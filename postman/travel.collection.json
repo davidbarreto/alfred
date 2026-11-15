@@ -5521,7 +5521,8 @@
               "pm.test('Status is 201', () => pm.response.to.have.status(201));",
               "const j = pm.response.json();",
               "pm.test('City created in the existing country', () => { pm.expect(j.city.name).to.eql('Postman Newtown ' + pm.environment.get('travel_ts')); pm.expect(j.city.country.id).to.eql(Number(pm.environment.get('travel_country_id'))); });",
-              "pm.environment.set('travel_cities_place_b_id', j.id);"
+              "pm.environment.set('travel_cities_place_b_id', j.id);",
+              "pm.environment.set('travel_newtown_city_id', j.city.id);"
             ],
             "type": "text/javascript"
           }
@@ -5710,7 +5711,8 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
-              "pm.test('Same country, new city', () => { pm.expect(j.city.name).to.eql('Postman Renamed ' + pm.environment.get('travel_ts')); pm.expect(j.city.country.id).to.eql(Number(pm.environment.get('travel_country_id'))); });"
+              "pm.test('Same country, new city', () => { pm.expect(j.city.name).to.eql('Postman Renamed ' + pm.environment.get('travel_ts')); pm.expect(j.city.country.id).to.eql(Number(pm.environment.get('travel_country_id'))); });",
+              "pm.environment.set('travel_renamed_city_id', j.city.id);"
             ],
             "type": "text/javascript"
           }
@@ -5879,6 +5881,917 @@
             "travel",
             "trips",
             "{{travel_cities_trip_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "152 - Get City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Shape', () => { pm.expect(j.country.id).to.eql(Number(pm.environment.get('travel_country_id'))); pm.expect(j.place_count).to.eql(0); pm.expect(j.grade).to.eql(null); pm.expect(j.places).to.eql([]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "153 - Get Unknown City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "154 - Get Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Lists its cities', () => pm.expect(j.cities.map(c => c.id)).to.include(Number(pm.environment.get('travel_city_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "155 - Get Unknown Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "156 - Create City Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Owned by the city', () => { pm.expect(j.city_id).to.eql(Number(pm.environment.get('travel_city_id'))); pm.expect(j.trip_id).to.eql(null); pm.expect(j.place_id).to.eql(null); pm.expect(j.country_id).to.eql(null); });",
+              "pm.environment.set('travel_city_link_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/?postman-city={{travel_ts}}\",\n  \"title\": \"City tips\"\n}"
+        }
+      }
+    },
+    {
+      "name": "157 - Create Duplicate City Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/?postman-city={{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "158 - List City Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Listed', () => pm.expect(pm.response.json().map(l => l.id)).to.include(Number(pm.environment.get('travel_city_link_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}",
+            "links"
+          ]
+        }
+      }
+    },
+    {
+      "name": "159 - Create Link On An Unknown City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/999999999/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "999999999",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/x\"\n}"
+        }
+      }
+    },
+    {
+      "name": "160 - Create Country Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Owned by the country', () => pm.expect(j.country_id).to.eql(Number(pm.environment.get('travel_country_id'))));",
+              "pm.environment.set('travel_country_link_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/?postman-country={{travel_ts}}\",\n  \"title\": \"Country tips\"\n}"
+        }
+      }
+    },
+    {
+      "name": "161 - List Country Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Listed', () => pm.expect(pm.response.json().map(l => l.id)).to.include(Number(pm.environment.get('travel_country_link_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}",
+            "links"
+          ]
+        }
+      }
+    },
+    {
+      "name": "162 - Create Link On An Unknown Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/999999999/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "999999999",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/x\"\n}"
+        }
+      }
+    },
+    {
+      "name": "163 - Rename City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Renamed', () => pm.expect(pm.response.json().name).to.eql('Postman City R ' + pm.environment.get('travel_ts')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman City R {{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "164 - Rename City Into A Taken Name",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_b_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman city r {{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "165 - Move City To An Unknown Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"country_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "166 - Set Country Code",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Uppercased', () => pm.expect(pm.response.json().code).to.eql('TL'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"tl\"\n}"
+        }
+      }
+    },
+    {
+      "name": "167 - Set Country Code With Bad Value",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"1\"\n}"
+        }
+      }
+    },
+    {
+      "name": "168 - Delete Country With Cities",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "169 - Places Filter By City Id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Filter accepted', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?city_id={{travel_city_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ]
+        }
+      }
+    },
+    {
+      "name": "170 - Delete City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "171 - Get Deleted City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "172 - City Link Went With The City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_city_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_city_link_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "173 - Delete City B",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_b_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "174 - Delete Newtown City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_newtown_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_newtown_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "175 - Delete Renamed City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_renamed_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_renamed_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "176 - Delete Country Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_country_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_country_link_id}}"
           ]
         }
       }

@@ -9,6 +9,7 @@ from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.schemas import normalize_tags
 from app.features.travel.visits.schemas import VisitRead
+from app.features.travel.trips.trip_cities import TripCity
 from app.features.travel.trips.timeline import TimelineItem, TripWarning
 from app.shared.timezone import local_today
 
@@ -146,3 +147,6 @@ class TripDetail(TripRead):
     warnings: list[TripWarning]
     # Planned visits with no day yet (the trip's own and the wishlist's), by stay city; empty once the trip is over.
     ideas: list[IdeaGroup] = []
+    # Where the trip went (stays, visits, leg ends), in order of first appearance, and the leg ends with no city.
+    cities: list[TripCity] = []
+    unmatched_leg_ends: int = 0

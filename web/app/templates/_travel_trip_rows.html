@@ -1,0 +1,7 @@
+{# Trips that touch a city or country. Needs `rows` (id, name, start_date, end_date) and `today`. #}
+{% for t in rows %}
+<a href="/travel/{{ t.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+  <span class="text-gray-900">{{ t.name }}</span>
+  <span class="text-xs text-gray-500 whitespace-nowrap">{{ t.start_date | short_date }} → {{ t.end_date | short_date }}</span>
+</a>
+{% endfor %}

@@ -662,7 +662,7 @@ def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceServ
     return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_city_service(session: AsyncSession = Depends(get_session)) -> CityService:
-    return CityService(session)
+    return CityService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_web_link_service(session: AsyncSession = Depends(get_session)) -> WebLinkService:
     return WebLinkService(session, LinkPreviewClient(), EmbeddingService(session, get_embedding_provider()))

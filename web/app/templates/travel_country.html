@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}{{ country.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6 max-w-3xl mx-auto">
+  <a href="/travel/cities" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Cities and countries</a>
+
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h1 class="text-base font-semibold text-gray-900">{{ country | country_flag_of }} {{ country.name }}</h1>
+          {% if country.code %}<p class="text-xs text-gray-500">{{ country.code }}</p>{% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+          {% if country.grade %}<span class="text-sm font-medium text-amber-600" id="country-grade">{{ country.grade | number }}/5 <span class="text-xs text-gray-400">({{ country.grade_count }} graded {{ 'city' if country.grade_count == 1 else 'cities' }})</span></span>{% endif %}
+          <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-country-wrap').classList.toggle('hidden')">Edit</button>
+          <button class="btn btn-xs btn-outline btn-error" id="delete-country">Delete</button>
+        </div>
+      </div>
+      <div id="edit-country-wrap" class="hidden">
+        <form id="edit-country" class="flex flex-wrap items-end gap-3 pt-2 border-t border-gray-100">
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span>
+            <input name="name" value="{{ country.name }}" required maxlength="100" class="input input-sm input-bordered w-56"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">ISO code (e.g. ES)</span>
+            <input name="code" value="{{ country.code or '' }}" maxlength="2" class="input input-sm input-bordered w-20 uppercase"></label>
+          <button type="submit" class="btn btn-sm btn-outline">Save</button>
+          <span class="text-xs text-red-600 form-error"></span>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-white" id="country-cities">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Cities <span class="text-xs font-normal text-gray-400">{{ country.cities | length }}</span></h2>
+      {% for c in country.cities[:preview] %}
+      <a href="/travel/cities/{{ c.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+        <span class="text-gray-900">{{ c.name }} <span class="text-xs text-gray-400">{{ c.place_count }} place{{ '' if c.place_count == 1 else 's' }}</span></span>
+        {% if c.grade %}<span class="text-xs text-amber-600">{{ c.grade | number }}/5</span>{% endif %}
+      </a>
+      {% else %}<p class="text-sm text-gray-400">No cities.</p>{% endfor %}
+      {% if country.cities | length > preview %}<a href="/travel/countries/{{ country.id }}/cities" class="text-xs text-[#378ADD] hover:underline">See all {{ country.cities | length }} cities</a>{% endif %}
+    </div>
+  </div>
+
+  <div class="card bg-white" id="country-trips">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Trips <span class="text-xs font-normal text-gray-400">{{ country.trips | length }}</span></h2>
+      {% set rows = country.trips[:preview] %}{% include "_travel_trip_rows.html" %}
+      {% if not country.trips %}<p class="text-sm text-gray-400">No trip has a stay, a visit or a leg here yet.</p>{% endif %}
+      {% if country.trips | length > preview %}<a href="/travel/countries/{{ country.id }}/trips" class="text-xs text-[#378ADD] hover:underline">See all {{ country.trips | length }} trips</a>{% endif %}
+    </div>
+  </div>
+
+  {% set owner_kind = 'country' %}{% set owner_id = country.id %}{% set links_url = '/travel/countries/' ~ country.id ~ '/links' %}
+  {% include "_travel_web_links_card.html" %}
+  {% include "_travel_web_link_dialog.html" %}
+</div>
+
+<script src="/static/js/travel-web-links.js"></script>
+<script>
+initWebLinks();
+async function send(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
+}
+document.getElementById('edit-country').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const code = form.elements.code.value.trim();
+  const { ok, data } = await send('PATCH', '/travel/countries/{{ country.id }}', { name: form.elements.name.value.trim(), code: code || null });
+  if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+  location.reload();
+});
+document.getElementById('delete-country').addEventListener('click', async () => {
+  if (!confirm('Delete this country and its links?')) return;
+  const { ok, data } = await send('DELETE', '/travel/countries/{{ country.id }}');
+  if (!ok) { alert(data.error || 'Could not delete the country.'); return; }
+  location.href = '/travel/cities';
+});
+</script>
+{% endblock %}

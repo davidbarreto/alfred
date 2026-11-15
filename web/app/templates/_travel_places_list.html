@@ -9,7 +9,7 @@
     <div class="card-body p-4 flex flex-row items-start justify-between gap-3">
       <div class="space-y-1">
         <p class="text-sm font-semibold text-gray-900">{{ p.name }}</p>
-        <p class="text-xs text-gray-500">{{ p.kind }} · {{ p.city.name }}, {{ p.city.country.name }}</p>
+        <p class="text-xs text-gray-500">{{ p.kind }} · <a class="hover:underline" href="/travel/cities/{{ p.city.id }}">{{ p.city.name }}</a>, <a class="hover:underline" href="/travel/countries/{{ p.city.country.id }}">{{ p.city.country.name }}</a></p>
         {% if p.tags %}
         <div class="flex flex-wrap gap-1">{% for tag in p.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
         {% endif %}

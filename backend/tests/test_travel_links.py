@@ -192,10 +192,16 @@ class TestLinkPreviewClient:
 def svc():
     service = WebLinkService(AsyncMock(), AsyncMock(), None)
     service._repo, service._trip_repo, service._place_repo = AsyncMock(), AsyncMock(), AsyncMock()
+    service._city_repo = AsyncMock()
     service._trip_repo.get_trip.return_value = SimpleNamespace(id=1, name="Example trip")
     service._place_repo.get_place.return_value = SimpleNamespace(id=3, name="Cafe Example")
+    service._city_repo.get_city.return_value = SimpleNamespace(id=4, name="Alpha")
+    service._city_repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia")
     service._preview.fetch.return_value = LinkPreview("Fetched title", "Fetched desc", "https://example.com/i.jpg")
-    service._repo.create_link.side_effect = lambda data: _link(**{**data, "id": 5, "trip_id": data.get("trip_id"), "place_id": data.get("place_id")})
+    service._repo.create_link.side_effect = lambda data: _link(**{
+        **data, "id": 5, "trip_id": data.get("trip_id"), "place_id": data.get("place_id"),
+        "city_id": data.get("city_id"), "country_id": data.get("country_id"),
+    })
     return service
 
 
@@ -224,6 +230,25 @@ class TestCreate:
         await svc.create_trip_link(1, WebLinkCreate(url="https://example.com/a"))
         data = svc._repo.create_link.await_args.args[0]
         assert (data["title"], data["description"], data["image_url"]) == (None, None, None)
+
+    async def test_city_and_country_links_have_their_own_owner(self, svc):
+        await svc.create_city_link(4, WebLinkCreate(url="https://example.com/a"))
+        assert svc._repo.create_link.await_args.args[0]["city_id"] == 4
+        await svc.create_country_link(2, WebLinkCreate(url="https://example.com/a"))
+        data = svc._repo.create_link.await_args.args[0]
+        assert data["country_id"] == 2 and "city_id" not in data and "trip_id" not in data
+
+    async def test_unknown_city_or_country(self, svc):
+        svc._city_repo.get_city.return_value = None
+        svc._city_repo.get_country.return_value = None
+        for call in (svc.create_city_link, svc.create_country_link, svc.get_city_links, svc.get_country_links):
+            with pytest.raises(TravelNotFoundError):
+                await call(9, WebLinkCreate(url="https://example.com/a")) if "create" in call.__name__ else await call(9)
+
+    async def test_city_links_list_by_city(self, svc):
+        svc._repo.get_links.return_value = [_link(trip_id=None, city_id=4)]
+        assert len(await svc.get_city_links(4)) == 1
+        svc._repo.get_links.assert_awaited_with(city_id=4)
 
     async def test_unknown_parents(self, svc):
         svc._trip_repo.get_trip.return_value = None

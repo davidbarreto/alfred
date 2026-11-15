@@ -178,6 +178,28 @@
     </div>
   </div>
 
+  {% set stayed = trip.cities | selectattr('role', 'equalto', 'stayed') | list %}
+  {% set passed = trip.cities | selectattr('role', 'equalto', 'passed') | list %}
+  {% if stayed or passed or trip.unmatched_leg_ends %}
+  <div class="card bg-white" id="trip-cities">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Cities</h2>
+      {% if stayed %}
+      <div class="flex flex-wrap gap-2">
+        {% for c in stayed %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">{{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
+      </div>
+      {% endif %}
+      {% if passed %}
+      <p class="text-xs text-gray-500">Passed through:
+        {% for c in passed %}<a href="/travel/cities/{{ c.city.id }}" class="hover:underline text-[#378ADD]">{{ c.city.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+      {% if trip.unmatched_leg_ends %}
+      <p class="text-xs text-amber-700" id="unmatched-leg-ends"><i class="ti ti-alert-triangle"></i> {{ trip.unmatched_leg_ends }} leg end{{ '' if trip.unmatched_leg_ends == 1 else 's' }} {{ 'has' if trip.unmatched_leg_ends == 1 else 'have' }} no city: edit the leg to pick one, or create the city under <a class="underline" href="/travel/cities">Cities</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="card bg-white">
     <div class="card-body p-5 space-y-3">
       <div class="flex items-center justify-between">
@@ -218,7 +240,7 @@
       <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ stay.place.name }}<span class="text-xs text-gray-400">{{ stay.place.city.name }}</span> {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
+          <p class="text-gray-900">{{ stay.place.name }}<a href="/travel/cities/{{ stay.place.city.id }}" class="text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
           {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
           <p class="text-xs space-x-3">

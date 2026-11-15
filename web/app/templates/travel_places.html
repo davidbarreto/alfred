@@ -8,6 +8,7 @@
   <div class="flex items-center gap-4">
     <a href="/travel" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Trips</a>
     <h1 class="text-base font-semibold text-gray-900">Places</h1>
+    <a href="/travel/cities" class="text-xs text-[#378ADD] hover:underline">Cities and countries</a>
     <button type="button" class="btn btn-xs btn-outline ml-auto" id="toggle-new-place"><i class="ti ti-plus"></i> New place</button>
   </div>
 
@@ -34,8 +35,11 @@
     </form>
   </div>
 
+  {% if scope %}<p class="text-sm text-gray-600">Places in <a class="text-[#378ADD] hover:underline" href="{{ scope.href }}">{{ scope.name }}</a> · <a class="text-xs text-gray-500 hover:underline" href="/travel/places">all places</a></p>{% endif %}
   <form id="place-filters" class="flex flex-wrap items-end gap-3"
         hx-get="/travel/places/list" hx-target="#places-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#place-q">
+    {% if filters.city_id %}<input type="hidden" name="city_id" value="{{ filters.city_id }}">{% endif %}
+    {% if filters.country_id %}<input type="hidden" name="country_id" value="{{ filters.country_id }}">{% endif %}
     <label class="space-y-1"><span class="block text-xs text-gray-500">Search</span>
       <input id="place-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-40" placeholder="Name or address"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>

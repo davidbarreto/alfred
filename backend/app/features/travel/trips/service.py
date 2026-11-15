@@ -29,6 +29,7 @@ from app.features.travel.trips.coverage_warnings import (
     find_outside_dates_warnings, find_stay_overlap_warnings, find_unpaid_leg_warnings, find_unpaid_stay_warnings,
     find_visit_overlap_warnings, find_visit_warnings,
 )
+from app.features.travel.trips.trip_cities import build_trip_cities
 from app.features.travel.trips.timeline import TripWarning, build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_timezone, local_timezone_name, local_today
 
@@ -112,6 +113,7 @@ class TripService:
         if trip.end_date >= local_today():
             wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city.name for s in stays])
             ideas = build_ideas(all_visits, [VisitRead.model_validate(v) for v in wishlist], stays)
+        trip_cities, unmatched = build_trip_cities(legs, stays, all_visits, today, trip.end_date)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),
             legs=legs,
@@ -122,6 +124,8 @@ class TripService:
             visits=visits,
             hidden_visit_count=hidden,
             ideas=ideas,
+            cities=trip_cities,
+            unmatched_leg_ends=unmatched,
         )
 
     async def _linked_events(self, visits: list[VisitRead]) -> dict:

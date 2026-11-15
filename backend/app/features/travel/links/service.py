@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import WEB_LINK_NOTE, TravelNoteIndex
+from app.features.travel.cities.repository import CityRepository
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.links.kind import display_domain, guess_kind, is_social
@@ -25,6 +26,7 @@ class WebLinkService:
         self._repo = WebLinkRepository(session)
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
+        self._city_repo = CityRepository(session)
         self._preview = preview_client
         self._notes = TravelNoteIndex(embedding_service)
 
@@ -40,6 +42,18 @@ class WebLinkService:
             raise TravelNotFoundError(f"Place {place_id} not found")
         return place.name
 
+    async def _city_name(self, city_id: int) -> str:
+        city = await self._city_repo.get_city(city_id)
+        if city is None:
+            raise TravelNotFoundError(f"City {city_id} not found")
+        return city.name
+
+    async def _country_name(self, country_id: int) -> str:
+        country = await self._city_repo.get_country(country_id)
+        if country is None:
+            raise TravelNotFoundError(f"Country {country_id} not found")
+        return country.name
+
     async def _preview_for(self, url: str, kind: str) -> LinkPreview:
         """Social platforms answer scrapers with a login wall, so they are saved without a fetch."""
         if is_social(kind):
@@ -47,7 +61,14 @@ class WebLinkService:
         return await self._preview.fetch(url) or LinkPreview()
 
     async def _label(self, link: WebLink) -> str:
-        parent = await self._trip_name(link.trip_id) if link.trip_id else await self._place_name(link.place_id)
+        if link.trip_id:
+            parent = await self._trip_name(link.trip_id)
+        elif link.place_id:
+            parent = await self._place_name(link.place_id)
+        elif link.city_id:
+            parent = await self._city_name(link.city_id)
+        else:
+            parent = await self._country_name(link.country_id)
         return f"Link for {parent} ({link.title or display_domain(link.url)})"
 
     async def _sync_notes(self, link: WebLink) -> None:
@@ -60,6 +81,14 @@ class WebLinkService:
     async def get_place_links(self, place_id: int) -> list[WebLinkRead]:
         await self._place_name(place_id)
         return [WebLinkRead.model_validate(link) for link in await self._repo.get_links(place_id=place_id)]
+
+    async def get_city_links(self, city_id: int) -> list[WebLinkRead]:
+        await self._city_name(city_id)
+        return [WebLinkRead.model_validate(link) for link in await self._repo.get_links(city_id=city_id)]
+
+    async def get_country_links(self, country_id: int) -> list[WebLinkRead]:
+        await self._country_name(country_id)
+        return [WebLinkRead.model_validate(link) for link in await self._repo.get_links(country_id=country_id)]
 
     async def get_link(self, link_id: int) -> WebLinkRead | None:
         link = await self._repo.get_link(link_id)
@@ -87,6 +116,14 @@ class WebLinkService:
     async def create_place_link(self, place_id: int, data: WebLinkCreate) -> WebLinkRead:
         await self._place_name(place_id)
         return await self._create({"place_id": place_id}, data)
+
+    async def create_city_link(self, city_id: int, data: WebLinkCreate) -> WebLinkRead:
+        await self._city_name(city_id)
+        return await self._create({"city_id": city_id}, data)
+
+    async def create_country_link(self, country_id: int, data: WebLinkCreate) -> WebLinkRead:
+        await self._country_name(country_id)
+        return await self._create({"country_id": country_id}, data)
 
     async def update_link(self, link_id: int, data: WebLinkUpdate) -> WebLinkRead | None:
         current = await self._repo.get_link(link_id)

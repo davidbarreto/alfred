@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4 max-w-2xl mx-auto">
+  <a href="{{ back_url }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ back_name }}</a>
+  <h1 class="text-base font-semibold text-gray-900">{{ title }}</h1>
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-2">
+      {% if trips is not none %}
+        {% set rows = trips %}{% include "_travel_trip_rows.html" %}
+        {% if not trips %}<p class="text-sm text-gray-400">No trips.</p>{% endif %}
+      {% else %}
+        {% for c in cities %}
+        <a href="/travel/cities/{{ c.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+          <span class="text-gray-900">{{ c.name }} <span class="text-xs text-gray-400">{{ c.place_count }} place{{ '' if c.place_count == 1 else 's' }}</span></span>
+          {% if c.grade %}<span class="text-xs text-amber-600">{{ c.grade | number }}/5</span>{% endif %}
+        </a>
+        {% else %}<p class="text-sm text-gray-400">No cities.</p>{% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -38,6 +38,10 @@ class PlaceRepository:
             stmt = stmt.where(func.lower(City.name) == filters.city.strip().lower())
         if filters.country:
             stmt = stmt.where(func.lower(Country.name) == filters.country.strip().lower())
+        if filters.city_id is not None:
+            stmt = stmt.where(Place.city_id == filters.city_id)
+        if filters.country_id is not None:
+            stmt = stmt.where(City.country_id == filters.country_id)
         for tag_name in filters.tag or []:
             tagged = (
                 select(places_tags.c.place_id)

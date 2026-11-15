@@ -1,6 +1,9 @@
 // Add / edit / delete links on the trip page, the place page and the links pages
 // (see templates/_travel_web_link_dialog.html and _travel_web_link_row.html).
+// Owners: trip, place, city or country.
 // Buttons: .add-web-link (data-owner-kind, data-owner-id), .edit-web-link (data-item), .delete-web-link (data-id).
+const OWNER_PATHS = { trip: 'trips', place: 'places', city: 'cities', country: 'countries' };
+
 function initWebLinks() {
   const dialog = document.getElementById('web-link-dialog');
   const form = document.getElementById('web-link-form');
@@ -8,7 +11,7 @@ function initWebLinks() {
   const title = document.getElementById('web-link-title');
   const autoOption = document.getElementById('web-link-auto');
   const error = form.querySelector('.form-error');
-  let owner = null;   // { kind: 'trip'|'place', id } when adding
+  let owner = null;   // { kind: 'trip'|'place'|'city'|'country', id } when adding
   let editing = null; // the link being edited
 
   async function send(method, url, body) {
@@ -72,7 +75,7 @@ function initWebLinks() {
       const body = { url, notes: notes || null };
       if (kind) body.kind = kind;
       if (linkTitle) body.title = linkTitle;
-      result = await send('POST', `/travel/${owner.kind === 'trip' ? 'trips' : 'places'}/${owner.id}/links`, body);
+      result = await send('POST', `/travel/${OWNER_PATHS[owner.kind]}/${owner.id}/links`, body);
     }
     if (!result.ok) { error.textContent = result.data.error || 'Something went wrong.'; return; }
     location.reload();

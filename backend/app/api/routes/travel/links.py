@@ -44,6 +44,42 @@ async def create_place_link(place_id: int, request: WebLinkCreate, service: WebL
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
+@router.get("/cities/{city_id}/links", response_model=list[WebLinkRead])
+async def get_city_links(city_id: int, service: WebLinkServiceDep) -> list[WebLinkRead]:
+    try:
+        return await service.get_city_links(city_id)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.post("/cities/{city_id}/links", response_model=WebLinkRead, status_code=status.HTTP_201_CREATED)
+async def create_city_link(city_id: int, request: WebLinkCreate, service: WebLinkServiceDep) -> WebLinkRead:
+    try:
+        return await service.create_city_link(city_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except TravelConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.get("/countries/{country_id}/links", response_model=list[WebLinkRead])
+async def get_country_links(country_id: int, service: WebLinkServiceDep) -> list[WebLinkRead]:
+    try:
+        return await service.get_country_links(country_id)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.post("/countries/{country_id}/links", response_model=WebLinkRead, status_code=status.HTTP_201_CREATED)
+async def create_country_link(country_id: int, request: WebLinkCreate, service: WebLinkServiceDep) -> WebLinkRead:
+    try:
+        return await service.create_country_link(country_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except TravelConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
 @router.get("/links/{link_id}", response_model=WebLinkRead)
 async def get_link(link_id: int, service: WebLinkServiceDep) -> WebLinkRead:
     link = await service.get_link(link_id)

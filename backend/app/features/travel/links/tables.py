@@ -9,17 +9,16 @@ from app.features.travel.constants import WEB_LINK_KINDS, in_clause
 
 
 class WebLink(Base):
-    """A saved URL (official site, tips, video) owned by exactly one trip or place."""
+    """A saved URL (official site, tips, video) owned by exactly one trip, place, city or country."""
 
     __tablename__ = "links"
     __table_args__ = (
-        CheckConstraint(
-            "(trip_id IS NOT NULL AND place_id IS NULL) OR (trip_id IS NULL AND place_id IS NOT NULL)",
-            name="ck_travel_links_one_parent",
-        ),
+        CheckConstraint("num_nonnulls(trip_id, place_id, city_id, country_id) = 1", name="ck_travel_links_one_parent"),
         CheckConstraint(in_clause("kind", WEB_LINK_KINDS), name="ck_travel_links_kind"),
         UniqueConstraint("trip_id", "url", name="uq_travel_links_trip_url"),
         UniqueConstraint("place_id", "url", name="uq_travel_links_place_url"),
+        UniqueConstraint("city_id", "url", name="uq_travel_links_city_url"),
+        UniqueConstraint("country_id", "url", name="uq_travel_links_country_url"),
         {"schema": "travel"},
     )
 
@@ -29,6 +28,12 @@ class WebLink(Base):
     )
     place_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("travel.places.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    city_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("travel.cities.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    country_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("travel.countries.id", ondelete="CASCADE"), nullable=True, index=True
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)

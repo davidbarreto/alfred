@@ -46,6 +46,8 @@ class WebLinkRead(BaseModel):
     id: int
     trip_id: int | None
     place_id: int | None
+    city_id: int | None = None
+    country_id: int | None = None
     url: str
     kind: WebLinkKind
     title: str | None

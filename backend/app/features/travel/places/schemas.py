@@ -103,6 +103,8 @@ class PlaceFilters:
         kind: Annotated[PlaceKind | None, Query()] = None,
         city: Annotated[str | None, Query()] = None,
         country: Annotated[str | None, Query()] = None,
+        city_id: Annotated[int | None, Query()] = None,
+        country_id: Annotated[int | None, Query()] = None,
         tag: Annotated[list[str] | None, Query(description="Place must carry every given tag")] = None,
         min_grade: Annotated[int | None, Query(ge=1, le=5, description="Minimum derived grade")] = None,
         ungraded: Annotated[bool, Query(description="Only places with no grade yet")] = False,
@@ -115,6 +117,8 @@ class PlaceFilters:
         self.kind = kind
         self.city = city
         self.country = country
+        self.city_id = city_id
+        self.country_id = country_id
         self.tag = tag
         self.min_grade = min_grade
         self.ungraded = ungraded

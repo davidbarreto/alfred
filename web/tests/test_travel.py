@@ -1418,3 +1418,121 @@ class TestLinks:
         assert 'id="visit-11"' in html
         # Place links reach a visit's details on demand, never through the page.
         assert "/travel/places/3/links" not in [c.args[0] for c in mock_api["get"].await_args_list]
+
+
+def _country(id=2, name="Examplia", code=None):
+    return {"id": id, "name": name, "code": code}
+
+
+def _city_detail(**kw):
+    detail = {
+        "id": 4, "name": "Alpha", "country": _country(), "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z",
+        "grade": 4.5, "grade_count": 2, "place_count": 7,
+        "places": [{"id": 3, "name": "Hotel Example", "kind": "hotel", "grade": 4.0}],
+        "trips": [{"id": i, "name": f"Trip {i}", "start_date": "2026-12-17", "end_date": "2026-12-24"} for i in range(1, 8)],
+    }
+    detail.update(kw)
+    return detail
+
+
+def _country_detail(**kw):
+    detail = {
+        **_country(), "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z", "grade": 3.5, "grade_count": 2,
+        "cities": [{"id": i, "name": f"City {i}", "place_count": i, "grade": None} for i in range(1, 8)],
+        "trips": [{"id": 1, "name": "Trip 1", "start_date": "2026-12-17", "end_date": "2026-12-24"}],
+    }
+    detail.update(kw)
+    return detail
+
+
+class TestCityPages:
+    def test_index_groups_cities_by_country(self, client, mock_api):
+        _route(mock_api, {"/travel/countries": [_country(), _country(3, "Otherland", "OL")], "/travel/cities": [
+            {"id": 4, "name": "Alpha", "country": _country()}, {"id": 5, "name": "Beta", "country": _country(3, "Otherland", "OL")}]})
+        html = client.get("/travel/cities").text
+        assert 'id="country-2"' in html and 'href="/travel/cities/4"' in html and 'href="/travel/countries/3"' in html
+        assert "New city" in html
+
+    def test_city_page_shows_grade_places_and_caps_the_trips(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [_country()], "/travel/cities/4": _city_detail()})
+        html = client.get("/travel/cities/4").text
+        assert "4.5/5" in html and "2 graded places" in html and 'href="/travel/countries/2"' in html
+        assert html.count('href="/travel/1"') == 1 and 'href="/travel/5"' in html and 'href="/travel/6"' not in html
+        assert 'href="/travel/cities/4/trips"' in html and "See all 7 trips" in html
+        assert 'href="/travel/places?city_id=4"' in html and "See all 7 places" in html
+
+    def test_city_page_links_card_is_for_the_city(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(place_count=1, trips=[])})
+        html = client.get("/travel/cities/4").text
+        assert 'data-owner-kind="city" data-owner-id="4"' in html and "See all 1 places" not in html
+
+    def test_unknown_city_redirects_to_the_index(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/9": None})
+        resp = client.get("/travel/cities/9", follow_redirects=False)
+        assert resp.status_code == 302 and resp.headers["location"] == "/travel/cities"
+
+    def test_country_page_caps_cities_and_links_to_the_rest(self, client, mock_api):
+        _route(mock_api, {"/travel/countries/2/links": [], "/travel/countries/2": _country_detail()})
+        html = client.get("/travel/countries/2").text
+        assert 'href="/travel/cities/5"' in html and 'href="/travel/cities/6"' not in html
+        assert 'href="/travel/countries/2/cities"' in html and "3.5/5" in html
+        assert 'data-owner-kind="country" data-owner-id="2"' in html
+
+    def test_full_lists(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4": _city_detail(), "/travel/countries/2": _country_detail()})
+        assert 'href="/travel/7"' in client.get("/travel/cities/4/trips").text
+        assert 'href="/travel/cities/7"' in client.get("/travel/countries/2/cities").text
+        assert 'href="/travel/1"' in client.get("/travel/countries/2/trips").text
+
+    def test_links_pages_use_the_right_owner(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries/2/links": [], "/travel/cities/4": _city_detail(),
+                          "/travel/countries/2": _country_detail()})
+        assert 'data-owner-kind="city" data-owner-id="4"' in client.get("/travel/cities/4/links").text
+        assert 'data-owner-kind="country" data-owner-id="2"' in client.get("/travel/countries/2/links").text
+
+    def test_places_page_can_be_narrowed_to_a_city(self, client, mock_api):
+        _route(mock_api, {"/travel/places": [_place()], "/travel/tags": [], "/travel/places/locations": {"cities": [], "countries": []},
+                          "/travel/cities/4": _city_detail()})
+        html = client.get("/travel/places?city_id=4").text
+        assert "Places in" in html and 'name="city_id" value="4"' in html
+        params = [c.kwargs.get("params") for c in mock_api["get"].await_args_list if c.args and c.args[0] == "/travel/places"]
+        assert ("city_id", "4") in params[0]
+
+    def test_a_non_numeric_city_id_is_ignored(self, client, mock_api):
+        _route(mock_api, {"/travel/places": [], "/travel/tags": [], "/travel/places/locations": {"cities": [], "countries": []}})
+        assert "Places in" not in client.get("/travel/places?city_id=abc").text
+
+    def test_writes_are_proxied(self, client, mock_api):
+        mock_api["patch"].return_value = {"id": 4}
+        assert client.patch("/travel/cities/4", json={"name": "B"}).status_code == 200
+        mock_api["patch"].assert_awaited_with("/travel/cities/4", json={"name": "B"})
+        assert client.patch("/travel/countries/2", json={"code": "EX"}).status_code == 200
+        mock_api["delete"].return_value = None
+        assert client.delete("/travel/cities/4").status_code == 200
+        assert client.delete("/travel/countries/2").status_code == 200
+        mock_api["post"].return_value = {"id": 1}
+        assert client.post("/travel/cities/4/links", json={"url": "https://example.com"}).status_code == 200
+        mock_api["post"].assert_awaited_with("/travel/cities/4/links", json={"url": "https://example.com"})
+        assert client.post("/travel/countries/2/links", json={"url": "https://example.com"}).status_code == 200
+
+    def test_a_conflict_on_delete_is_relayed(self, client, mock_api):
+        mock_api["delete"].side_effect = _status_error(409, "Alpha is used by 2 place(s) and 0 leg end(s)")
+        resp = client.delete("/travel/cities/4")
+        assert resp.status_code == 409 and "used by 2" in resp.json()["error"]
+
+
+class TestTripCitiesCard:
+    def _detail_with(self, **kw):
+        return _detail(**kw)
+
+    def test_lists_stayed_cities_passed_through_and_the_unmatched_hint(self, client, mock_api):
+        cities = [{"city": {"id": 4, "name": "Alpha", "country": _country()}, "role": "stayed"},
+                  {"city": {"id": 5, "name": "Beta", "country": _country()}, "role": "passed"}]
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, unmatched_leg_ends=2), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="trip-cities"' in html and 'href="/travel/cities/4"' in html and "Passed through" in html
+        assert "2 leg ends have no city" in html
+
+    def test_no_card_without_cities(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=[], unmatched_leg_ends=0), "/travel/places": []})
+        assert 'id="trip-cities"' not in client.get("/travel/1").text

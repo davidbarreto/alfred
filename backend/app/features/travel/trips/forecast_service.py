@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Open-Meteo forecasts reach 16 days; ask for one less.
 _FORECAST_REACH_DAYS = 15
-# The forecast endpoint also serves past days up to 92 days back (no lag); older ones need the archive.
-_PAST_REACH_DAYS = 90
+# The forecast endpoint documents past days up to 92 days back (no lag) but answers 200 with null values from about
+# 67 days back, so stay well inside; older days come from the archive.
+_PAST_REACH_DAYS = 60
 
 
 class TripForecastService:
@@ -172,9 +173,15 @@ class TripForecastService:
                     continue
                 dates = [group[0] + timedelta(days=i) for i in range((group[-1] - group[0]).days + 1)]
                 loaded = await self._load(*coords, group[0], group[-1], dates, archive=archive)
+                found = [d for d in loaded if d.date in group and d.max_c is not None]
+                if not archive and len(found) < len(group):
+                    # The normal endpoint answers with nulls for days it no longer holds: ask the archive for those.
+                    left = sorted(set(group) - {d.date for d in found})
+                    left_dates = [left[0] + timedelta(days=i) for i in range((left[-1] - left[0]).days + 1)]
+                    again = await self._load(*coords, left[0], left[-1], left_dates, archive=True)
+                    found += [d for d in again if d.date in left and d.max_c is not None]
                 rows = [{"city_id": key, "day": d.date, "min_c": d.min_c, "max_c": d.max_c,
-                         "precip_mm": d.precip_mm, "source": "actual", "fetched_on": today}
-                        for d in loaded if d.date in group and d.max_c is not None]
+                         "precip_mm": d.precip_mm, "source": "actual", "fetched_on": today} for d in found]
                 if rows:
                     await self._weather.upsert_weather(trip_id, rows)
                     logger.info("Trip weather backfilled: trip_id=%d city_id=%d days=%d", trip_id, key, len(rows))

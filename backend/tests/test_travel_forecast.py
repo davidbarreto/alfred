@@ -234,11 +234,27 @@ class TestService:
         service._client.fetch_range.return_value = {"temperature_2m_min": [1], "temperature_2m_max": [4], "precipitation_sum": [0]}
         service._stays.get_stays.return_value = [_stay(lat=1.0, lng=2.0, check_in=datetime(2026, 12, 17, 14), check_out=datetime(2026, 12, 18, 10))]
         service._trips.get_trip.return_value = SimpleNamespace(start_date=date(2026, 12, 17), end_date=date(2026, 12, 18))
-        with freeze_time("2027-03-18 12:00:00"):  # 90 days back is 18 Dec: the 17th is older, the 18th is in reach
+        with freeze_time("2027-02-16 12:00:00"):  # 60 days back is 18 Dec: the 17th is older, the 18th is in reach
             result = await service.get_forecast(1)
         calls = [(c.args[2], c.kwargs["archive"]) for c in service._client.fetch_range.await_args_list]
         assert calls == [(date(2026, 12, 17), True), (date(2026, 12, 18), False)]
         assert [d.date.day for d in result.cities[0].days] == [17, 18]
+
+    async def test_a_trip_two_months_old_already_reads_the_archive(self, service):
+        """Open-Meteo's normal endpoint answers 200 with null values from about 67 days back, so stop asking it at 60."""
+        service._trips.get_trip.return_value = SimpleNamespace(start_date=date(2026, 12, 17), end_date=date(2026, 12, 19))
+        with freeze_time("2027-02-27 12:00:00"):  # 72 days after the trip
+            result = await service.get_forecast(1)
+        assert service._client.fetch_range.await_args.kwargs["archive"] is True and result.mode == "actual"
+
+    async def test_days_the_normal_endpoint_has_no_values_for_are_asked_from_the_archive(self, service):
+        empty = {"temperature_2m_min": [None] * 3, "temperature_2m_max": [None] * 3, "precipitation_sum": [None] * 3}
+        full = {"temperature_2m_min": [1, 1, 1], "temperature_2m_max": [6, 6, 6], "precipitation_sum": [0, 0, 0]}
+        service._client.fetch_range.side_effect = [empty, full]
+        with freeze_time("2026-12-30 12:00:00"):
+            result = await service.get_forecast(1)
+        assert [c.kwargs["archive"] for c in service._client.fetch_range.await_args_list] == [False, True]
+        assert result.mode == "actual" and [d.max_c for d in result.cities[0].days] == [6, 6, 6]
 
     async def test_only_the_days_never_saved_are_backfilled_and_the_mode_is_mixed(self, service):
         await service.get_forecast(1)

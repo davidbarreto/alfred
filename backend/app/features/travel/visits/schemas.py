@@ -5,7 +5,7 @@ from fastapi import Query
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 from app.features.travel.constants import PlaceKind, VisitStatus
-from app.features.travel.links import place_maps_url
+from app.shared.links import place_maps_url
 
 
 class VisitCreate(BaseModel):

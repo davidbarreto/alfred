@@ -10,7 +10,7 @@ from app.features.core.settings.service import SettingService
 from app.features.organizer.calendar_events.schemas import EventCreate, EventRead, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.travel.default_tags import parse_default_tag_names
-from app.features.travel.links import place_maps_url
+from app.shared.links import place_maps_url
 from app.features.travel.settings_service import DEFAULT_VISIT_DURATION_MIN as DEFAULT_DURATION_MIN
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository

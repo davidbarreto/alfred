@@ -1,0 +1,25 @@
+{# Add / edit link dialog, driven by static/js/travel-web-links.js. Needs link_kinds. #}
+<dialog id="web-link-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-lg space-y-3" id="web-link-form">
+    <h3 class="text-sm font-semibold" id="web-link-title">Add link</h3>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Address</span>
+      <input name="url" type="url" required placeholder="https://" class="input input-sm input-bordered w-full"></label>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+        <select name="kind" class="select select-sm select-bordered w-full">
+          <option value="" id="web-link-auto">Detect from the address</option>
+          {% for k in link_kinds %}<option value="{{ k }}">{{ k }}</option>{% endfor %}
+        </select></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Title (optional, fetched when empty)</span>
+        <input name="title" maxlength="300" class="input input-sm input-bordered w-full"></label>
+    </div>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Notes (why it is useful)</span>
+      <textarea name="notes" rows="2" class="textarea textarea-bordered w-full text-sm"></textarea></label>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Save</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>

@@ -4255,6 +4255,677 @@
           ]
         }
       }
+    },
+    {
+      "name": "109 - Create Trip For Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('travel_links_trip_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman links trip {{travel_ts}}\",\n  \"start_date\": \"2031-12-17\",\n  \"end_date\": \"2031-12-24\"\n}"
+        }
+      }
+    },
+    {
+      "name": "110 - Create Place For Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('travel_links_place_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"restaurant\",\n  \"name\": \"Postman links place {{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "111 - Create Trip Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Kind is guessed from the domain', () => pm.expect(j.kind).to.eql('website'));",
+              "pm.test('The typed title wins', () => pm.expect(j.title).to.eql('Postman tips'));",
+              "pm.test('Owned by the trip', () => { pm.expect(j.trip_id).to.eql(Number(pm.environment.get('travel_links_trip_id'))); pm.expect(j.place_id).to.eql(null); });",
+              "pm.environment.set('travel_link_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/?postman={{travel_ts}}\",\n  \"title\": \"Postman tips\",\n  \"notes\": \"Official tips\"\n}"
+        }
+      }
+    },
+    {
+      "name": "112 - Create Duplicate Trip Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/?postman={{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "113 - Create Instagram Place Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Instagram kind, no fetched preview', () => { pm.expect(j.kind).to.eql('instagram'); pm.expect(j.image_url).to.eql(null); });",
+              "pm.environment.set('travel_place_link_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_links_place_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_links_place_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://www.instagram.com/postman_{{travel_ts}}/\"\n}"
+        }
+      }
+    },
+    {
+      "name": "114 - Create Link With Bad Url",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"ftp://example.com/file\"\n}"
+        }
+      }
+    },
+    {
+      "name": "115 - Create Link With Bad Kind",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/other\",\n  \"kind\": \"podcast\"\n}"
+        }
+      }
+    },
+    {
+      "name": "116 - Create Link For Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "links"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com/x\"\n}"
+        }
+      }
+    },
+    {
+      "name": "117 - List Trip Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contains the link', () => pm.expect(pm.response.json().map(l => l.id)).to.include(Number(pm.environment.get('travel_link_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}",
+            "links"
+          ]
+        }
+      }
+    },
+    {
+      "name": "118 - List Place Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contains the place link', () => pm.expect(pm.response.json().map(l => l.id)).to.include(Number(pm.environment.get('travel_place_link_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_links_place_id}}/links",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_links_place_id}}",
+            "links"
+          ]
+        }
+      }
+    },
+    {
+      "name": "119 - Update Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Updated', () => { const j = pm.response.json(); pm.expect(j.kind).to.eql('article'); pm.expect(j.notes).to.eql('Read before the trip'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_link_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"article\",\n  \"notes\": \"Read before the trip\"\n}"
+        }
+      }
+    },
+    {
+      "name": "120 - Update Link With Null Url",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_link_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": null\n}"
+        }
+      }
+    },
+    {
+      "name": "121 - Get Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_link_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "122 - Delete Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_link_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "123 - Get Deleted Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_link_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "124 - Delete Links Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_links_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_links_place_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "125 - Place Links Went With The Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/links/{{travel_place_link_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "links",
+            "{{travel_place_link_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "126 - Delete Links Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_links_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_links_trip_id}}"
+          ]
+        }
+      }
     }
   ]
 }

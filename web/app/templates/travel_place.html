@@ -69,6 +69,9 @@
     </div>
   </div>
 
+  {% set owner_kind = 'place' %}{% set owner_id = place.id %}{% set links_url = '/travel/places/' ~ place.id ~ '/links' %}
+  {% include "_travel_web_links_card.html" %}
+
   {% if place.stays %}
   <div class="card bg-white" id="stay-history">
     <div class="card-body p-5 space-y-3">
@@ -88,16 +91,19 @@
   {% include "_travel_visit_dialog.html" %}
   {% include "_travel_tx_dialog.html" %}
   {% include "_travel_detail_dialog.html" %}
+  {% include "_travel_web_link_dialog.html" %}
 </div>
 
 <script src="/static/js/airport-input.js"></script>
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
 <script src="/static/js/travel-detail.js"></script>
+<script src="/static/js/travel-web-links.js"></script>
 <script>
 initTravelVisits({ tripId: null, placeId: {{ place.id }} });
 initTravelTransactions();
 initTravelDetail();
+initWebLinks();
 
 async function send(method, url, body) {
   const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

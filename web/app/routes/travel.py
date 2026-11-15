@@ -19,6 +19,8 @@ _PAGE_SIZE = 20
 _TIMELINE_PREVIEW = 8
 _STATUSES = {"current": "Upcoming & ongoing", "upcoming": "Upcoming", "ongoing": "Ongoing", "past": "Past", "all": "All"}
 _WARNING_PREVIEW = 5
+_LINK_KINDS = ["website", "instagram", "tiktok", "video", "article", "map", "booking", "other"]
+_LINKS_PREVIEW = 5
 _PLACE_KINDS = ["hotel", "restaurant", "cafe", "activity", "museum", "attraction", "shop", "other"]
 _LEG_MODES = ["flight", "train", "bus", "ferry", "car", "other"]
 # Suggestions for the time zone fields; any IANA name can still be typed.
@@ -366,14 +368,52 @@ async def delete_visit(visit_id: int, delete_event: bool = False):
     return await forward(api.delete(path), "Could not delete the visit.")
 
 
+@router.post("/trips/{trip_id}/links")
+async def create_trip_link(trip_id: int, request: Request):
+    return await forward(api.post(f"/travel/trips/{trip_id}/links", json=await request.json()), "Could not add the link.")
+
+
+@router.post("/places/{place_id}/links")
+async def create_place_link(place_id: int, request: Request):
+    return await forward(api.post(f"/travel/places/{place_id}/links", json=await request.json()), "Could not add the link.")
+
+
+@router.get("/web-links/place/{place_id}")
+async def place_web_links(place_id: int):
+    return await forward(api.get(f"/travel/places/{place_id}/links"), "Could not read the place's links.")
+
+
+@router.patch("/web-links/{link_id}")
+async def update_web_link(link_id: int, request: Request):
+    return await forward(api.patch(f"/travel/links/{link_id}", json=await request.json()), "Could not update the link.")
+
+
+@router.delete("/web-links/{link_id}")
+async def delete_web_link(link_id: int):
+    return await forward(api.delete(f"/travel/links/{link_id}"), "Could not delete the link.")
+
+
+@router.get("/places/{place_id}/links", response_class=HTMLResponse)
+async def place_links_page(place_id: int, request: Request):
+    place = await safe_get(f"/travel/places/{place_id}")
+    if place is None:
+        return RedirectResponse("/travel/places", status_code=302)
+    links = await safe_get(f"/travel/places/{place_id}/links", default=[])
+    return templates.TemplateResponse(request, "travel_links.html", {
+        "owner_kind": "place", "owner_id": place_id, "owner_name": place["name"], "back_url": f"/travel/places/{place_id}",
+        "web_links": links, "link_kinds": _LINK_KINDS,
+    })
+
+
 @router.get("/places/{place_id}", response_class=HTMLResponse)
 async def place_page(place_id: int, request: Request):
     place = await safe_get(f"/travel/places/{place_id}")
     if place is None:
         return RedirectResponse("/travel/places", status_code=302)
     costs = await safe_get(f"/travel/places/{place_id}/costs")
+    links = await safe_get(f"/travel/places/{place_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_place.html", {
-        "place": place, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
+        "place": place, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
         "entity_costs": {"visits": {c["id"]: c for c in (costs or {}).get("visits", [])}},
     })
 
@@ -402,6 +442,18 @@ def _group_by_day(items: list[dict]) -> dict[str, list]:
     for item in items:
         days.setdefault(item["local"][:10], []).append(item)
     return days
+
+
+@router.get("/{trip_id}/links", response_class=HTMLResponse)
+async def trip_links_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}")
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    links = await safe_get(f"/travel/trips/{trip_id}/links", default=[])
+    return templates.TemplateResponse(request, "travel_links.html", {
+        "owner_kind": "trip", "owner_id": trip_id, "owner_name": trip["name"], "back_url": f"/travel/{trip_id}",
+        "web_links": links, "link_kinds": _LINK_KINDS,
+    })
 
 
 @router.get("/{trip_id}/timeline", response_class=HTMLResponse)
@@ -567,6 +619,7 @@ async def trip_page(trip_id: int, request: Request):
     unlinked = await safe_get(f"/travel/trips/{trip_id}/unlinked-transactions", default=[])
     tagged = await safe_get(f"/travel/trips/{trip_id}/tagged-transactions")
     notes = await safe_get("/organizer/notes", params={"limit": 200}, default=[])
+    web_links = await safe_get(f"/travel/trips/{trip_id}/links", default=[])
     checklist_note = (
         await safe_get(f"/organizer/notes/{trip['checklist_note_id']}") if trip.get("checklist_note_id") else None
     )
@@ -578,6 +631,7 @@ async def trip_page(trip_id: int, request: Request):
         visit_days.setdefault(visit["visit_date"], []).append(visit)
     return templates.TemplateResponse(request, "travel_trip.html", {
         "trip": trip,
+        "web_links": web_links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
         "empty_days": _empty_days(trip),
         "days": _group_by_day(preview),
         "today": local_today().isoformat(),

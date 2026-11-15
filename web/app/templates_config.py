@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi.templating import Jinja2Templates
@@ -114,3 +115,22 @@ templates.env.filters["short_date"] = _short_date
 templates.env.filters["compact_number"] = _compact_number
 templates.env.filters["money"] = _money
 templates.env.filters["country_flag"] = country_flag
+
+
+_LINK_ICONS = {
+    "website": "ti-world", "instagram": "ti-brand-instagram", "tiktok": "ti-brand-tiktok", "video": "ti-brand-youtube",
+    "map": "ti-map-2", "article": "ti-news", "booking": "ti-ticket", "other": "ti-link",
+}
+
+
+def _url_domain(url: str | None) -> str:
+    host = (urlsplit(url or "").hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host
+
+
+def _link_icon(kind: str | None) -> str:
+    return _LINK_ICONS.get(kind or "", "ti-link")
+
+
+templates.env.filters["url_domain"] = _url_domain
+templates.env.filters["link_icon"] = _link_icon

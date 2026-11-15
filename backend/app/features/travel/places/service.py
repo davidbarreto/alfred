@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.travel.notes_index import PLACE_NOTE, TravelNoteIndex
+from app.features.travel.notes_index import PLACE_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceLocations, PlaceRead, PlaceUpdate
@@ -14,6 +14,7 @@ from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitRead
+from app.features.travel.links.repository import WebLinkRepository
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class PlaceService:
         self._tag_repo = TravelTagRepository(session)
         self._visit_repo = VisitRepository(session)
         self._stay_repo = StayRepository(session)
+        self._web_link_repo = WebLinkRepository(session)
 
     async def _read_all(self, places: list[Place]) -> list[PlaceRead]:
         grades = await self._repo.get_grades([p.id for p in places])
@@ -85,6 +87,7 @@ class PlaceService:
         return (await self._read_all([place]))[0]
 
     async def delete_place(self, place_id: int) -> bool:
+        link_ids = await self._web_link_repo.get_link_ids(place_id=place_id)
         try:
             deleted = await self._repo.delete_place(place_id)
         except IntegrityError as exc:
@@ -93,4 +96,6 @@ class PlaceService:
         if deleted:
             logger.info("Place deleted: id=%d", place_id)
             await self._notes.remove(PLACE_NOTE, place_id)
+            for link_id in link_ids:
+                await self._notes.remove(WEB_LINK_NOTE, link_id)
         return deleted

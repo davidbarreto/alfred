@@ -8,7 +8,7 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.travel.checklist.service import ChecklistService
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.legs.schemas import LegRead
-from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, TravelNoteIndex
+from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayRead
@@ -19,6 +19,7 @@ from app.features.travel.trips.schemas import (
     TripCreate, TripDetail, TripFilters, TripListItem, TripLocations, TripRead, TripUpdate,
 )
 from app.features.travel.visits.repository import VisitRepository
+from app.features.travel.links.repository import WebLinkRepository
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
 from app.features.travel.trips.ideas import build_ideas
@@ -47,6 +48,7 @@ class TripService:
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)
         self._link_repo = TransactionLinkRepository(session)
+        self._web_link_repo = WebLinkRepository(session)
         self._checklist = ChecklistService(session)
         self.settings_service = TravelSettingsService(session)
         # The local calendar copy only: warnings never call Google.
@@ -181,10 +183,13 @@ class TripService:
     async def delete_trip(self, trip_id: int) -> bool:
         # Legs go with the trip, so their note embeddings must too; stays and visits keep theirs.
         leg_ids = [leg.id for leg in await self._leg_repo.get_legs(trip_id)]
+        link_ids = await self._web_link_repo.get_link_ids(trip_id=trip_id)
         deleted = await self._repo.delete_trip(trip_id)
         if deleted:
             logger.info("Trip deleted: id=%d", trip_id)
             await self._notes.remove(TRIP_NOTE, trip_id)
             for leg_id in leg_ids:
                 await self._notes.remove(LEG_NOTE, leg_id)
+            for link_id in link_ids:
+                await self._notes.remove(WEB_LINK_NOTE, link_id)
         return deleted

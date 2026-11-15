@@ -74,6 +74,8 @@ def trips():
     svc._visit_repo.get_trip_visits.return_value = []
     svc._link_repo = AsyncMock()
     svc._link_repo.get_linked_ids.return_value = set()
+    svc._web_link_repo = AsyncMock()
+    svc._web_link_repo.get_link_ids.return_value = []
     svc._checklist = AsyncMock()
     svc._checklist.is_pending.return_value = False
     svc.settings_service = AsyncMock()
@@ -336,6 +338,8 @@ def places():
     svc = PlaceService(AsyncMock())
     svc._repo = AsyncMock()
     svc._repo.get_grades.return_value = {}
+    svc._web_link_repo = AsyncMock()
+    svc._web_link_repo.get_link_ids.return_value = []
     svc._tag_repo = AsyncMock()
     svc._tag_repo.get_or_create_tags.return_value = []
     return svc

@@ -687,3 +687,83 @@ def test_visit_event_action_maps_reason_and_not_found():
     service.event_action.return_value = None
     assert client.post("/travel/visits/1/event", headers=AUTH, json={"action": "create"}).status_code == 404
     assert client.post("/travel/visits/1/event", headers=AUTH, json={"action": "explode"}).status_code == 422
+
+
+def _web_link(id=5, **kw):
+    from app.features.travel.links.schemas import WebLinkRead
+
+    base = dict(
+        id=id, trip_id=1, place_id=None, url="https://example.com/a", kind="website", title="Title", description=None,
+        image_url=None, notes=None, created_at=NOW, updated_at=NOW,
+    )
+    base.update(kw)
+    return WebLinkRead(**base)
+
+
+@pytest.fixture
+def web_links():
+    client, service = _client("get_web_link_service")
+    yield client, service
+    client.app.dependency_overrides.clear()
+
+
+class TestWebLinks:
+    def test_requires_a_token(self, web_links):
+        client, _ = web_links
+        assert client.get("/travel/trips/1/links").status_code in (401, 403)
+
+    def test_list_trip_links(self, web_links):
+        client, service = web_links
+        service.get_trip_links.return_value = [_web_link()]
+        r = client.get("/travel/trips/1/links", headers=AUTH)
+        assert r.status_code == 200 and r.json()[0]["url"] == "https://example.com/a"
+        service.get_trip_links.assert_awaited_once_with(1)
+
+    def test_list_for_an_unknown_parent_is_404(self, web_links):
+        client, service = web_links
+        service.get_trip_links.side_effect = TravelNotFoundError("Trip 9 not found")
+        service.get_place_links.side_effect = TravelNotFoundError("Place 9 not found")
+        assert client.get("/travel/trips/9/links", headers=AUTH).status_code == 404
+        assert client.get("/travel/places/9/links", headers=AUTH).status_code == 404
+
+    def test_create_place_link(self, web_links):
+        client, service = web_links
+        service.create_place_link.return_value = _web_link(trip_id=None, place_id=3, kind="booking")
+        r = client.post("/travel/places/3/links", json={"url": "https://example.com/a", "kind": "booking"}, headers=AUTH)
+        assert r.status_code == 201 and r.json()["place_id"] == 3
+        assert service.create_place_link.await_args.args[0] == 3
+
+    def test_create_rejects_a_non_web_url(self, web_links):
+        client, service = web_links
+        assert client.post("/travel/trips/1/links", json={"url": "ftp://example.com"}, headers=AUTH).status_code == 422
+        service.create_trip_link.assert_not_awaited()
+
+    def test_create_duplicate_is_409_and_unknown_parent_404(self, web_links):
+        from app.features.travel.errors import TravelConflictError
+
+        client, service = web_links
+        service.create_trip_link.side_effect = TravelConflictError("This link is already saved here")
+        assert client.post("/travel/trips/1/links", json={"url": "https://example.com/a"}, headers=AUTH).status_code == 409
+        service.create_place_link.side_effect = TravelNotFoundError("Place 9 not found")
+        assert client.post("/travel/places/9/links", json={"url": "https://example.com/a"}, headers=AUTH).status_code == 404
+
+    def test_get_update_delete(self, web_links):
+        client, service = web_links
+        service.get_link.return_value = _web_link()
+        assert client.get("/travel/links/5", headers=AUTH).status_code == 200
+        service.update_link.return_value = _web_link(title="New")
+        r = client.patch("/travel/links/5", json={"title": "New"}, headers=AUTH)
+        assert r.status_code == 200 and r.json()["title"] == "New"
+        service.delete_link.return_value = True
+        assert client.delete("/travel/links/5", headers=AUTH).status_code == 204
+
+    def test_unknown_link_is_404_and_null_url_is_422(self, web_links):
+        client, service = web_links
+        service.get_link.return_value = None
+        service.update_link.return_value = None
+        service.delete_link.return_value = False
+        assert client.get("/travel/links/9", headers=AUTH).status_code == 404
+        assert client.patch("/travel/links/9", json={"title": "x"}, headers=AUTH).status_code == 404
+        assert client.delete("/travel/links/9", headers=AUTH).status_code == 404
+        service.update_link.side_effect = ValueError("url cannot be null")
+        assert client.patch("/travel/links/5", json={"kind": None}, headers=AUTH).status_code == 422

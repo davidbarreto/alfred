@@ -133,6 +133,8 @@ from app.features.travel.stays.service import StayService
 from app.features.travel.tags.service import TravelTagService
 from app.features.travel.trips.service import TripService
 from app.features.travel.visits.service import VisitService
+from app.features.travel.links.service import WebLinkService
+from app.integrations.link_preview.client import LinkPreviewClient
 from app.shared.holiday import HolidayProvider
 from app.shared.pronunciation import PronunciationProvider
 from app.shared.conversation import ConversationProvider
@@ -658,6 +660,9 @@ def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayServic
 def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
     return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
 
+def get_web_link_service(session: AsyncSession = Depends(get_session)) -> WebLinkService:
+    return WebLinkService(session, LinkPreviewClient(), EmbeddingService(session, get_embedding_provider()))
+
 def get_travel_tag_service(session: AsyncSession = Depends(get_session)) -> TravelTagService:
     return TravelTagService(session)
 
@@ -841,4 +846,5 @@ TripSnoozeServiceDep = Annotated[TripSnoozeService, Depends(get_trip_snooze_serv
 TripForecastServiceDep = Annotated[TripForecastService, Depends(get_trip_forecast_service)]
 WhileAwayServiceDep = Annotated[WhileAwayService, Depends(get_while_away_service)]
 TripRecapServiceDep = Annotated[TripRecapService, Depends(get_trip_recap_service)]
+WebLinkServiceDep = Annotated[WebLinkService, Depends(get_web_link_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

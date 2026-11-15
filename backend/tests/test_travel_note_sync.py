@@ -76,6 +76,8 @@ class TestTrips:
     def svc(self, embeddings):
         svc = TripService(AsyncMock(), embeddings)
         svc._repo, svc._tag_repo, svc._leg_repo = AsyncMock(), AsyncMock(), AsyncMock()
+        svc._web_link_repo = AsyncMock()
+        svc._web_link_repo.get_link_ids.return_value = []
         svc._tag_repo.get_or_create_tags.return_value = [TravelTag(name="x")][:0]
         return svc
 
@@ -103,6 +105,14 @@ class TestTrips:
         await svc.delete_trip(1)
         removed = {c.args for c in embeddings.delete_by_source.await_args_list}
         assert removed == {("trip_note", 1), ("leg_note", 2), ("leg_note", 5)}
+
+    async def test_deleting_a_trip_drops_its_links_notes(self, svc, embeddings):
+        svc._leg_repo.get_legs.return_value = []
+        svc._web_link_repo.get_link_ids.return_value = [8, 9]
+        svc._repo.delete_trip.return_value = True
+        await svc.delete_trip(1)
+        removed = {c.args for c in embeddings.delete_by_source.await_args_list}
+        assert removed == {("trip_note", 1), ("web_link_note", 8), ("web_link_note", 9)}
 
     async def test_deleting_a_missing_trip_removes_nothing(self, svc, embeddings):
         svc._leg_repo.get_legs.return_value = []
@@ -190,6 +200,8 @@ class TestPlaces:
     def svc(self, embeddings):
         svc = PlaceService(AsyncMock(), embeddings)
         svc._repo, svc._tag_repo = AsyncMock(), AsyncMock()
+        svc._web_link_repo = AsyncMock()
+        svc._web_link_repo.get_link_ids.return_value = []
         svc._repo.get_grades.return_value = {}
         svc._tag_repo.get_or_create_tags.return_value = []
         return svc
@@ -207,6 +219,13 @@ class TestPlaces:
         svc._repo.delete_place.return_value = True
         await svc.delete_place(3)
         assert embeddings.delete_by_source.await_args.args == ("place_note", 3)
+
+    async def test_deleting_a_place_drops_its_links_notes(self, svc, embeddings):
+        svc._web_link_repo.get_link_ids.return_value = [4]
+        svc._repo.delete_place.return_value = True
+        await svc.delete_place(3)
+        removed = {c.args for c in embeddings.delete_by_source.await_args_list}
+        assert removed == {("place_note", 3), ("web_link_note", 4)}
 
     async def test_a_refused_delete_keeps_the_embedding(self, svc, embeddings):
         svc._repo.delete_place.return_value = False

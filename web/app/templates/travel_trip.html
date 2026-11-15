@@ -240,6 +240,9 @@
     </div>
   </div>
 
+  {% set owner_kind = 'trip' %}{% set owner_id = trip.id %}{% set links_url = '/travel/' ~ trip.id ~ '/links' %}
+  {% include "_travel_web_links_card.html" %}
+
   {% if forecast and forecast.mode != 'none' %}
   <div class="card bg-white" id="forecast">
     <div class="card-body p-5 space-y-2">
@@ -327,6 +330,7 @@
 
   {% include "_travel_tx_dialog.html" %}
   {% include "_travel_detail_dialog.html" %}
+  {% include "_travel_web_link_dialog.html" %}
 
   <dialog id="link-dialog" class="modal">
     <div class="modal-box max-w-2xl space-y-3">
@@ -423,12 +427,14 @@
 <script src="/static/js/travel-place-history.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
 <script src="/static/js/travel-detail.js"></script>
+<script src="/static/js/travel-web-links.js"></script>
 {% include "_travel_tx_detail_dialog.html" %}
 <script src="/static/js/travel-unlinked.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
 initTravelTransactions();
 initTravelDetail();
+initWebLinks();
 const TRIP_ID = {{ trip.id }};
 const TRIP_START = {{ trip.start_date | tojson }};
 const TRIP_END = {{ trip.end_date | tojson }};

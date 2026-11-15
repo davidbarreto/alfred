@@ -72,7 +72,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/links": [], "/travel/places/3/links": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -1279,3 +1279,104 @@ def test_link_dialog_falls_back_to_the_bank_description():
     from pathlib import Path
     script = (Path(__file__).parent.parent / "app/static/js/travel-transactions.js").read_text()
     assert "t.merchant || t.description || t.bank_description" in script
+
+
+def _web_link(id=5, **kw):
+    link = {"id": id, "trip_id": 1, "place_id": None, "url": "https://www.example.com/visit", "kind": "website",
+            "title": "Official visit site", "description": "Plan your stay", "image_url": "https://img.example.com/c.jpg",
+            "notes": "Best tips are on the second page", "created_at": "2026-11-15T00:00:00Z", "updated_at": "2026-11-15T00:00:00Z"}
+    link.update(kw)
+    return link
+
+
+class TestLinks:
+    def test_trip_card_shows_title_domain_and_note_but_no_preview(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/links": [_web_link()], "/travel/trips/1/costs": None,
+                          "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="web-links"' in html and "Official visit site" in html and "example.com" in html
+        assert "Best tips are on the second page" in html
+        assert 'target="_blank"' in html and "noopener" in html
+        assert "img.example.com" not in html and "Plan your stay" not in html
+
+    def test_trip_card_empty_state_and_add_button(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert "No links yet" in html and 'data-owner-kind="trip"' in html and 'data-owner-id="1"' in html
+
+    def test_trip_card_is_capped_with_a_see_all_link(self, client, mock_api):
+        links = [_web_link(id=n, title=f"Link {n}", url=f"https://example.com/{n}") for n in range(1, 9)]
+        _route(mock_api, {"/travel/trips/1/links": links, "/travel/trips/1/costs": None,
+                          "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert "Link 5" in html and "Link 6" not in html
+        assert 'href="/travel/1/links"' in html and "See all 8 links" in html
+
+    def test_a_link_without_title_shows_its_domain(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/links": [_web_link(title=None, notes=None)], "/travel/trips/1/costs": None,
+                          "/travel/trips/1": _detail(), "/travel/places": []})
+        assert ">example.com</a>" in client.get("/travel/1").text
+
+    def test_links_survive_a_backend_failure(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/links": httpx.ConnectError("down"), "/travel/trips/1/costs": None,
+                          "/travel/trips/1": _detail(), "/travel/places": []})
+        resp = client.get("/travel/1")
+        assert resp.status_code == 200 and "No links yet" in resp.text
+
+    def test_place_card(self, client, mock_api):
+        place = _place(visits=[], stays=[])
+        _route(mock_api, {"/travel/places/3/links": [_web_link(trip_id=None, place_id=3, kind="instagram", title=None,
+                                                                 url="https://www.instagram.com/example_cafe/")],
+                          "/travel/places/3/costs": None, "/travel/places/3": place})
+        html = client.get("/travel/places/3").text
+        assert 'data-owner-kind="place"' in html and "ti-brand-instagram" in html and "instagram.com" in html
+
+    def test_trip_links_page_shows_the_preview(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/links": [_web_link()], "/travel/trips/1": _detail()})
+        html = client.get("/travel/1/links").text
+        assert "Official visit site" in html and "Plan your stay" in html and "img.example.com/c.jpg" in html
+        assert 'href="/travel/1"' in html
+
+    def test_place_links_page(self, client, mock_api):
+        _route(mock_api, {"/travel/places/3/links": [_web_link(trip_id=None, place_id=3)], "/travel/places/3": _place(visits=[], stays=[])})
+        html = client.get("/travel/places/3/links").text
+        assert "Official visit site" in html and 'href="/travel/places/3"' in html and 'data-owner-kind="place"' in html
+
+    def test_links_pages_redirect_for_unknown_parents(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/9": None, "/travel/places/9": None})
+        assert client.get("/travel/9/links", follow_redirects=False).headers["location"] == "/travel"
+        assert client.get("/travel/places/9/links", follow_redirects=False).headers["location"] == "/travel/places"
+
+    def test_post_is_proxied_for_trips_and_places(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 5}
+        assert client.post("/travel/trips/1/links", json={"url": "https://example.com"}).json() == {"id": 5}
+        mock_api["post"].assert_awaited_with("/travel/trips/1/links", json={"url": "https://example.com"})
+        client.post("/travel/places/3/links", json={"url": "https://example.com"})
+        mock_api["post"].assert_awaited_with("/travel/places/3/links", json={"url": "https://example.com"})
+
+    def test_patch_and_delete_are_proxied(self, client, mock_api):
+        mock_api["patch"].return_value = {"id": 5}
+        assert client.patch("/travel/web-links/5", json={"title": "New"}).status_code == 200
+        mock_api["patch"].assert_awaited_once_with("/travel/links/5", json={"title": "New"})
+        mock_api["delete"].return_value = None
+        assert client.delete("/travel/web-links/5").status_code == 200
+        mock_api["delete"].assert_awaited_once_with("/travel/links/5")
+
+    def test_place_links_for_the_visit_details_are_proxied(self, client, mock_api):
+        mock_api["get"].return_value = [_web_link()]
+        resp = client.get("/travel/web-links/place/3")
+        assert resp.status_code == 200 and resp.json()[0]["id"] == 5
+        mock_api["get"].assert_awaited_once_with("/travel/places/3/links")
+
+    def test_duplicate_message_is_relayed(self, client, mock_api):
+        mock_api["post"].side_effect = _status_error(409, "This link is already saved here")
+        resp = client.post("/travel/trips/1/links", json={"url": "https://example.com"})
+        assert resp.status_code == 409 and resp.json() == {"error": "This link is already saved here"}
+
+    def test_visit_rows_do_not_carry_the_places_links(self, client, mock_api):
+        detail = _detail(visits=[_visit()])
+        _route(mock_api, {"/travel/trips/1/links": [], "/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": [_place()]})
+        html = client.get("/travel/1").text
+        assert 'id="visit-11"' in html
+        # Place links reach a visit's details on demand, never through the page.
+        assert "/travel/places/3/links" not in [c.args[0] for c in mock_api["get"].await_args_list]

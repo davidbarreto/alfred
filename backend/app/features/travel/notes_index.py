@@ -14,7 +14,8 @@ LEG_NOTE = "leg_note"
 STAY_NOTE = "stay_note"
 VISIT_NOTE = "visit_note"
 PLACE_NOTE = "place_note"
-NOTE_SOURCE_TYPES = (TRIP_NOTE, LEG_NOTE, STAY_NOTE, VISIT_NOTE, PLACE_NOTE)
+WEB_LINK_NOTE = "web_link_note"
+NOTE_SOURCE_TYPES = (TRIP_NOTE, LEG_NOTE, STAY_NOTE, VISIT_NOTE, PLACE_NOTE, WEB_LINK_NOTE)
 
 
 def note_text(label: str, notes: str) -> str:

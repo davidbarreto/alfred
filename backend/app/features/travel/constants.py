@@ -10,6 +10,9 @@ LegMode: TypeAlias = Literal["flight", "train", "bus", "ferry", "car", "other"]
 VISIT_STATUSES = ("planned", "visited", "missed")
 VisitStatus: TypeAlias = Literal["planned", "visited", "missed"]
 
+WEB_LINK_KINDS = ("website", "instagram", "tiktok", "video", "article", "map", "booking", "other")
+WebLinkKind: TypeAlias = Literal["website", "instagram", "tiktok", "video", "article", "map", "booking", "other"]
+
 TRIP_STATUS_FILTERS = ("current", "upcoming", "ongoing", "past", "all")
 TripStatusFilter: TypeAlias = Literal["current", "upcoming", "ongoing", "past", "all"]
 

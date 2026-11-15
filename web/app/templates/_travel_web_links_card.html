@@ -1,0 +1,14 @@
+{# Links card for a trip or place. Needs owner_kind ('trip'|'place'), owner_id, web_links, links_preview, links_url. #}
+<div class="card bg-white" id="web-links">
+  <div class="card-body p-5 space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-900">Links <span class="text-xs font-normal text-gray-400">{{ web_links | length }}</span></h2>
+      <button type="button" class="btn btn-xs btn-outline add-web-link" data-owner-kind="{{ owner_kind }}" data-owner-id="{{ owner_id }}">Add link</button>
+    </div>
+    {% for l in web_links[:links_preview] %}{% set show_preview = false %}{% include "_travel_web_link_row.html" %}
+    {% else %}<p class="text-sm text-gray-400">No links yet: official sites, tips, videos.</p>{% endfor %}
+    {% if web_links | length > links_preview %}
+    <a href="{{ links_url }}" class="text-xs text-[#378ADD] hover:underline">See all {{ web_links | length }} links</a>
+    {% endif %}
+  </div>
+</div>

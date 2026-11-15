@@ -62,6 +62,8 @@ function initTravelDetail() {
     }),
   };
 
+  let renderToken = 0;
+
   function render(kind, data) {
     const view = builders[kind](data);
     title.textContent = view.title;
@@ -89,7 +91,37 @@ function initTravelDetail() {
       row.append(term, desc);
       body.appendChild(row);
     }
+    renderToken += 1;
+    if (kind === 'visit') appendPlaceLinks(data.place_id, renderToken);
     dialog.showModal();
+  }
+
+  // The place's links, read-only: a visit inherits them (they are managed on the place page).
+  async function appendPlaceLinks(placeId, token) {
+    let links = [];
+    try {
+      const res = await fetch(`/travel/web-links/place/${placeId}`);
+      if (res.ok) links = await res.json();
+    } catch (err) { return; }
+    if (!links.length || token !== renderToken) return; // another row was opened meanwhile
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-3 gap-2 text-sm';
+    const term = document.createElement('span');
+    term.className = 'text-xs text-gray-500';
+    term.textContent = 'Links';
+    const list = document.createElement('span');
+    list.className = 'col-span-2 space-y-1';
+    for (const item of links) {
+      const a = document.createElement('a');
+      a.href = item.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = 'block text-[#378ADD] hover:underline break-words';
+      a.textContent = item.title || new URL(item.url).hostname.replace(/^www\./, '');
+      list.appendChild(a);
+    }
+    row.append(term, list);
+    body.appendChild(row);
   }
 
   document.querySelectorAll('.detail-row').forEach((row) => row.addEventListener('click', (event) => {

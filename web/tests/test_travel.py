@@ -26,8 +26,12 @@ def _leg(id=1):
     }
 
 
+def _city(name="Beta", country="Testland", code=None):
+    return {"id": 1, "name": name, "country": {"id": 1, "name": country, "code": code}}
+
+
 def _place(**kw):
-    place = {"id": 3, "kind": "hotel", "name": "Hotel Example", "city": "Beta", "country": None, "maps_url": None,
+    place = {"id": 3, "kind": "hotel", "name": "Hotel Example", "city": _city("Beta"), "maps_url": None,
              "lat": None, "lng": None, "address": None, "notes": None, "maps_link": "https://maps.example/x",
              "tags": [], "grade": None, "grade_count": 0}
     place.update(kw)
@@ -36,7 +40,7 @@ def _place(**kw):
 
 def _visit(id=11, status="planned", day="2026-12-18", grade=None, **kw):
     return {
-        "id": id, "place_id": 3, "place": {"id": 3, "kind": "restaurant", "name": "Cafe Example", "city": "Beta",
+        "id": id, "place_id": 3, "place": {"id": 3, "kind": "restaurant", "name": "Cafe Example", "city": _city("Beta"),
                                           "maps_url": None, "lat": None, "lng": None, "maps_link": "https://maps.example/c"},
         "trip_id": 1, "trip_name": "Example trip", "status": status, "visit_date": day,
         "visit_time": kw.get("time", "20:00:00"), "notes": kw.get("notes"), "grade": grade,
@@ -296,6 +300,40 @@ class TestTripPage:
     def test_stay_form_offers_known_hotels(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
         assert 'value="3"' in client.get("/travel/1").text
+
+
+class TestCities:
+    def test_search_forwards_the_query_to_the_backend(self, client, mock_api):
+        mock_api["get"].return_value = [_city("Alpha")]
+        resp = client.get("/travel/cities/search?q= alp ")
+        assert resp.status_code == 200 and resp.json()[0]["name"] == "Alpha"
+        mock_api["get"].assert_awaited_once_with("/travel/cities", params={"q": "alp"})
+
+    def test_search_failure_is_502(self, client, mock_api):
+        mock_api["get"].side_effect = httpx.ConnectError("down")
+        assert client.get("/travel/cities/search?q=al").status_code == 502
+
+    def test_create_is_proxied_and_a_conflict_is_relayed(self, client, mock_api):
+        body = {"name": "Alpha", "country": "Testland", "country_code": "TL"}
+        mock_api["post"].return_value = _city("Alpha")
+        assert client.post("/travel/cities", json=body).status_code == 200
+        mock_api["post"].assert_awaited_once_with("/travel/cities", json=body)
+        mock_api["post"].side_effect = _status_error(409, "Alpha already exists in Testland")
+        resp = client.post("/travel/cities", json=body)
+        assert resp.status_code == 409 and "already exists" in resp.json()["error"]
+
+
+class TestLegFormCities:
+    def test_each_end_has_a_city_picker_and_the_new_city_dialog_exists(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
+        html = client.get("/travel/1").text
+        for name in ("origin_city_text", "origin_city_id", "destination_city_text", "destination_city_id", 'id="city-dialog"'):
+            assert name in html
+        assert "/static/js/travel-city-picker.js" in html
+
+    def test_a_stay_shows_its_places_city_name(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
+        assert "Hotel Example (Beta)" in client.get("/travel/1").text
 
 
 class TestWrites:

@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects import postgresql
 
+from travel_city_helpers import city_ref
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.places.schemas import PlaceFilters, PlaceRead
 from app.features.travel.recap.builder import build_recap
@@ -22,7 +23,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 def _place(name="Hotel Example", city="Lisbon", country="Portugal", kind="hotel"):
     return PlaceRead(
-        id=3, kind=kind, name=name, city=city, country=country, maps_url=None, lat=None, lng=None, address=None, notes=None,
+        id=3, kind=kind, name=name, city=city_ref(city, country), maps_url=None, lat=None, lng=None, address=None, notes=None,
         created_at=NOW, updated_at=NOW,
     )
 
@@ -38,7 +39,7 @@ def _stay(id=7, grade=None, notes=None, place=None, check_in=datetime(2031, 12, 
 
 def _visit(id=11, status="visited", grade=None, notes=None, name="Cafe Example", city="Porto", country="Portugal", day=date(2031, 12, 19)):
     return VisitRead(
-        id=id, place_id=20 + id, place=VisitPlace(id=20 + id, kind="restaurant", name=name, city=city, country=country,
+        id=id, place_id=20 + id, place=VisitPlace(id=20 + id, kind="restaurant", name=name, city=city_ref(city, country),
                                                  maps_url=None, lat=None, lng=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=day, visit_time=time(20, 0), notes=notes, grade=grade,
         created_at=NOW, updated_at=NOW,
@@ -185,8 +186,8 @@ async def _sql(call) -> str:
 class TestFilterSql:
     async def test_trip_city_and_country_look_at_stays_and_visits(self):
         sql = await _sql(lambda s: TripRepository(s).get_trips(TripFilters(status="all", city="Lisbon", country="Portugal"), date(2026, 6, 5)))
-        assert "travel.stays" in sql and "travel.visits" in sql and "lower(travel.places.city) = 'lisbon'" in sql
-        assert "lower(travel.places.country) = 'portugal'" in sql and " OR " in sql
+        assert "travel.stays" in sql and "travel.visits" in sql and "lower(travel.cities.name) = 'lisbon'" in sql
+        assert "lower(travel.countries.name) = 'portugal'" in sql and " OR " in sql
 
     async def test_ungraded_places_are_those_without_any_grade(self):
         sql = await _sql(lambda s: PlaceRepository(s).get_places(PlaceFilters(ungraded=True)))

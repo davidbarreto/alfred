@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timezone
 
+from travel_city_helpers import city_ref
 from app.features.travel.visits.note_log import append_note, pick_note_visit
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
@@ -7,7 +8,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 def _visit(id, day, at=None, status="planned", notes=None):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city="Beta", maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref("Beta"), maps_url=None, lat=None, lng=None)
     return VisitRead(
         id=id, place_id=id, place=place, trip_id=1, trip_name="T", status=status,
         visit_date=date(2026, 12, day) if day else None, visit_time=at, notes=notes, grade=None,

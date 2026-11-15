@@ -135,6 +135,8 @@ async def _find_place(
         return exact[0]
     if not create:
         raise _not_found("Place", repr(ref))
+    if not city or not country:
+        raise _bad_request(f"Which city and country is {ref} in?")
     data = build_model(PlaceCreate, kind=kind or "other", name=ref, city=city, country=country)
     return await services.places.create_place(data)
 
@@ -159,7 +161,7 @@ def _leg_summary(leg: LegRead) -> dict[str, Any]:
 
 def _stay_summary(stay: StayRead) -> dict[str, Any]:
     return {
-        "id": stay.id, "place_id": stay.place_id, "place": stay.place.name, "city": stay.place.city,
+        "id": stay.id, "place_id": stay.place_id, "place": stay.place.name, "city": stay.place.city.name,
         "check_in": stay.check_in_local.isoformat(timespec="minutes"), "check_out": stay.check_out_local.isoformat(timespec="minutes"),
         "timezone": stay.timezone, "booking_ref": stay.booking_ref, "grade": stay.grade, "notes": stay.notes,
     }
@@ -167,7 +169,7 @@ def _stay_summary(stay: StayRead) -> dict[str, Any]:
 
 def _visit_summary(visit: VisitRead) -> dict[str, Any]:
     return {
-        "id": visit.id, "place_id": visit.place_id, "place": visit.place.name, "city": visit.place.city,
+        "id": visit.id, "place_id": visit.place_id, "place": visit.place.name, "city": visit.place.city.name,
         "trip_id": visit.trip_id, "status": visit.status,
         "date": visit.visit_date.isoformat() if visit.visit_date else None,
         "time": visit.visit_time.isoformat(timespec="minutes") if visit.visit_time else None,
@@ -177,7 +179,7 @@ def _visit_summary(visit: VisitRead) -> dict[str, Any]:
 
 def _place_summary(place: PlaceRead) -> dict[str, Any]:
     return {
-        "id": place.id, "kind": place.kind, "name": place.name, "city": place.city, "country": place.country,
+        "id": place.id, "kind": place.kind, "name": place.name, "city": place.city.name, "country": place.city.country.name,
         "grade": place.grade, "grade_count": place.grade_count, "tags": place.tags, "notes": place.notes,
         "maps_link": place.maps_link,
     }
@@ -426,6 +428,8 @@ async def _place(command: str, arguments: dict[str, Any], services: TravelServic
         fields["tags"] = parse_tags(arguments.get("tags"))
 
     if command == "add":
+        if not fields.get("city") or not fields.get("country"):
+            raise _bad_request(f"Which city and country is {_text(arguments, 'name')} in?")
         place = await services.places.create_place(build_model(PlaceCreate, name=_text(arguments, "name"), **{
             "kind": "other", **{k: v for k, v in fields.items() if v is not None},
         }))

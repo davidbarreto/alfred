@@ -13,7 +13,7 @@
       <div class="flex items-start justify-between gap-3">
         <div>
           <h1 class="text-base font-semibold text-gray-900">{{ place.name }}</h1>
-          <p class="text-xs text-gray-500">{{ place.kind }}{% if place.city %} · {{ place.city }}{% endif %}{% if place.country %}, {{ place.country }}{% endif %}</p>
+          <p class="text-xs text-gray-500">{{ place.kind }} · {{ place.city.country | country_flag_of }} {{ place.city.name }}, {{ place.city.country.name }}</p>
           {% if place.address %}<p class="text-xs text-gray-400">{{ place.address }}</p>{% endif %}
           <a class="text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener">Open in maps</a>
         </div>
@@ -36,9 +36,9 @@
           <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
             <select name="kind" class="select select-sm select-bordered">{% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if k == place.kind }}>{{ k }}</option>{% endfor %}</select></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
-            <input name="city" value="{{ place.city or '' }}" class="input input-sm input-bordered w-36"></label>
+            <input name="city" value="{{ place.city.name }}" required class="input input-sm input-bordered w-36"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
-            <input name="country" value="{{ place.country or '' }}" class="input input-sm input-bordered w-36"></label>
+            <input name="country" value="{{ place.city.country.name }}" required class="input input-sm input-bordered w-36"><input type="hidden" name="country_code" value="{{ place.city.country.code or '' }}"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link</span>
             <input name="maps_url" value="{{ place.maps_url or '' }}" class="input input-sm input-bordered w-64"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Latitude (optional)</span>
@@ -112,12 +112,15 @@ async function send(method, url, body) {
 }
 
 const editPlaceForm = document.getElementById('edit-place');
-initCityInput({ input: editPlaceForm.elements.city, countryInput: editPlaceForm.elements.country });
+initCityInput({ input: editPlaceForm.elements.city, countryInput: editPlaceForm.elements.country, codeInput: editPlaceForm.elements.country_code });
 document.getElementById('edit-place').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;
   const body = { name: form.elements.name.value, kind: form.elements.kind.value };
-  for (const name of ['city', 'country', 'maps_url', 'address', 'notes']) body[name] = form.elements[name].value.trim() || null;
+  for (const name of ['maps_url', 'address', 'notes']) body[name] = form.elements[name].value.trim() || null;
+  body.city = form.elements.city.value.trim();
+  body.country = form.elements.country.value.trim();
+  if (form.elements.country_code.value) body.country_code = form.elements.country_code.value;
   for (const name of ['lat', 'lng']) body[name] = form.elements[name].value === '' ? null : Number(form.elements[name].value);
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
   const { ok, data } = await send('PATCH', '/travel/places/{{ place.id }}', body);

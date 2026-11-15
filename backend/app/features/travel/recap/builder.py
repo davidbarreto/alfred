@@ -19,8 +19,8 @@ def build_recap(trip: TripDetail, costs: TripCosts | None) -> TripRecap:
     visited = [v for v in trip.visits if v.status == "visited"]
     # Where the trip actually went: stays, and visits that happened (a missed or planned one did not).
     places = [s.place for s in trip.stays]
-    place_cities = _distinct([*(p.city for p in places), *(v.place.city for v in visited)])
-    countries = _distinct([*(p.country for p in places), *(v.place.country for v in visited)])
+    place_cities = _distinct([*(p.city.name for p in places), *(v.place.city.name for v in visited)])
+    countries = _distinct([*(p.city.country.name for p in places), *(v.place.city.country.name for v in visited)])
 
     to_complete: list[RecapItem] = []
     for v in visited:

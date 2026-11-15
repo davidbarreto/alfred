@@ -3,6 +3,7 @@ from typing import Any
 from sqlalchemy import func, or_, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.cities.tables import City, Country
 from app.features.travel.places.schemas import PlaceFilters
 from app.features.travel.places.tables import Place
 from app.features.travel.stays.tables import Stay
@@ -25,18 +26,18 @@ class PlaceRepository:
         return await self._session.get(Place, place_id)
 
     async def get_places(self, filters: PlaceFilters) -> list[Place]:
-        stmt = select(Place)
+        stmt = select(Place).join(City, City.id == Place.city_id).join(Country, Country.id == City.country_id)
         if filters.q:
             pattern = f"%{filters.q.strip().lower()}%"
             stmt = stmt.where(
-                or_(*(func.lower(col).like(pattern) for col in (Place.name, Place.city, Place.country, Place.address)))
+                or_(*(func.lower(col).like(pattern) for col in (Place.name, City.name, Country.name, Place.address)))
             )
         if filters.kind:
             stmt = stmt.where(Place.kind == filters.kind)
         if filters.city:
-            stmt = stmt.where(func.lower(Place.city) == filters.city.strip().lower())
+            stmt = stmt.where(func.lower(City.name) == filters.city.strip().lower())
         if filters.country:
-            stmt = stmt.where(func.lower(Place.country) == filters.country.strip().lower())
+            stmt = stmt.where(func.lower(Country.name) == filters.country.strip().lower())
         for tag_name in filters.tag or []:
             tagged = (
                 select(places_tags.c.place_id)
@@ -62,9 +63,12 @@ class PlaceRepository:
 
     async def get_locations(self) -> tuple[list[str], list[str]]:
         """Distinct cities and countries over all places, sorted case-insensitively."""
-        rows = (await self._session.execute(select(Place.city, Place.country))).all()
-        cities = {city for city, _ in rows if city}
-        countries = {country for _, country in rows if country}
+        stmt = select(City.name, Country.name).join(Country, Country.id == City.country_id).where(
+            City.id.in_(select(Place.city_id))
+        )
+        rows = (await self._session.execute(stmt)).all()
+        cities = {city for city, _ in rows}
+        countries = {country for _, country in rows}
         return sorted(cities, key=str.casefold), sorted(countries, key=str.casefold)
 
     async def get_grades(self, place_ids: list[int]) -> dict[int, tuple[float, int]]:

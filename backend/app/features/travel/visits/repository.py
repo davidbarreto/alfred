@@ -3,6 +3,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.cities.tables import City
 from app.features.travel.places.tables import Place
 from app.features.travel.visits.schemas import VisitFilters
 from app.features.travel.visits.tables import Visit
@@ -55,8 +56,8 @@ class VisitRepository:
         if not lowered:
             return []
         stmt = (
-            select(Visit).join(Place, Visit.place_id == Place.id)
-            .where(Visit.trip_id.is_(None), Visit.status == "planned", func.lower(Place.city).in_(lowered))
+            select(Visit).join(Place, Visit.place_id == Place.id).join(City, City.id == Place.city_id)
+            .where(Visit.trip_id.is_(None), Visit.status == "planned", func.lower(City.name).in_(lowered))
             .order_by(*_ORDER)
         )
         return list((await self._session.scalars(stmt)).all())

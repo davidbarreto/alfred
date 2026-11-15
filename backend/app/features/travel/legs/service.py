@@ -3,6 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.travel.cities.repository import CityRepository
 from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.repository import LegRepository
@@ -20,6 +21,7 @@ class LegService:
     def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = LegRepository(session)
+        self._city_repo = CityRepository(session)
         self._trip_repo = TripRepository(session)
         self._event_links = EventLinkChecker(session)
 
@@ -32,12 +34,25 @@ class LegService:
         leg = await self._repo.get_leg(leg_id)
         return LegRead.model_validate(leg) if leg else None
 
+    async def _end_city(self, sent: bool, city_id: int | None, text: str | None) -> int | None:
+        """A leg end's city: the one sent (it must exist), else the only city named like the terminal text."""
+        if sent:
+            if city_id is not None and await self._city_repo.get_city(city_id) is None:
+                raise TravelNotFoundError(f"City {city_id} not found")
+            return city_id
+        return await self._city_repo.find_unique_city_id(text) if text else None
+
     async def create_leg(self, data: LegCreate) -> LegRead:
         if await self._trip_repo.get_trip(data.trip_id) is None:
             raise TravelNotFoundError(f"Trip {data.trip_id} not found")
         if data.calendar_event_id is not None:
             await self._event_links.ensure_free(data.calendar_event_id)
-        leg = await self._repo.create_leg(data.model_dump())
+        fields = data.model_dump()
+        for end in ("origin", "destination"):
+            fields[f"{end}_city_id"] = await self._end_city(
+                f"{end}_city_id" in data.model_fields_set, fields[f"{end}_city_id"], fields[end]
+            )
+        leg = await self._repo.create_leg(fields)
         logger.info("Leg created: id=%d trip_id=%d mode=%s", leg.id, leg.trip_id, leg.mode)
         await self._notes.sync(LEG_NOTE, leg.id, f"{leg.origin} to {leg.destination} ({leg.mode})", leg.notes)
         return LegRead.model_validate(leg)
@@ -53,6 +68,10 @@ class LegService:
                 raise ValueError(f"{field} cannot be null")
         if changes.get("calendar_event_id") is not None:
             await self._event_links.ensure_free(changes["calendar_event_id"], "leg", leg_id)
+        for end in ("origin", "destination"):
+            sent = f"{end}_city_id" in changes
+            if sent or end in changes:
+                changes[f"{end}_city_id"] = await self._end_city(sent, changes.get(f"{end}_city_id"), changes.get(end))
         departs_tz = changes.get("departs_tz", leg.departs_tz)
         arrives_tz = changes.get("arrives_tz", leg.arrives_tz)
         if "departs_at" in changes:

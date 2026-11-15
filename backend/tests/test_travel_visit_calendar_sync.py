@@ -4,11 +4,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from travel_city_helpers import city_ref
 from app.features.travel.visits.calendar_sync import VisitCalendarSync, event_description, event_location
 
 
 def _place(**kw):
-    base = dict(name="Cafe Example", city="Lisbon", address=None, maps_url=None, lat=None, lng=None)
+    base = dict(name="Cafe Example", city=city_ref("Lisbon"), address=None, maps_url=None, lat=None, lng=None)
     base.update(kw)
     return SimpleNamespace(**base)
 

@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timezone
 
+from travel_city_helpers import city_ref
 from app.features.travel.trips.schemas import TripDetail
 from app.features.travel.trips.timeline import TimelineItem
 from app.features.travel.trips.today import build_today
@@ -13,7 +14,7 @@ def _item(id, at):
 
 
 def _visit(id, day, at=None, status="planned"):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city="Beta", maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref("Beta"), maps_url=None, lat=None, lng=None)
     return VisitRead(
         id=id, place_id=id, place=place, trip_id=1, trip_name="T", status=status, visit_date=day, visit_time=at,
         notes=None, grade=None, created_at=NOW, updated_at=NOW,
@@ -56,7 +57,7 @@ class TestBuildToday:
         from app.features.travel.places.schemas import PlaceRead
         from app.features.travel.stays.schemas import StayRead
 
-        place = PlaceRead(id=1, kind="hotel", name="Hotel", city="Beta", country=None, maps_url=None, lat=None,
+        place = PlaceRead(id=1, kind="hotel", name="Hotel", city=city_ref("Beta"), maps_url=None, lat=None,
                           lng=None, address=None, notes=None, created_at=NOW, updated_at=NOW)
         stay = StayRead(id=1, trip_id=1, place_id=1, place=place, check_in_at=_at(10, 12), check_out_at=_at(14, 9),
                         timezone="Asia/Tokyo", booking_ref=None, booking_url=None, notes=None, grade=None,

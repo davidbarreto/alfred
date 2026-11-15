@@ -39,8 +39,8 @@ def _location(place: PlaceRead | VisitPlace) -> str:
         return f"{place.lat},{place.lng}"
     address = getattr(place, "address", None)  # a visit's place slice has no address
     if address:
-        return ", ".join(p for p in (place.name, address, place.city) if p)
-    return ", ".join(p for p in (place.name, place.city, place.country) if p)
+        return ", ".join(p for p in (place.name, address, place.city.name) if p)
+    return ", ".join(p for p in (place.name, place.city.name, place.city.country.name) if p)
 
 
 def _stay_text(stay: StayRead) -> str:

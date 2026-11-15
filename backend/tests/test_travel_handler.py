@@ -5,9 +5,11 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 
+from travel_city_helpers import city_ref
 from app.assistant.commands.handlers.travel import TravelServices, handle_travel
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
+from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.schemas import PlaceCreate, PlaceRead
 from app.features.travel.places.service import PlaceInUseError
 from app.features.travel.stays.schemas import StayCreate, StayRead
@@ -27,7 +29,7 @@ def _trip(id=1, name="Example trip", **kw):
 
 
 def _place(id=3, name="Hotel Example", kind="hotel", **kw):
-    base = dict(id=id, kind=kind, name=name, city="Lisbon", country=None, maps_url=None, lat=None, lng=None, address=None,
+    base = dict(id=id, kind=kind, name=name, city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None, address=None,
                 notes=None, tags=[], grade=None, grade_count=0, created_at=NOW, updated_at=NOW)
     base.update(kw)
     return PlaceRead(**base)
@@ -52,7 +54,7 @@ def _stay(id=7):
 
 def _visit(id=11, status="planned", grade=None):
     return VisitRead(
-        id=id, place_id=3, place=VisitPlace(id=3, kind="museum", name="Museum Example", city="Lisbon", maps_url=None, lat=None, lng=None),
+        id=id, place_id=3, place=VisitPlace(id=3, kind="museum", name="Museum Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=date(2031, 12, 18), visit_time=time(10, 0), notes=None,
         grade=grade, created_at=NOW, updated_at=NOW,
     )
@@ -265,11 +267,11 @@ class TestStays:
         services.places.create_place.return_value = _place()
         services.stays.create_stay.return_value = _stay()
         await run("travel_stay", "add", {
-            "trip_id": "1", "hotel": "Hotel Example", "city": "Lisbon", "check_in": "2031-12-18T15:00",
+            "trip_id": "1", "hotel": "Hotel Example", "city": "Lisbon", "country": "Portugal", "check_in": "2031-12-18T15:00",
             "check_out": "2031-12-20T11:00", "tz": "Europe/Lisbon",
         }, services)
         place: PlaceCreate = services.places.create_place.await_args.args[0]
-        assert (place.kind, place.name, place.city) == ("hotel", "Hotel Example", "Lisbon")
+        assert (place.kind, place.name, place.city, place.country) == ("hotel", "Hotel Example", "Lisbon", "Portugal")
         data: StayCreate = services.stays.create_stay.await_args.args[0]
         assert data.place_id == 3 and data.trip_id == 1
 
@@ -277,7 +279,7 @@ class TestStays:
         services.places.get_places.return_value = [_place(), _place(id=4, name="Hotel Example Annex")]
         services.stays.create_stay.return_value = _stay()
         await run("travel_stay", "add", {
-            "trip_id": "1", "hotel": "hotel example", "city": "Lisbon", "check_in": "2031-12-18T15:00",
+            "trip_id": "1", "hotel": "hotel example", "city": "Lisbon", "country": "Portugal", "check_in": "2031-12-18T15:00",
             "check_out": "2031-12-20T11:00", "tz": "UTC",
         }, services)
         services.places.create_place.assert_not_awaited()
@@ -311,7 +313,7 @@ class TestStays:
 class TestPlaces:
     async def test_add_defaults_the_kind(self, services):
         services.places.create_place.return_value = _place()
-        await run("travel_place", "add", {"name": "Cafe Example", "city": "Lisbon", "tags": "Would return"}, services)
+        await run("travel_place", "add", {"name": "Cafe Example", "city": "Lisbon", "country": "Portugal", "tags": "Would return"}, services)
         data: PlaceCreate = services.places.create_place.await_args.args[0]
         assert (data.kind, data.tags) == ("other", ["would return"])
 
@@ -329,8 +331,8 @@ class TestPlaces:
 
     async def test_get_returns_history_and_lifetime_cost(self, services):
         services.places.get_place.return_value = _place()
-        services.places.get_place_detail.return_value = SimpleNamespace(
-            **_place().model_dump(), visits=[_visit()], stays=[_stay()],
+        services.places.get_place_detail.return_value = PlaceDetail(
+            **dict(_place()), visits=[_visit()], stays=[_stay()],
         )
         services.links.get_place_costs.return_value = SimpleNamespace(total=Cost(total_eur="80.00", transaction_count=2))
         result = await run("travel_place", "get", {"place": "3"}, services)
@@ -365,10 +367,10 @@ class TestVisits:
         services.places.create_place.return_value = _place(id=5, name="Museum Example", kind="museum")
         services.visits.create_visit.return_value = _visit()
         await run("travel_visit", "add", {
-            "place": "Museum Example", "kind": "museum", "city": "Lisbon", "trip": "1", "date": "2031-12-18", "time": "10:00",
+            "place": "Museum Example", "kind": "museum", "city": "Lisbon", "country": "Portugal", "trip": "1", "date": "2031-12-18", "time": "10:00",
         }, services)
         place: PlaceCreate = services.places.create_place.await_args.args[0]
-        assert (place.kind, place.city) == ("museum", "Lisbon")
+        assert (place.kind, place.city, place.country) == ("museum", "Lisbon", "Portugal")
         visit = services.visits.create_visit.await_args.args[0]
         assert (visit.place_id, visit.trip_id, visit.visit_date, visit.visit_time, visit.status) == (5, 1, date(2031, 12, 18), time(10, 0), "planned")
 

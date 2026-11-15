@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import PlaceServiceDep
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceLocations, PlaceRead, PlaceUpdate
 from app.features.travel.places.service import PlaceInUseError
@@ -24,7 +25,10 @@ async def get_place_locations(service: PlaceServiceDep) -> PlaceLocations:
 
 @router.post("", response_model=PlaceRead, status_code=status.HTTP_201_CREATED)
 async def create_place(request: PlaceCreate, service: PlaceServiceDep) -> PlaceRead:
-    return await service.create_place(request)
+    try:
+        return await service.create_place(request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get("/{place_id}", response_model=PlaceDetail)
@@ -39,6 +43,8 @@ async def get_place(place_id: int, service: PlaceServiceDep) -> PlaceDetail:
 async def update_place(place_id: int, request: PlaceUpdate, service: PlaceServiceDep) -> PlaceRead:
     try:
         place = await service.update_place(place_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if place is None:

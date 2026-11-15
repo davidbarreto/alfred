@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from travel_city_helpers import city_ref
 from app.features.briefing.morning_formatter_service import _build_context as morning_context
 from app.features.briefing.evening_formatter_service import _build_context as evening_context
 from app.features.briefing.schemas import EveningDigest, MorningBriefing, TripBrief, TripMarkBrief
@@ -24,7 +25,7 @@ def _item(kind, hour, title):
 
 
 def _visit(id, at, status="planned", day=DAY):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city="Beta", maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref("Beta"), maps_url=None, lat=None, lng=None)
     return VisitRead(id=id, place_id=id, place=place, trip_id=1, trip_name="T", status=status, visit_date=day,
                      visit_time=at, notes=None, grade=None, created_at=NOW, updated_at=NOW)
 

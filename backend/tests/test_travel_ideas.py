@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 
+from travel_city_helpers import city_ref
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.trips.ideas import OTHER_CITY, build_ideas
@@ -10,7 +11,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 def _stay(id, city, day):
     place = PlaceRead(
-        id=id, kind="hotel", name=f"Hotel {city}", city=city, country=None, maps_url=None, lat=None, lng=None,
+        id=id, kind="hotel", name=f"Hotel {city}", city=city_ref(city), maps_url=None, lat=None, lng=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
     return StayRead(
@@ -21,7 +22,7 @@ def _stay(id, city, day):
 
 
 def _visit(id, city, day=None, trip_id=1, status="planned"):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city, maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref(city), maps_url=None, lat=None, lng=None)
     return VisitRead(
         id=id, place_id=id, place=place, trip_id=trip_id, trip_name=None, status=status,
         visit_date=date(2026, 3, day) if day else None, visit_time=None, notes=None, grade=None,
@@ -47,7 +48,7 @@ class TestBuildIdeas:
         assert [(g.city, [v.id for v in g.visits]) for g in ideas] == [("Alpha", [5])]
 
     def test_trip_visit_outside_every_stay_city_goes_under_other_places(self):
-        ideas = build_ideas([_visit(1, "Gamma"), _visit(2, None)], [], STAYS)
+        ideas = build_ideas([_visit(1, "Gamma"), _visit(2, "Delta")], [], STAYS)
         assert [(g.city, [v.id for v in g.visits]) for g in ideas] == [(OTHER_CITY, [1, 2])]
 
     def test_nothing_to_suggest(self):

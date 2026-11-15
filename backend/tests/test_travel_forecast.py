@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from freezegun import freeze_time
 
+from travel_city_helpers import city_ref
 from app.features.travel.trips import forecast as fc
 from app.features.travel.trips.forecast import a_year_earlier, days_from_daily, pick_mode
 from app.features.travel.trips.forecast_service import TripForecastService
@@ -41,17 +42,23 @@ class TestDaysFromDaily:
 
 
 def _stay(city="Beta", lat=None, lng=None, check_in=datetime(2026, 12, 17, 14), check_out=datetime(2026, 12, 19, 10)):
-    return SimpleNamespace(place=SimpleNamespace(city=city, country="Testland", lat=lat, lng=lng),
+    ref = city_ref(city)
+    return SimpleNamespace(place=SimpleNamespace(city_id=ref.id, city=ref, lat=lat, lng=lng),
                            check_in_at=check_in, check_out_at=check_out, timezone="UTC")
 
 
 def _leg(origin, destination, departs_at, arrives_at):
-    return SimpleNamespace(origin=origin, destination=destination, departs_at=departs_at.replace(tzinfo=timezone.utc),
+    origin_city = city_ref(origin) if origin else None
+    destination_city = city_ref(destination) if destination else None
+    return SimpleNamespace(origin_city=origin_city, destination_city=destination_city,
+                           origin_city_id=origin_city.id if origin_city else None,
+                           destination_city_id=destination_city.id if destination_city else None,
+                           origin=origin, destination=destination, departs_at=departs_at.replace(tzinfo=timezone.utc),
                            arrives_at=arrives_at.replace(tzinfo=timezone.utc), departs_tz="UTC", arrives_tz="UTC")
 
 
 class FakeWeatherRepo:
-    """The saved-weather table in memory: upsert replaces by (city_key, day)."""
+    """The saved-weather table in memory: upsert replaces by (city_id, day)."""
 
     def __init__(self):
         self.rows: dict[tuple[str, date], SimpleNamespace] = {}
@@ -61,7 +68,7 @@ class FakeWeatherRepo:
 
     async def upsert_weather(self, trip_id, rows):
         for row in rows:
-            self.rows[row["city_key"], row["day"]] = SimpleNamespace(**row)
+            self.rows[row["city_id"], row["day"]] = SimpleNamespace(**row)
 
 
 @pytest.fixture
@@ -163,6 +170,16 @@ class TestService:
         result = await service.get_forecast(1)
         assert [c.city for c in result.cities].count("Beta") == 1
 
+    async def test_a_leg_end_without_a_city_gets_no_weather(self, service):
+        service._legs.get_legs.return_value = [_leg("Alpha", None, datetime(2026, 12, 17, 8), datetime(2026, 12, 19, 10))]
+        service._client.geocode.return_value = {"latitude": 3.0, "longitude": 4.0}
+        result = await service.get_forecast(1)
+        assert [c.city for c in result.cities] == ["Alpha", "Beta"]
+
+    async def test_weather_is_saved_by_city_id(self, service):
+        await service.get_forecast(1)
+        assert {key[0] for key in service._weather.rows} == {city_ref("Beta").id}
+
     async def test_a_second_call_the_same_day_reads_the_table_not_open_meteo(self, service):
         await service.get_forecast(1)
         again = await service.get_forecast(1)
@@ -225,7 +242,7 @@ class TestService:
 
     async def test_only_the_days_never_saved_are_backfilled_and_the_mode_is_mixed(self, service):
         await service.get_forecast(1)
-        del service._weather.rows["beta", date(2026, 12, 18)]
+        del service._weather.rows[city_ref("Beta").id, date(2026, 12, 18)]
         service._client.fetch_range.reset_mock()
         service._client.fetch_range.return_value = {
             "temperature_2m_min": [0], "temperature_2m_max": [7], "precipitation_sum": [0]}

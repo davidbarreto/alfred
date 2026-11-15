@@ -4,8 +4,9 @@ import pytest
 from freezegun import freeze_time
 from pydantic import ValidationError
 
+from travel_city_helpers import city_ref
 from app.features.travel.legs.schemas import LegCreate
-from app.features.travel.places.schemas import PlaceCreate, PlaceRead
+from app.features.travel.places.schemas import PlaceCreate, PlaceRead, PlaceUpdate
 from app.features.travel.stays.schemas import StayCreate
 from app.features.travel.tags.schemas import TravelTagUpdate
 from app.features.travel.trips.schemas import TripCreate, TripRead, TripUpdate, trip_status
@@ -126,10 +127,28 @@ class TestStayCreate:
 class TestPlace:
     def test_unknown_kind_is_rejected(self):
         with pytest.raises(ValidationError):
-            PlaceCreate(kind="spaceship", name="X")
+            PlaceCreate(kind="spaceship", name="X", city_id=1)
+
+    def test_a_place_needs_a_city_in_one_form(self):
+        assert PlaceCreate(kind="hotel", name="X", city_id=1).city_id == 1
+        assert PlaceCreate(kind="hotel", name="X", city="Alpha", country="Examplia").country == "Examplia"
+        for fields in ({}, {"city": "Alpha"}, {"country": "Examplia"}, {"city_id": 1, "city": "Alpha", "country": "Examplia"}):
+            with pytest.raises(ValidationError):
+                PlaceCreate(kind="hotel", name="X", **fields)
+
+    def test_an_update_may_name_only_a_city_or_a_country_but_not_both_forms(self):
+        assert PlaceUpdate(city="Alpha").country is None
+        with pytest.raises(ValidationError):
+            PlaceUpdate(city_id=1, city="Alpha")
+
+    def test_a_leg_tells_a_sent_city_from_an_unsent_one(self):
+        base = dict(trip_id=1, mode="flight", origin="A", destination="B", departs_at=datetime(2026, 12, 17, 6),
+                    arrives_at=datetime(2026, 12, 17, 9), departs_tz="UTC", arrives_tz="UTC")
+        assert "origin_city_id" not in LegCreate(**base).model_fields_set
+        assert "origin_city_id" in LegCreate(**base, origin_city_id=None).model_fields_set
 
     def test_maps_link_prefers_the_users_url_then_coordinates_then_search(self):
-        base = dict(id=1, kind="hotel", name="Hotel Example", city="Lisbon", country=None, address=None, notes=None,
+        base = dict(id=1, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), address=None, notes=None,
                     created_at=NOW, updated_at=NOW)
         assert PlaceRead(**base, maps_url="https://maps.example/x", lat=None, lng=None).maps_link == "https://maps.example/x"
         assert "38.7%2C-9.1" in PlaceRead(**base, maps_url=None, lat=38.7, lng=-9.1).maps_link

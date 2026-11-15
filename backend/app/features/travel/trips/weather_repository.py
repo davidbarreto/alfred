@@ -12,7 +12,7 @@ class TripWeatherRepository:
         self._session = session
 
     async def get_weather(self, trip_id: int) -> list[TripWeather]:
-        stmt = select(TripWeather).where(TripWeather.trip_id == trip_id).order_by(TripWeather.city_key, TripWeather.day)
+        stmt = select(TripWeather).where(TripWeather.trip_id == trip_id).order_by(TripWeather.city_id, TripWeather.day)
         return list((await self._session.scalars(stmt)).all())
 
     async def upsert_weather(self, trip_id: int, rows: list[dict[str, Any]]) -> None:
@@ -22,7 +22,7 @@ class TripWeatherRepository:
         stmt = insert(TripWeather).values([{"trip_id": trip_id, **row} for row in rows])
         stmt = stmt.on_conflict_do_update(
             constraint="uq_travel_trip_weather_day",
-            set_={col: getattr(stmt.excluded, col) for col in ("city", "min_c", "max_c", "precip_mm", "source", "fetched_on")}
+            set_={col: getattr(stmt.excluded, col) for col in ("min_c", "max_c", "precip_mm", "source", "fetched_on")}
             | {"updated_at": func.now()},
         )
         await self._session.execute(stmt)

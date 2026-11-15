@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from travel_city_helpers import city_ref
 from app.features.travel.legs.schemas import LegCreate, LegUpdate
 from app.features.travel.legs.service import LegService
 from app.features.travel.places.schemas import PlaceCreate, PlaceUpdate
@@ -33,7 +34,7 @@ def _embedded(embeddings):
 
 
 def _place(**kw):
-    base = dict(id=3, kind="restaurant", name="Cafe Example", city="Lisbon", country=None, maps_url=None, lat=None, lng=None,
+    base = dict(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
                 address=None, notes="Book the terrace", tags=[], created_at=NOW, updated_at=NOW)
     base.update(kw)
     return SimpleNamespace(**base)
@@ -126,6 +127,8 @@ class TestLegs:
     def svc(self, embeddings):
         svc = LegService(AsyncMock(), embeddings)
         svc._repo, svc._trip_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock()
+        svc._city_repo = AsyncMock()
+        svc._city_repo.find_unique_city_id.return_value = None
         return svc
 
     async def test_create_update_delete(self, svc, embeddings):
@@ -200,6 +203,7 @@ class TestPlaces:
     def svc(self, embeddings):
         svc = PlaceService(AsyncMock(), embeddings)
         svc._repo, svc._tag_repo = AsyncMock(), AsyncMock()
+        svc._city_repo = AsyncMock()
         svc._web_link_repo = AsyncMock()
         svc._web_link_repo.get_link_ids.return_value = []
         svc._repo.get_grades.return_value = {}
@@ -208,7 +212,7 @@ class TestPlaces:
 
     async def test_create_rename_delete(self, svc, embeddings):
         svc._repo.create_place.return_value = _place()
-        await svc.create_place(PlaceCreate(kind="restaurant", name="Cafe Example", notes="Book the terrace"))
+        await svc.create_place(PlaceCreate(kind="restaurant", name="Cafe Example", city_id=5, notes="Book the terrace"))
         assert _embedded(embeddings) == ("place_note", 3, "Cafe Example: Book the terrace")
         embeddings.embed_background.reset_mock()
 

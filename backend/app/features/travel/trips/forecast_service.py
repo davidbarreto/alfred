@@ -42,38 +42,38 @@ class TripForecastService:
     async def _coordinates(self, place) -> tuple[float, float] | None:
         if place.lat is not None and place.lng is not None:
             return place.lat, place.lng
-        found = await self._client.geocode(", ".join(p for p in (place.city, place.country) if p))
+        found = await self._client.geocode(f"{place.city.name}, {place.city.country.name}")
         return (found["latitude"], found["longitude"]) if found else None
 
-    async def _wanted_days(self, trip_id: int) -> dict[str, tuple[object, set[date]]]:
-        """City key -> (place, the days the trip needs weather there), in display order: the first leg's origin, the stay
-        cities, the last leg's destination (a home city at both ends is only first)."""
-        places: dict[str, object] = {}
-        days: dict[str, set[date]] = {}
+    async def _wanted_days(self, trip_id: int) -> dict[int, tuple[object, set[date]]]:
+        """City id -> (place, the days the trip needs weather there), in display order: the first leg's origin, the stay
+        cities, the last leg's destination (a home city at both ends is only first). A leg end with no city gets none."""
+        places: dict[int, object] = {}
+        days: dict[int, set[date]] = {}
         for stay in await self._stays.get_stays(trip_id):
-            if stay.place.city:
-                key = stay.place.city.lower()
-                places.setdefault(key, stay.place)
-                check_in, check_out = to_local(stay.check_in_at, stay.timezone).date(), to_local(stay.check_out_at, stay.timezone).date()
-                days.setdefault(key, set()).update(check_in + timedelta(days=i) for i in range((check_out - check_in).days + 1))
+            key = stay.place.city_id
+            places.setdefault(key, stay.place)
+            check_in, check_out = to_local(stay.check_in_at, stay.timezone).date(), to_local(stay.check_out_at, stay.timezone).date()
+            days.setdefault(key, set()).update(check_in + timedelta(days=i) for i in range((check_out - check_in).days + 1))
         # The first leg's origin on its departure day and the last leg's destination on its arrival day.
         # A city that is also a stay city shares its row.
         legs = await self._legs.get_legs(trip_id)
         first_key = last_key = None
         if legs:
             first, last = legs[0], max(legs, key=lambda l: l.arrives_at)
-            for city, day in ((first.origin, to_local(first.departs_at, first.departs_tz).date()),
-                              (last.destination, to_local(last.arrives_at, last.arrives_tz).date())):
-                key = city.strip().lower()
-                places.setdefault(key, SimpleNamespace(city=city.strip(), country=None, lat=None, lng=None))
-                days.setdefault(key, set()).add(day)
-            first_key, last_key = first.origin.strip().lower(), last.destination.strip().lower()
+            first_key, last_key = first.origin_city_id, last.destination_city_id
+            for city, day in ((first.origin_city, to_local(first.departs_at, first.departs_tz).date()),
+                              (last.destination_city, to_local(last.arrives_at, last.arrives_tz).date())):
+                if city is None:
+                    continue
+                places.setdefault(city.id, SimpleNamespace(city=city, lat=None, lng=None))
+                days.setdefault(city.id, set()).add(day)
         # Origin city first, destination city last; the same city at both ends goes first.
         order = [k for k in places if k not in (first_key, last_key)]
-        if first_key:
+        if first_key is not None:
             order.insert(0, first_key)
-            if last_key != first_key:
-                order.append(last_key)
+        if last_key is not None and last_key != first_key:
+            order.append(last_key)
         return {key: (places[key], days[key]) for key in order}
 
     async def get_forecast(self, trip_id: int) -> TripForecast | None:
@@ -82,7 +82,7 @@ class TripForecastService:
             return None
         today = local_today()
         wanted = await self._wanted_days(trip_id)
-        saved = {(r.city_key, r.day): r for r in await self._weather.get_weather(trip_id)}
+        saved = {(r.city_id, r.day): r for r in await self._weather.get_weather(trip_id)}
 
         finished = trip.end_date < today
         mode: ForecastMode = "none"
@@ -94,7 +94,7 @@ class TripForecastService:
             last_day = min(trip.end_date, today + timedelta(days=_FORECAST_REACH_DAYS)) if mode == "forecast" else trip.end_date
             try:
                 if await self._refresh(trip_id, wanted, saved, mode, today, last_day):
-                    saved = {(r.city_key, r.day): r for r in await self._weather.get_weather(trip_id)}
+                    saved = {(r.city_id, r.day): r for r in await self._weather.get_weather(trip_id)}
             except Exception as exc:  # Open-Meteo down or rejecting the range: the saved days (if any) are shown
                 failed = True
                 logger.warning("Trip forecast failed: trip_id=%d error=%s", trip_id, exc)
@@ -103,7 +103,7 @@ class TripForecastService:
             shown_until = trip.end_date
             try:
                 if await self._backfill(trip_id, wanted, saved, today, trip.end_date):
-                    saved = {(r.city_key, r.day): r for r in await self._weather.get_weather(trip_id)}
+                    saved = {(r.city_id, r.day): r for r in await self._weather.get_weather(trip_id)}
             except Exception as exc:  # the archive is unreachable: nothing is saved and the next request tries again
                 failed = True
                 logger.warning("Trip weather backfill failed: trip_id=%d error=%s", trip_id, exc)
@@ -114,7 +114,7 @@ class TripForecastService:
             city_rows = [saved[key, d] for d in sorted(days) if d <= shown_until and (key, d) in saved]
             if city_rows:
                 rows.extend(city_rows)
-                cities.append(CityForecast(city=place.city, days=[_to_day(r) for r in city_rows]))
+                cities.append(CityForecast(city=place.city.name, days=[_to_day(r) for r in city_rows]))
 
         if finished:
             if not cities:
@@ -146,10 +146,10 @@ class TripForecastService:
             else:
                 loaded = await self._load(*coords, a_year_earlier(first), a_year_earlier(last), dates, archive=True)
             await self._weather.upsert_weather(trip_id, [
-                {"city_key": key, "city": place.city, "day": d.date, "min_c": d.min_c, "max_c": d.max_c,
+                {"city_id": key, "day": d.date, "min_c": d.min_c, "max_c": d.max_c,
                  "precip_mm": d.precip_mm, "source": mode, "fetched_on": today}
                 for d in loaded if d.date in stale])
-            logger.info("Trip weather saved: trip_id=%d city=%s days=%d source=%s", trip_id, place.city, len(stale), mode)
+            logger.info("Trip weather saved: trip_id=%d city_id=%d days=%d source=%s", trip_id, key, len(stale), mode)
             changed = True
         return changed
 
@@ -172,12 +172,12 @@ class TripForecastService:
                     continue
                 dates = [group[0] + timedelta(days=i) for i in range((group[-1] - group[0]).days + 1)]
                 loaded = await self._load(*coords, group[0], group[-1], dates, archive=archive)
-                rows = [{"city_key": key, "city": place.city, "day": d.date, "min_c": d.min_c, "max_c": d.max_c,
+                rows = [{"city_id": key, "day": d.date, "min_c": d.min_c, "max_c": d.max_c,
                          "precip_mm": d.precip_mm, "source": "actual", "fetched_on": today}
                         for d in loaded if d.date in group and d.max_c is not None]
                 if rows:
                     await self._weather.upsert_weather(trip_id, rows)
-                    logger.info("Trip weather backfilled: trip_id=%d city=%s days=%d", trip_id, place.city, len(rows))
+                    logger.info("Trip weather backfilled: trip_id=%d city_id=%d days=%d", trip_id, key, len(rows))
                     changed = True
         return changed
 

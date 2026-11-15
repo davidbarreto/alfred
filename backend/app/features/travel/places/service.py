@@ -4,6 +4,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.travel.cities.repository import CityRepository
+from app.features.travel.cities.service import CityResolver
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.notes_index import PLACE_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.repository import PlaceRepository
@@ -28,6 +31,8 @@ class PlaceService:
         self._session = session
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = PlaceRepository(session)
+        self._city_repo = CityRepository(session)
+        self._cities = CityResolver(self._city_repo)
         self._tag_repo = TravelTagRepository(session)
         self._visit_repo = VisitRepository(session)
         self._stay_repo = StayRepository(session)
@@ -62,18 +67,39 @@ class PlaceService:
         stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_place_stays(place_id)]
         return PlaceDetail(**place.model_dump(), visits=visits, stays=stays)
 
+    async def _city_id(self, city_id: int | None, city: str | None, country: str | None, code: str | None) -> int:
+        """The id of the city a place form named, finding or creating it (and its country) by name."""
+        if city_id is not None:
+            if await self._city_repo.get_city(city_id) is None:
+                raise TravelNotFoundError(f"City {city_id} not found")
+            return city_id
+        resolved = await self._cities.resolve_city(city or "", await self._cities.resolve_country(country or "", code))
+        return resolved.id
+
     async def create_place(self, data: PlaceCreate) -> PlaceRead:
+        fields = data.model_dump(exclude={"tags", "city", "country", "country_code"})
+        fields["city_id"] = await self._city_id(data.city_id, data.city, data.country, data.country_code)
         tags = await self._tag_repo.get_or_create_tags(data.tags)
-        place = await self._repo.create_place(data.model_dump(exclude={"tags"}), tags)
+        place = await self._repo.create_place(fields, tags)
         logger.info("Place created: id=%d kind=%s name=%r", place.id, place.kind, place.name)
         await self._notes.sync(PLACE_NOTE, place.id, place.name, place.notes)
         return (await self._read_all([place]))[0]
 
     async def update_place(self, place_id: int, data: PlaceUpdate) -> PlaceRead | None:
-        changes = data.model_dump(exclude_unset=True, exclude={"tags"})
+        changes = data.model_dump(exclude_unset=True, exclude={"tags", "city", "country", "country_code"})
         for required in ("kind", "name"):
             if required in changes and changes[required] is None:
                 raise ValueError(f"{required} cannot be null")
+        if data.city_id is None:
+            changes.pop("city_id", None)
+        if data.city_id is not None or data.city is not None or data.country is not None:
+            current = await self._repo.get_place(place_id)
+            if current is None:
+                logger.debug("Place update: id=%d not found", place_id)
+                return None
+            changes["city_id"] = await self._city_id(
+                data.city_id, data.city or current.city.name, data.country or current.city.country.name, data.country_code
+            )
         tags = None
         if data.tags is not None:
             tags = await self._tag_repo.get_or_create_tags(data.tags)

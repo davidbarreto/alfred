@@ -110,7 +110,7 @@ class TripService:
             ))
         ideas = []
         if trip.end_date >= local_today():
-            wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city for s in stays if s.place.city])
+            wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city.name for s in stays])
             ideas = build_ideas(all_visits, [VisitRead.model_validate(v) for v in wishlist], stays)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),

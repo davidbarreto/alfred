@@ -62,7 +62,28 @@ class TestPlaceLocationQuery:
         except _Stop:
             pass
         sql = _literal(session.statement)
-        assert "travel.places.city" in sql and "travel.places.country" in sql
+        assert "travel.cities.name" in sql and "travel.countries.name" in sql
+
+
+class TestPlaceCityJoins:
+    async def test_city_and_country_filters_and_search_go_through_the_joined_tables(self):
+        session = _CaptureSession()
+        try:
+            await PlaceRepository(session).get_places(PlaceFilters(city="Lisbon", country="Portugal", q="Ex"))
+        except _Stop:
+            pass
+        sql = _literal(session.statement)
+        assert "JOIN travel.cities ON travel.cities.id = travel.places.city_id" in sql
+        assert "lower(travel.cities.name) = 'lisbon'" in sql and "lower(travel.countries.name) = 'portugal'" in sql
+        assert "lower(travel.cities.name) LIKE '%%ex%%'" in sql and "lower(travel.countries.name) LIKE '%%ex%%'" in sql
+
+
+class TestWeatherKey:
+    def test_one_row_per_trip_city_and_day(self):
+        from app.features.travel.trips.tables import TripWeather
+
+        constraint = next(c for c in TripWeather.__table__.constraints if c.name == "uq_travel_trip_weather_day")
+        assert [c.name for c in constraint.columns] == ["trip_id", "city_id", "day"]
 
 
 class TestTripLocationQueries:

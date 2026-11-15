@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from fastapi import Query
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
+from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import PlaceKind, VisitStatus
 from app.shared.links import place_maps_url
 
@@ -44,8 +45,7 @@ class VisitPlace(BaseModel):
     id: int
     kind: PlaceKind
     name: str
-    city: str | None
-    country: str | None = None
+    city: CityRef
     maps_url: str | None
     lat: float | None
     lng: float | None
@@ -55,7 +55,7 @@ class VisitPlace(BaseModel):
     @computed_field
     @property
     def maps_link(self) -> str:
-        return place_maps_url(self.name, self.city, self.maps_url, self.lat, self.lng)
+        return place_maps_url(self.name, self.city.name, self.maps_url, self.lat, self.lng)
 
 
 class VisitRead(BaseModel):

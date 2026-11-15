@@ -267,12 +267,13 @@ _LEG_OVERVIEW = (
 )
 _STAY_OVERVIEW = (
     "A stay is a lodging period. Give place (id of an existing place) or hotel (a name, with optional city/country/"
-    "maps_url, reused if a hotel with that name and city exists). check_in/check_out are local wall times at the hotel "
+    "maps_url, reused if a hotel with that name and city exists; a new hotel needs city and country). check_in/check_out are local wall times at the hotel "
     "in its zone (tz); grade is 1-5 after the stay. trip is optional (a weekend away needs no trip). " + _TRAVEL_FORMATS
 )
 _PLACE_OVERVIEW = (
     "A place is a hotel, restaurant, cafe, activity, museum, attraction, shop or other, independent of any trip. "
-    "kind is one of hotel/restaurant/cafe/activity/museum/attraction/shop/other. maps_url is the user's own link; lat/lng "
+    "kind is one of hotel/restaurant/cafe/activity/museum/attraction/shop/other. A new place needs a city and a country "
+    "(names; a new one is created). maps_url is the user's own link; lat/lng "
     "are optional and user-supplied. notes holds lasting facts (\"book the terrace\"). A place's grade is the average of "
     "its graded visits and stays. " + _TRAVEL_FORMATS
 )
@@ -280,7 +281,7 @@ _VISIT_OVERVIEW = (
     "A visit is one occurrence of going to a place: status planned/visited/missed, optional trip, date and time "
     "(HH:MM, real for a reservation or approximate to order the day). A planned visit with no trip is the wishlist. "
     "place is an id or a name: a name reuses an existing place (same name, and city if given) or creates one of the given "
-    "kind (default other). grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
+    "kind (default other); a new place needs city and country. grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
 )
 _TRAVEL_LINK_DETAILS = (
     "Links a finance transaction (by id) to this item as what paid for it; one transaction can be linked to several items "
@@ -1293,7 +1294,7 @@ COMMAND_DEFINITIONS = {
     },
     "travel_place": {
         "add": {
-            "description": "Add a place: name, then --kind (hotel, restaurant, cafe, activity, museum, attraction, shop, other), city, country",
+            "description": "Add a place: name, then --kind (hotel, restaurant, cafe, activity, museum, attraction, shop, other), --city and --country (both required)",
             "details": _PLACE_OVERVIEW,
             "aliases": ["/placeadd"],
             "flags": PLACE_FLAGS,

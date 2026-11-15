@@ -272,6 +272,20 @@ async def delete_stay(stay_id: int):
     return await forward(api.delete(f"/travel/stays/{stay_id}"), "Could not delete the stay.")
 
 
+@router.get("/cities/search")
+async def search_cities(q: str = ""):
+    """Cities matching a name, for the leg form's city picker."""
+    found = await safe_get("/travel/cities", params={"q": q.strip()} if q.strip() else None)
+    if found is None:
+        return JSONResponse({"error": "Could not search cities."}, status_code=502)
+    return JSONResponse(found)
+
+
+@router.post("/cities")
+async def create_city(request: Request):
+    return await forward(api.post("/travel/cities", json=await request.json()), "Could not create the city.")
+
+
 @router.post("/places")
 async def create_place(request: Request):
     return await forward(api.post("/travel/places", json=await request.json()), "Could not create the place.")

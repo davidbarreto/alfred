@@ -218,7 +218,7 @@
       <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
+          <p class="text-gray-900">{{ stay.place.name }}<span class="text-xs text-gray-400">{{ stay.place.city.name }}</span> {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
           {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
           <p class="text-xs space-x-3">
@@ -367,6 +367,10 @@
         <span></span>
         <label class="space-y-1"><span class="block text-xs text-gray-500">From</span><input name="origin" required class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">To</span><input name="destination" required class="input input-sm input-bordered w-full"></label>
+        <div class="space-y-1"><span class="block text-xs text-gray-500">From city</span>
+          <div class="flex items-center gap-1"><input name="origin_city_text" placeholder="Matched from the text" class="input input-sm input-bordered w-full"><input type="hidden" name="origin_city_id"><button type="button" class="btn btn-xs btn-ghost" data-clear-city="origin" title="No city for this end">clear</button></div></div>
+        <div class="space-y-1"><span class="block text-xs text-gray-500">To city</span>
+          <div class="flex items-center gap-1"><input name="destination_city_text" placeholder="Matched from the text" class="input input-sm input-bordered w-full"><input type="hidden" name="destination_city_id"><button type="button" class="btn btn-xs btn-ghost" data-clear-city="destination" title="No city for this end">clear</button></div></div>
         <label class="space-y-1"><span class="block text-xs text-gray-500">From code (airport / station)</span><input name="origin_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">To code</span><input name="destination_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Departs (local time there)</span><input name="departs_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
@@ -388,6 +392,19 @@
     </form>
   </dialog>
 
+  <dialog id="city-dialog" class="modal">
+    <form method="dialog" class="modal-box max-w-sm space-y-3">
+      <h3 class="text-sm font-semibold">New city</h3>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span><input name="name" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span><input name="country" required maxlength="100" class="input input-sm input-bordered w-full"><input type="hidden" name="country_code"></label>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-outline">Create</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="stay-dialog" class="modal">
     <form method="dialog" class="modal-box max-w-xl space-y-3" id="stay-form">
       <h3 class="text-sm font-semibold" id="stay-title">Add stay</h3>
@@ -395,13 +412,13 @@
         <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
           <select name="place_id" id="stay-place" class="select select-sm select-bordered w-full">
             <option value="new">+ New place…</option>
-            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}" data-href="/travel/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
+            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}" data-href="/travel/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }} ({{ p.city.name }})</option>{% endfor %}
           </select>
           <span class="block text-[11px] text-gray-500" id="stay-place-history"></span></label>
         <div class="col-span-2 grid grid-cols-2 gap-3" id="new-place-fields">
           <label class="space-y-1"><span class="block text-xs text-gray-500">Hotel name</span><input name="place_name" class="input input-sm input-bordered w-full"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">City</span><input name="place_city" class="input input-sm input-bordered w-full"></label>
-          <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span><input name="place_country" class="input input-sm input-bordered w-full"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span><input name="place_country" class="input input-sm input-bordered w-full"><input type="hidden" name="place_country_code"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link (optional)</span><input name="place_maps_url" class="input input-sm input-bordered w-full"></label>
         </div>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Check-in (local time there)</span><input name="check_in_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
@@ -423,6 +440,7 @@
 </div>
 
 <script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-place-history.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
@@ -443,7 +461,7 @@ const DEFAULT_ZONE = {{ default_zone | tojson }};
 async function send(method, url, body) {
   const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
   const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, data };
+  return { ok: res.ok, status: res.status, data };
 }
 
 // Empty text inputs are sent as null on edit (clears the field) and omitted on create.
@@ -550,12 +568,22 @@ function openLeg(leg, prefill = null, eventId = null) {
   legForm.elements.arrives_at.value = source ? LOCAL(source.arrives_local) : '';
   legForm.elements.departs_tz.value = source ? source.departs_tz : DEFAULT_ZONE;
   legForm.elements.arrives_tz.value = source ? source.arrives_tz : DEFAULT_ZONE;
+  cityPickers.origin.reset(source && source.origin_city);
+  cityPickers.destination.reset(source && source.destination_city);
   legDialog.showModal();
 }
 // Flights pick an airport and trains a station (fills name, code and time zone); other modes keep free text.
 const legMode = () => legForm.elements.mode.value;
 initTerminalInput({ input: legForm.elements.origin, codeInput: legForm.elements.origin_code, zoneInput: legForm.elements.departs_tz, mode: legMode });
 initTerminalInput({ input: legForm.elements.destination, codeInput: legForm.elements.destination_code, zoneInput: legForm.elements.arrives_tz, mode: legMode });
+const openNewCity = initNewCityDialog({ dialog: document.getElementById('city-dialog'), send });
+const cityPickers = {};
+for (const end of ['origin', 'destination']) {
+  cityPickers[end] = initCityPicker({
+    input: legForm.elements[`${end}_city_text`], idInput: legForm.elements[`${end}_city_id`],
+    clearButton: legForm.querySelector(`[data-clear-city="${end}"]`), terminalInput: legForm.elements[end], newCity: openNewCity,
+  });
+}
 document.getElementById('add-leg').addEventListener('click', () => openLeg(null));
 document.querySelectorAll('.edit-leg').forEach((b) => b.addEventListener('click', () => openLeg(JSON.parse(b.dataset.item))));
 
@@ -563,6 +591,8 @@ legForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const body = collect(legForm, LEG_FIELDS, { editing: !!editingLeg });
   for (const name of ['mode', 'departs_at', 'arrives_at', 'departs_tz', 'arrives_tz']) body[name] = legForm.elements[name].value;
+  // Only a picked or cleared city is sent; otherwise the backend matches the terminal text itself.
+  for (const end of ['origin', 'destination']) if (cityPickers[end].touched()) body[`${end}_city_id`] = cityPickers[end].value();
   if (!editingLeg) body.trip_id = TRIP_ID;
   if (!editingLeg && legEventId) body.calendar_event_id = legEventId;
   const { ok, data } = editingLeg
@@ -576,7 +606,7 @@ legForm.addEventListener('submit', async (event) => {
 const stayDialog = document.getElementById('stay-dialog');
 initPlaceHistory(document.getElementById('stay-place'), document.getElementById('stay-place-history'));
 const stayForm = document.getElementById('stay-form');
-initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country, zoneInput: stayForm.elements.timezone });
+initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country, codeInput: stayForm.elements.place_country_code, zoneInput: stayForm.elements.timezone });
 const newPlaceFields = document.getElementById('new-place-fields');
 const STAY_FIELDS = ['booking_ref', 'booking_url', 'notes'];
 let editingStay = null;
@@ -585,7 +615,7 @@ let stayEventId = null;
 function syncPlaceFields() {
   const isNew = stayForm.elements.place_id.value === 'new';
   newPlaceFields.classList.toggle('hidden', !isNew);
-  stayForm.elements.place_name.required = isNew;
+  for (const name of ['place_name', 'place_city', 'place_country']) stayForm.elements[name].required = isNew;
 }
 stayForm.elements.place_id.addEventListener('change', syncPlaceFields);
 
@@ -625,6 +655,7 @@ stayForm.addEventListener('submit', async (event) => {
       const value = stayForm.elements[input].value.trim();
       if (value) place[field] = value;
     }
+    if (stayForm.elements.place_country_code.value) place.country_code = stayForm.elements.place_country_code.value;
     const created = await send('POST', '/travel/places', place);
     if (!created.ok) { error.textContent = created.data.error || 'Could not create the place.'; return; }
     placeId = created.data.id;

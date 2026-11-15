@@ -26,12 +26,12 @@ EVENT_PROFILE = "normal"
 
 def event_location(visit: Visit) -> str | None:
     place = visit.place
-    return place.address or " ".join(p for p in (place.name, place.city) if p) or None
+    return place.address or " ".join(p for p in (place.name, place.city.name) if p) or None
 
 
 def event_description(visit: Visit) -> str | None:
     place = visit.place
-    parts = [place_maps_url(place.name, place.city, place.maps_url, place.lat, place.lng), visit.notes]
+    parts = [place_maps_url(place.name, place.city.name, place.maps_url, place.lat, place.lng), visit.notes]
     return "\n\n".join(p for p in parts if p) or None
 
 

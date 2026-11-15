@@ -6,6 +6,7 @@ import pytest
 from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 
+from travel_city_helpers import city_ref
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegUpdate
 from app.features.travel.legs.service import LegService
@@ -46,7 +47,7 @@ def _leg(**kw):
 
 def _place(**kw):
     base = dict(
-        id=3, kind="hotel", name="Hotel Example", city="Lisbon", country=None, maps_url=None, lat=None, lng=None,
+        id=3, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
         address=None, notes=None, tags=[], created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
@@ -240,6 +241,8 @@ def legs():
     svc = LegService(AsyncMock())
     svc._repo = AsyncMock()
     svc._trip_repo = AsyncMock()
+    svc._city_repo = AsyncMock()
+    svc._city_repo.find_unique_city_id.return_value = None
     return svc
 
 
@@ -262,6 +265,72 @@ class TestLegService:
         await legs.create_leg(self._create())
         stored = legs._repo.create_leg.await_args.args[0]
         assert stored["arrives_at"] == datetime(2026, 12, 17, 9, tzinfo=timezone.utc)
+
+    async def test_create_matches_an_unsent_city_by_the_terminal_text(self, legs):
+        legs._trip_repo.get_trip.return_value = _trip()
+        legs._repo.create_leg.return_value = _leg()
+        legs._city_repo.find_unique_city_id.side_effect = lambda text: {"A": 11}.get(text)
+        await legs.create_leg(self._create())
+        stored = legs._repo.create_leg.await_args.args[0]
+        assert (stored["origin_city_id"], stored["destination_city_id"]) == (11, None)
+
+    async def test_create_uses_a_sent_city_as_is_and_null_clears_the_match(self, legs):
+        legs._trip_repo.get_trip.return_value = _trip()
+        legs._repo.create_leg.return_value = _leg()
+        legs._city_repo.find_unique_city_id.return_value = 11
+        legs._city_repo.get_city.return_value = object()
+        data = LegCreate(
+            trip_id=1, mode="flight", origin="A", destination="B", departs_at=datetime(2026, 12, 17, 6),
+            arrives_at=datetime(2026, 12, 17, 10), departs_tz="UTC", arrives_tz="UTC", origin_city_id=4, destination_city_id=None,
+        )
+        await legs.create_leg(data)
+        stored = legs._repo.create_leg.await_args.args[0]
+        assert (stored["origin_city_id"], stored["destination_city_id"]) == (4, None)
+
+    async def test_create_with_an_unknown_city_id_is_not_found(self, legs):
+        legs._trip_repo.get_trip.return_value = _trip()
+        legs._city_repo.get_city.return_value = None
+        data = LegCreate(
+            trip_id=1, mode="flight", origin="A", destination="B", departs_at=datetime(2026, 12, 17, 6),
+            arrives_at=datetime(2026, 12, 17, 10), departs_tz="UTC", arrives_tz="UTC", origin_city_id=99,
+        )
+        with pytest.raises(TravelNotFoundError):
+            await legs.create_leg(data)
+        legs._repo.create_leg.assert_not_awaited()
+
+    async def test_update_rematches_the_end_whose_text_changed(self, legs):
+        leg = _leg()
+        legs._repo.get_leg.return_value = leg
+        legs._repo.update_leg.return_value = leg
+        legs._city_repo.find_unique_city_id.return_value = 12
+        await legs.update_leg(1, LegUpdate(destination="Gamma"))
+        changes = legs._repo.update_leg.await_args.args[1]
+        assert changes["destination_city_id"] == 12 and "origin_city_id" not in changes
+
+    async def test_update_that_sends_the_city_keeps_it_even_when_the_text_changes(self, legs):
+        leg = _leg()
+        legs._repo.get_leg.return_value = leg
+        legs._repo.update_leg.return_value = leg
+        legs._city_repo.get_city.return_value = object()
+        legs._city_repo.find_unique_city_id.return_value = 12
+        await legs.update_leg(1, LegUpdate(origin="Gamma", origin_city_id=4))
+        assert legs._repo.update_leg.await_args.args[1]["origin_city_id"] == 4
+
+    async def test_update_with_a_null_city_clears_it(self, legs):
+        leg = _leg()
+        legs._repo.get_leg.return_value = leg
+        legs._repo.update_leg.return_value = leg
+        await legs.update_leg(1, LegUpdate.model_validate({"origin_city_id": None}))
+        assert legs._repo.update_leg.await_args.args[1]["origin_city_id"] is None
+
+    async def test_update_without_a_text_or_city_change_leaves_the_cities_alone(self, legs):
+        leg = _leg()
+        legs._repo.get_leg.return_value = leg
+        legs._repo.update_leg.return_value = leg
+        await legs.update_leg(1, LegUpdate(seat="1A"))
+        changes = legs._repo.update_leg.await_args.args[1]
+        assert "origin_city_id" not in changes and "destination_city_id" not in changes
+        legs._city_repo.find_unique_city_id.assert_not_awaited()
 
     async def test_update_reads_naive_time_in_the_stored_zone(self, legs):
         leg = _leg()
@@ -338,6 +407,8 @@ def places():
     svc = PlaceService(AsyncMock())
     svc._repo = AsyncMock()
     svc._repo.get_grades.return_value = {}
+    svc._city_repo = AsyncMock()
+    svc._cities = AsyncMock()
     svc._web_link_repo = AsyncMock()
     svc._web_link_repo.get_link_ids.return_value = []
     svc._tag_repo = AsyncMock()
@@ -353,8 +424,46 @@ class TestPlaceService:
 
     async def test_create(self, places):
         places._repo.create_place.return_value = _place()
-        result = await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city="Lisbon"))
+        result = await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city_id=5))
         assert result.name == "Hotel Example"
+
+    async def test_create_by_names_resolves_the_country_and_city(self, places):
+        places._cities.resolve_country.return_value = SimpleNamespace(id=2)
+        places._cities.resolve_city.return_value = SimpleNamespace(id=8)
+        places._repo.create_place.return_value = _place()
+        await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city="Alpha", country="Examplia", country_code="EX"))
+        places._cities.resolve_country.assert_awaited_once_with("Examplia", "EX")
+        fields, _ = places._repo.create_place.await_args.args
+        assert fields["city_id"] == 8 and not {"city", "country", "country_code"} & fields.keys()
+
+    async def test_create_with_an_unknown_city_id_is_not_found(self, places):
+        places._city_repo.get_city.return_value = None
+        with pytest.raises(TravelNotFoundError):
+            await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city_id=99))
+        places._repo.create_place.assert_not_awaited()
+
+    async def test_update_with_a_lone_city_keeps_the_current_country(self, places):
+        places._repo.get_place.return_value = _place()
+        places._repo.update_place.return_value = _place()
+        places._cities.resolve_country.return_value = SimpleNamespace(id=2)
+        places._cities.resolve_city.return_value = SimpleNamespace(id=8)
+        await places.update_place(3, PlaceUpdate(city="Alpha"))
+        places._cities.resolve_country.assert_awaited_once_with("Testland", None)
+        assert places._repo.update_place.await_args.args[1] == {"city_id": 8}
+
+    async def test_update_with_a_lone_country_keeps_the_current_city_name(self, places):
+        places._repo.get_place.return_value = _place()
+        places._repo.update_place.return_value = _place()
+        places._cities.resolve_country.return_value = SimpleNamespace(id=2)
+        places._cities.resolve_city.return_value = SimpleNamespace(id=8)
+        await places.update_place(3, PlaceUpdate(country="Newland"))
+        assert places._cities.resolve_city.await_args.args[0] == "Lisbon"
+
+    async def test_update_without_a_city_field_does_not_touch_the_city(self, places):
+        places._repo.update_place.return_value = _place()
+        await places.update_place(3, PlaceUpdate(name="Renamed"))
+        places._cities.resolve_city.assert_not_awaited()
+        assert "city_id" not in places._repo.update_place.await_args.args[1]
 
     async def test_update_rejects_nulling_name(self, places):
         with pytest.raises(ValueError, match="name"):

@@ -96,12 +96,12 @@ def find_visit_warnings(
                     kind="visit_overlaps_leg", visit_id=visit.id, leg_id=overlap.id,
                     message=f"{name} ({when}) falls during {overlap.origin} → {overlap.destination}",
                 ))
-        if stays and visit.place.city:
+        if stays:
             lodging = [s for s in stays if s.check_in_local.date() <= visit.visit_date <= s.check_out_local.date()]
-            if not any(_same_place(visit.place.city, s.place.city) for s in lodging):
+            if not any(visit.place.city.id == s.place.city.id for s in lodging):
                 warnings.append(TripWarning(
                     kind="visit_without_stay", visit_id=visit.id,
-                    message=f"{name} ({when}) is in {visit.place.city} but no stay there covers that day",
+                    message=f"{name} ({when}) is in {visit.place.city.name} but no stay there covers that day",
                 ))
 
     per_day: dict[date, int] = {}

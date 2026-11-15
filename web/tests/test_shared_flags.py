@@ -1,4 +1,4 @@
-from app.shared.flags import country_flag, language_flag
+from app.shared.flags import country_flag, country_flag_of, language_flag
 
 
 class TestCountryFlag:
@@ -66,3 +66,15 @@ class TestLanguageFlag:
 
     def test_unknown_code_falls_back_to_globe(self):
         assert language_flag("xx") == "🌐"
+
+
+class TestCountryFlagOf:
+    def test_the_iso_code_wins_over_the_name(self):
+        assert country_flag_of({"name": "Somewhere", "code": "IE"}) == "🇮🇪"
+
+    def test_without_a_code_the_name_is_used(self):
+        assert country_flag_of({"name": "Ireland", "code": None}) == "🇮🇪"
+
+    def test_unknown_name_and_none_give_nothing(self):
+        assert country_flag_of({"name": "Nowhereland", "code": None}) == ""
+        assert country_flag_of(None) == ""

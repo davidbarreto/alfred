@@ -6,6 +6,7 @@ import pytest
 from freezegun import freeze_time
 from pydantic import ValidationError
 
+from travel_city_helpers import city_ref
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceUpdate
 from app.features.travel.places.service import PlaceService
@@ -20,7 +21,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 def _place(**kw):
     base = dict(
-        id=3, kind="restaurant", name="Cafe Example", city="Lisbon", country=None, maps_url=None, lat=None, lng=None,
+        id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
         address=None, notes=None, tags=[TravelTag(name="Would return")], created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
@@ -109,6 +110,7 @@ class TestVisitService:
 def places():
     svc = PlaceService(AsyncMock())
     svc._repo = AsyncMock()
+    svc._city_repo = AsyncMock()
     svc._tag_repo = AsyncMock()
     svc._visit_repo = AsyncMock()
     svc._stay_repo = AsyncMock()
@@ -128,7 +130,7 @@ class TestPlaceService:
         places._tag_repo.get_or_create_tags.return_value = [TravelTag(name="Family")]
         places._repo.create_place.return_value = _place()
         places._repo.get_grades.return_value = {}
-        await places.create_place(PlaceCreate(kind="cafe", name="X", tags=["Family"]))
+        await places.create_place(PlaceCreate(kind="cafe", name="X", city_id=5, tags=["Family"]))
         fields, tags = places._repo.create_place.await_args.args
         assert "tags" not in fields and tags[0].name == "Family"
 

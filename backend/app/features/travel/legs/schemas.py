@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
+from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import LegMode
 from app.shared.links import check_flight_url
 from app.features.travel.zones import to_local, to_utc, validate_zone
@@ -10,6 +11,9 @@ from app.features.travel.zones import to_local, to_utc, validate_zone
 class _LegFields(BaseModel):
     """Optional fields shared by create and update."""
 
+    # Sent: used as is (null clears). Not sent: matched by the terminal text when exactly one city has that name.
+    origin_city_id: int | None = None
+    destination_city_id: int | None = None
     origin_code: str | None = Field(default=None, max_length=8)
     destination_code: str | None = Field(default=None, max_length=8)
     carrier: str | None = Field(default=None, max_length=100)
@@ -72,6 +76,8 @@ class LegRead(BaseModel):
     mode: LegMode
     origin: str
     destination: str
+    origin_city: CityRef | None = None
+    destination_city: CityRef | None = None
     origin_code: str | None
     destination_code: str | None
     departs_at: datetime

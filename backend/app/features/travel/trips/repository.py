@@ -4,12 +4,22 @@ from typing import Any
 from sqlalchemy import and_, case, delete, func, or_, select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.cities.tables import City, Country
 from app.features.travel.places.tables import Place
 from app.features.travel.stays.tables import Stay
 from app.features.travel.tags.tables import TravelTag, trips_tags
 from app.features.travel.visits.tables import Visit
 from app.features.travel.trips.schemas import TripFilters
 from app.features.travel.trips.tables import Trip
+
+
+def _place_join(stmt, place_id_column):
+    """Join a stay or visit query to the place's city and country, for filtering by their names."""
+    return (
+        stmt.join(Place, Place.id == place_id_column)
+        .join(City, City.id == Place.city_id)
+        .join(Country, Country.id == City.country_id)
+    )
 
 
 class TripRepository:
@@ -41,12 +51,12 @@ class TripRepository:
             stmt = stmt.where(Trip.end_date >= filters.date_from)
         if filters.date_to:
             stmt = stmt.where(Trip.start_date <= filters.date_to)
-        for column, wanted in ((Place.city, filters.city), (Place.country, filters.country)):
+        for column, wanted in ((City.name, filters.city), (Country.name, filters.country)):
             if wanted:
                 where_place = func.lower(column) == wanted.strip().lower()
                 stmt = stmt.where(or_(
-                    Trip.id.in_(select(Stay.trip_id).join(Place, Place.id == Stay.place_id).where(where_place)),
-                    Trip.id.in_(select(Visit.trip_id).join(Place, Place.id == Visit.place_id).where(where_place)),
+                    Trip.id.in_(_place_join(select(Stay.trip_id), Stay.place_id).where(where_place)),
+                    Trip.id.in_(_place_join(select(Visit.trip_id), Visit.place_id).where(where_place)),
                 ))
         for tag_name in filters.tag or []:
             tagged = (
@@ -70,16 +80,14 @@ class TripRepository:
 
     async def get_trip_locations(self, trip_ids: list[int]) -> dict[int, tuple[list[str], list[str]]]:
         """Distinct cities and countries (sorted) of the places each trip stays at or visits."""
-        stays = select(Stay.trip_id, Place.city, Place.country).join(Place, Place.id == Stay.place_id)
-        visits = select(Visit.trip_id, Place.city, Place.country).join(Place, Place.id == Visit.place_id)
+        stays = _place_join(select(Stay.trip_id, City.name.label("city"), Country.name.label("country")), Stay.place_id)
+        visits = _place_join(select(Visit.trip_id, City.name.label("city"), Country.name.label("country")), Visit.place_id)
         found = union(stays.where(Stay.trip_id.in_(trip_ids)), visits.where(Visit.trip_id.in_(trip_ids))).subquery()
         cities: dict[int, set[str]] = {i: set() for i in trip_ids}
         countries: dict[int, set[str]] = {i: set() for i in trip_ids}
         for trip_id, city, country in (await self._session.execute(select(found))).all():
-            if city:
-                cities[trip_id].add(city)
-            if country:
-                countries[trip_id].add(country)
+            cities[trip_id].add(city)
+            countries[trip_id].add(country)
         return {i: (sorted(cities[i], key=str.casefold), sorted(countries[i], key=str.casefold)) for i in trip_ids}
 
     async def get_locations(self) -> tuple[list[str], list[str]]:
@@ -88,11 +96,15 @@ class TripRepository:
             select(Stay.place_id.label("place_id")).where(Stay.trip_id.is_not(None)),
             select(Visit.place_id.label("place_id")).where(Visit.trip_id.is_not(None)),
         ).subquery()
-        rows = (await self._session.execute(
-            select(Place.city, Place.country).where(Place.id.in_(select(used.c.place_id)))
-        )).all()
-        cities = {city for city, _ in rows if city}
-        countries = {country for _, country in rows if country}
+        stmt = (
+            select(City.name, Country.name)
+            .join(Country, Country.id == City.country_id)
+            .join(Place, Place.city_id == City.id)
+            .where(Place.id.in_(select(used.c.place_id)))
+        )
+        rows = (await self._session.execute(stmt)).all()
+        cities = {city for city, _ in rows}
+        countries = {country for _, country in rows}
         return sorted(cities, key=str.casefold), sorted(countries, key=str.casefold)
 
     async def get_trips_in_window(self, first_day: date, last_day: date) -> list[Trip]:

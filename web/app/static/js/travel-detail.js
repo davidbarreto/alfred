@@ -17,7 +17,9 @@ function initTravelDetail() {
       rows: [
         ['Mode', d.mode],
         ['From', d.origin_code ? `${d.origin} (${d.origin_code})` : d.origin],
+        ['From city', d.origin_city && `${d.origin_city.name}, ${d.origin_city.country.name}`],
         ['To', d.destination_code ? `${d.destination} (${d.destination_code})` : d.destination],
+        ['To city', d.destination_city && `${d.destination_city.name}, ${d.destination_city.country.name}`],
         ['Departs', local(d.departs_local, d.departs_tz)],
         ['Arrives', local(d.arrives_local, d.arrives_tz)],
         ['Carrier', d.carrier],
@@ -32,7 +34,7 @@ function initTravelDetail() {
     stay: (d) => ({
       title: d.place.name,
       rows: [
-        ['City', [d.place.city, d.place.country].filter(Boolean).join(', ')],
+        ['City', `${d.place.city.name}, ${d.place.city.country.name}`],
         ['Address', d.place.address],
         ['Map', link(d.place.maps_link, 'Open')],
         ['Check-in', local(d.check_in_local, d.timezone)],
@@ -51,7 +53,7 @@ function initTravelDetail() {
         ['Status', d.status],
         ['Day', d.visit_date ? shortDate(d.visit_date) : 'No day yet'],
         ['Time', d.visit_time && d.visit_time.slice(0, 5)],
-        ['City', [d.place.city, d.place.country].filter(Boolean).join(', ')],
+        ['City', `${d.place.city.name}, ${d.place.city.country.name}`],
         ['Address', d.place.address],
         ['Map', link(d.place.maps_link, 'Open')],
         ['Trip', d.trip_name],

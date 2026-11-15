@@ -65,6 +65,15 @@ def country_flag(location: str | None) -> str:
     return ""
 
 
+def country_flag_of(country: dict | None) -> str:
+    """The flag of a travel country ({name, code}): from its ISO code when it has one, else from its name."""
+    if not country:
+        return ""
+    if country.get("code"):
+        return flag_emoji_for_country_code(country["code"])
+    return country_flag(country.get("name"))
+
+
 def language_flag(code: str) -> str:
     country_code = LANGUAGE_TO_COUNTRY_CODE.get(code.lower())
     return flag_emoji_for_country_code(country_code) if country_code else "🌐"

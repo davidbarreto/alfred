@@ -62,6 +62,13 @@ def _same_place(name: str | None, city: str | None) -> bool:
     return bool(a) and bool(b) and (a in b or b in a)
 
 
+def _end_at_city(end_text: str, end_city_id: int | None, place: PlaceRead) -> bool:
+    """Whether a leg end is in the place's city: by city when the end has one, else by the terminal text."""
+    if end_city_id is not None:
+        return end_city_id == place.city.id
+    return _same_place(end_text, place.city.name)
+
+
 # From this many hours of difference an arrival row gets a sleep hint.
 SLEEP_HINT_HOURS = 3
 
@@ -107,7 +114,7 @@ def _lodging(place: PlaceRead) -> str:
     """What to type into Maps for a stay: the address or coordinates when known, else name + city."""
     if place.lat is not None and place.lng is not None:
         return f"{place.lat},{place.lng}"
-    return " ".join(p for p in (place.name, place.address or place.city) if p)
+    return " ".join(p for p in (place.name, place.address or place.city.name) if p)
 
 
 def _transfer_links(origin: str, destination: str) -> dict[str, str]:
@@ -121,7 +128,7 @@ def _transfer_links(origin: str, destination: str) -> dict[str, str]:
 
 def _stay_before(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
     """The stay in the leg's origin city the traveler is leaving from (the latest one begun by departure)."""
-    started = [s for s in stays if _same_place(leg.origin, s.place.city) and s.check_in_at <= leg.departs_at]
+    started = [s for s in stays if _end_at_city(leg.origin, leg.origin_city.id if leg.origin_city else None, s.place) and s.check_in_at <= leg.departs_at]
     return max(started, key=lambda s: s.check_in_at, default=None)
 
 
@@ -129,12 +136,12 @@ def _stay_after(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
     """The stay in the leg's destination city the traveler is heading to (the first check-in near arrival)."""
     near = [
         s for s in stays
-        if _same_place(leg.destination, s.place.city) and timedelta(hours=-1) <= s.check_in_at - leg.arrives_at <= ARRIVAL_WINDOW
+        if _end_at_city(leg.destination, leg.destination_city.id if leg.destination_city else None, s.place) and timedelta(hours=-1) <= s.check_in_at - leg.arrives_at <= ARRIVAL_WINDOW
     ]
     if near:
         return min(near, key=lambda s: s.check_in_at)
     # Checking in more than a day later still means heading to that hotel: the first stay there that is not over yet.
-    later = [s for s in stays if _same_place(leg.destination, s.place.city) and s.check_out_at > leg.arrives_at]
+    later = [s for s in stays if _end_at_city(leg.destination, leg.destination_city.id if leg.destination_city else None, s.place) and s.check_out_at > leg.arrives_at]
     return min(later, key=lambda s: s.check_in_at, default=None)
 
 
@@ -189,9 +196,9 @@ def _arrival_item(leg: LegRead, stays: list[StayRead]) -> TimelineItem:
 
 def _stay_items(stay: StayRead) -> list[TimelineItem]:
     place = stay.place
-    near = " ".join(p for p in (place.name, place.city) if p)
+    near = " ".join(p for p in (place.name, place.city.name) if p)
     links = {
-        "map": place_maps_url(place.name, place.city, place.maps_url, place.lat, place.lng),
+        "map": place_maps_url(place.name, place.city.name, place.maps_url, place.lat, place.lng),
         **_food_links(near),
         "luggage": maps_search_url(f"luggage storage near {near}"),
         "pharmacy": maps_search_url(f"pharmacy near {near}"),
@@ -201,11 +208,11 @@ def _stay_items(stay: StayRead) -> list[TimelineItem]:
     return [
         TimelineItem(
             kind="check_in", at=stay.check_in_at, local=stay.check_in_local, timezone=stay.timezone,
-            title=f"Check in: {place.name}", subtitle=place.city, ref_id=stay.id, links=links,
+            title=f"Check in: {place.name}", subtitle=place.city.name, ref_id=stay.id, links=links,
         ),
         TimelineItem(
             kind="check_out", at=stay.check_out_at, local=stay.check_out_local, timezone=stay.timezone,
-            title=f"Check out: {place.name}", subtitle=place.city, ref_id=stay.id, links=links,
+            title=f"Check out: {place.name}", subtitle=place.city.name, ref_id=stay.id, links=links,
         ),
     ]
 
@@ -287,9 +294,8 @@ def find_warnings(legs: list[LegRead], stays: list[StayRead]) -> list[TripWarnin
             ))
 
     for stay in stays:
-        city = stay.place.city
         for leg in ordered:
-            if not _same_place(leg.destination, city):
+            if not _end_at_city(leg.destination, leg.destination_city.id if leg.destination_city else None, stay.place):
                 continue
             wait = stay.check_in_at - leg.arrives_at
             if timedelta(0) <= wait <= ARRIVAL_WINDOW and wait > LONG_WAIT_BEFORE_CHECK_IN:

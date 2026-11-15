@@ -2,18 +2,23 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Query
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
+from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import PlaceKind, VisitStatus
 from app.shared.links import place_maps_url
 from app.features.travel.tags.schemas import normalize_tags
 
 
 class PlaceCreate(BaseModel):
+    """The city is `city_id`, or `city` + `country` (+ `country_code`), found or created by name."""
+
     kind: PlaceKind
     name: str = Field(min_length=1, max_length=200)
-    city: str | None = Field(default=None, max_length=100)
-    country: str | None = Field(default=None, max_length=100)
+    city_id: int | None = None
+    city: str | None = Field(default=None, min_length=1, max_length=100)
+    country: str | None = Field(default=None, min_length=1, max_length=100)
+    country_code: str | None = Field(default=None, min_length=2, max_length=2)
     maps_url: str | None = None
     lat: float | None = Field(default=None, ge=-90, le=90)
     lng: float | None = Field(default=None, ge=-180, le=180)
@@ -26,12 +31,22 @@ class PlaceCreate(BaseModel):
     def _clean_tags(cls, tags: list[str]) -> list[str]:
         return normalize_tags(tags) or []
 
+    @model_validator(mode="after")
+    def _one_city_form(self) -> "PlaceCreate":
+        named = self.city is not None and self.country is not None
+        if (self.city_id is not None) == named or (self.city is None) != (self.country is None):
+            raise ValueError("Send city_id, or city and country")
+        return self
+
 
 class PlaceUpdate(BaseModel):
     kind: PlaceKind | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    city: str | None = Field(default=None, max_length=100)
-    country: str | None = Field(default=None, max_length=100)
+    # Either form re-points the place; a lone city or country keeps the other from the place's current city.
+    city_id: int | None = None
+    city: str | None = Field(default=None, min_length=1, max_length=100)
+    country: str | None = Field(default=None, min_length=1, max_length=100)
+    country_code: str | None = Field(default=None, min_length=2, max_length=2)
     maps_url: str | None = None
     lat: float | None = Field(default=None, ge=-90, le=90)
     lng: float | None = Field(default=None, ge=-180, le=180)
@@ -44,13 +59,18 @@ class PlaceUpdate(BaseModel):
     def _clean_tags(cls, tags: list[str] | None) -> list[str] | None:
         return normalize_tags(tags)
 
+    @model_validator(mode="after")
+    def _one_city_form(self) -> "PlaceUpdate":
+        if self.city_id is not None and (self.city is not None or self.country is not None):
+            raise ValueError("Send city_id, or city and country, not both")
+        return self
+
 
 class PlaceRead(BaseModel):
     id: int
     kind: PlaceKind
     name: str
-    city: str | None
-    country: str | None
+    city: CityRef
     maps_url: str | None
     lat: float | None
     lng: float | None
@@ -73,7 +93,7 @@ class PlaceRead(BaseModel):
     @computed_field
     @property
     def maps_link(self) -> str:
-        return place_maps_url(self.name, self.city, self.maps_url, self.lat, self.lng)
+        return place_maps_url(self.name, self.city.name, self.maps_url, self.lat, self.lng)
 
 
 class PlaceFilters:

@@ -4,7 +4,7 @@
  * [iata, city, name, country, tz], loaded once on first use.
  *
  * initCityInput({ input, countryInput }) is the same dropdown over distinct cities for place forms:
- * picking a city fills the country name (via Intl.DisplayNames).
+ * picking a city fills the country name (via Intl.DisplayNames) and its ISO code.
  *
  * initTerminalInput({ input, codeInput, zoneInput, mode }) attaches a dropdown to `input`; `mode()` returns the
  * leg's mode. For "flight" it searches the airports, for "train" the stations in /static/js/stations.json
@@ -182,7 +182,7 @@
     }
   }
 
-  // One row per city + country, derived from the airports list: [city, country name].
+  // One row per city + country, derived from the airports list: [city, country name, time zone, ISO country code].
   let citiesPromise = null;
   function loadCities() {
     if (!citiesPromise) {
@@ -193,7 +193,7 @@
           const key = `${city}|${country}`;
           if (!city || seen.has(key)) continue;
           seen.add(key);
-          cities.push([city, countryName(country), tz]);
+          cities.push([city, countryName(country), tz, country]);
         }
         return cities;
       });
@@ -215,23 +215,51 @@
     return hits.slice(0, MAX_RESULTS).map((h) => h[1]);
   }
 
-  // City typeahead for place forms: picking a city also fills the country and, if given, the time zone (editable afterwards).
-  function initCityInput({ input, countryInput, zoneInput }) {
+  // City typeahead for place forms: picking a city also fills the country, its ISO code (a hidden `codeInput`, so the
+  // backend can store it) and, if given, the time zone (editable afterwards). Typing in the country by hand drops the code.
+  function initCityInput({ input, countryInput, codeInput, zoneInput }) {
+    if (codeInput) countryInput.addEventListener("input", () => { codeInput.value = ""; });
     attachDropdown({
       input,
       isActive: () => true,
       find: async (query) => searchCities(await loadCities(), query),
       label: ([city, country]) => [city, country],
-      pick: ([city, country, tz]) => {
+      pick: ([city, country, tz, code]) => {
         input.value = city;
         countryInput.value = country;
+        if (codeInput) codeInput.value = code || "";
         if (zoneInput && tz) zoneInput.value = tz;
+      },
+    });
+  }
+
+  // Country typeahead (names from the airports list) that also fills the hidden ISO code.
+  function initCountryInput({ input, codeInput }) {
+    input.addEventListener("input", () => { codeInput.value = ""; });
+    attachDropdown({
+      input,
+      isActive: () => true,
+      find: async (query) => {
+        const q = query.trim().toLowerCase();
+        if (q.length < 2) return [];
+        const seen = new Map();
+        for (const [, country, , code] of await loadCities()) {
+          if (country.toLowerCase().includes(q) && !seen.has(code)) seen.set(code, [country, code]);
+        }
+        return [...seen.values()].sort((a, b) => a[0].localeCompare(b[0])).slice(0, MAX_RESULTS);
+      },
+      label: ([country, code]) => [country, code],
+      pick: ([country, code]) => {
+        input.value = country;
+        codeInput.value = code;
       },
     });
   }
 
   window.initTerminalInput = initTerminalInput;
   window.initCityInput = initCityInput;
+  window.initCountryInput = initCountryInput;
+  window.attachDropdown = attachDropdown;
   window.searchAirports = search;
   window.searchStations = searchStations;
   window.searchCities = searchCities;

@@ -119,6 +119,7 @@ from app.features.metrics.tags.service import MetricTagService
 from app.assistant.commands.handlers.travel import TravelServices
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import TripDefaultTagService
+from app.features.travel.cities.service import CityService
 from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
@@ -660,6 +661,9 @@ def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayServic
 def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
     return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
 
+def get_city_service(session: AsyncSession = Depends(get_session)) -> CityService:
+    return CityService(session)
+
 def get_web_link_service(session: AsyncSession = Depends(get_session)) -> WebLinkService:
     return WebLinkService(session, LinkPreviewClient(), EmbeddingService(session, get_embedding_provider()))
 
@@ -835,6 +839,7 @@ TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
 StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
+CityServiceDep = Annotated[CityService, Depends(get_city_service)]
 TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
 VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]
 TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transaction_link_service)]

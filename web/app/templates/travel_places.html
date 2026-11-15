@@ -18,9 +18,9 @@
       <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
         <select name="kind" class="select select-sm select-bordered">{% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if k == 'other' }}>{{ k }}</option>{% endfor %}</select></label>
       <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
-        <input name="city" class="input input-sm input-bordered w-36"></label>
+        <input name="city" required class="input input-sm input-bordered w-36"></label>
       <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
-        <input name="country" class="input input-sm input-bordered w-36"></label>
+        <input name="country" required class="input input-sm input-bordered w-36"><input type="hidden" name="country_code"></label>
       <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link</span>
         <input name="maps_url" class="input input-sm input-bordered w-64"></label>
       <label class="space-y-1"><span class="block text-xs text-gray-500">Tags (comma separated)</span>
@@ -85,7 +85,7 @@
 <script src="/static/js/airport-input.js"></script>
 <script>
 const newPlaceForm = document.getElementById('new-place');
-initCityInput({ input: newPlaceForm.elements.city, countryInput: newPlaceForm.elements.country });
+initCityInput({ input: newPlaceForm.elements.city, countryInput: newPlaceForm.elements.country, codeInput: newPlaceForm.elements.country_code });
 document.getElementById('toggle-new-place').addEventListener('click', () => {
   document.getElementById('new-place-wrap').classList.toggle('hidden');
   newPlaceForm.elements.name.focus();
@@ -98,6 +98,7 @@ newPlaceForm.addEventListener('submit', async (event) => {
     const value = form.elements[name].value.trim();
     if (value) body[name] = value;
   }
+  if (form.elements.country_code.value) body.country_code = form.elements.country_code.value;
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
   const res = await fetch('/travel/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));

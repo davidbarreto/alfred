@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timezone
 
+from travel_city_helpers import city_ref
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
@@ -26,7 +27,7 @@ def _leg(id, origin, destination, mode="flight", origin_code=None, destination_c
 
 def _place(id=1, name="Hotel Example", city="Lisbon", lat=None, lng=None, address=None):
     return PlaceRead(
-        id=id, kind="hotel", name=name, city=city, country="Portugal", maps_url=None, lat=lat, lng=lng,
+        id=id, kind="hotel", name=name, city=city_ref(city, "Portugal"), maps_url=None, lat=lat, lng=lng,
         address=address, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -41,8 +42,8 @@ def _stay(id, place, day_in, day_out):
 
 def _visit(id, place_id=30, name="Cafe Example", status="planned", day=date(2031, 3, 3)):
     return VisitRead(
-        id=id, place_id=place_id, place=VisitPlace(id=place_id, kind="restaurant", name=name, city="Lisbon",
-                                                  country="Portugal", maps_url=None, lat=None, lng=None),
+        id=id, place_id=place_id, place=VisitPlace(id=place_id, kind="restaurant", name=name, city=city_ref("Lisbon", "Portugal"),
+                                                  maps_url=None, lat=None, lng=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=day, visit_time=time(20, 0), notes=None,
         grade=None, created_at=NOW, updated_at=NOW,
     )

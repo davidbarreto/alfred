@@ -2,6 +2,7 @@ from zoneinfo import ZoneInfo
 
 from datetime import datetime, timezone
 
+from travel_city_helpers import city_ref
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
@@ -27,7 +28,7 @@ def _leg(id, origin, destination, departs, arrives, **kw):
 
 def _place(name="Hotel Example", city="Lisbon"):
     return PlaceRead(
-        id=1, kind="hotel", name=name, city=city, country=None, maps_url=None, lat=None, lng=None,
+        id=1, kind="hotel", name=name, city=city_ref(city), maps_url=None, lat=None, lng=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -192,6 +193,16 @@ class TestWarnings:
     def test_stay_in_another_city_is_not_matched(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 6), _dt(2, 8))
         assert find_warnings([leg], [_stay(5, _dt(2, 18), _dt(4, 10), city="Madrid")]) == []
+
+    def test_a_leg_end_with_a_city_is_matched_by_city_not_by_text(self):
+        # The terminal text says "Lisboa Airport" but the end is linked to the Lisbon city of the stay.
+        leg = _leg(1, "Porto", "Lisboa Airport", _dt(2, 6), _dt(2, 8), destination_city=city_ref("Lisbon"))
+        warnings = find_warnings([leg], [_stay(5, _dt(2, 18), _dt(4, 10))])
+        assert [w.kind for w in warnings] == ["long_wait_before_check_in"]
+
+    def test_a_leg_end_in_another_city_is_not_matched_even_when_the_text_would_be(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 6), _dt(2, 8), destination_city=city_ref("Lisbon", "Otherland"))
+        assert find_warnings([leg], [_stay(5, _dt(2, 18), _dt(4, 10))]) == []
 
     def test_arrival_after_check_out(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(4, 9), _dt(4, 12))

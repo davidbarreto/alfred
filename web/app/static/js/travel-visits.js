@@ -14,7 +14,7 @@ function initTravelVisits(config) {
   const placeSelect = form.elements.place_id;
   const newPlaceFields = document.getElementById('visit-new-place');
   let editing = null;
-  if (window.initCityInput && form.elements.place_city) initCityInput({ input: form.elements.place_city, countryInput: form.elements.place_country });
+  if (window.initCityInput && form.elements.place_city) initCityInput({ input: form.elements.place_city, countryInput: form.elements.place_country, codeInput: form.elements.place_country_code });
 
   async function send(method, url, body) {
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -26,7 +26,7 @@ function initTravelVisits(config) {
     if (!placeSelect) return;
     const isNew = placeSelect.value === 'new';
     newPlaceFields.classList.toggle('hidden', !isNew);
-    form.elements.place_name.required = isNew;
+    for (const name of ['place_name', 'place_city', 'place_country']) form.elements[name].required = isNew;
   }
   placeSelect?.addEventListener('change', syncPlaceFields);
   if (typeof initPlaceHistory === 'function') initPlaceHistory(placeSelect, document.getElementById('visit-place-history'));
@@ -88,6 +88,7 @@ function initTravelVisits(config) {
         const value = form.elements[input].value.trim();
         if (value) place[field] = value;
       }
+      if (form.elements.place_country_code.value) place.country_code = form.elements.place_country_code.value;
       const created = await send('POST', '/travel/places', place);
       if (!created.ok) { error.textContent = created.data.error || 'Could not create the place.'; return; }
       placeId = created.data.id;

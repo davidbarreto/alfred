@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
+from travel_city_helpers import city_ref
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.detail import PlaceDetail
@@ -38,7 +39,7 @@ def _leg(id=1) -> LegRead:
 
 def _place(id=3) -> PlaceRead:
     return PlaceRead(
-        id=id, kind="hotel", name="Hotel Example", city="Lisbon", country=None, maps_url=None, lat=None, lng=None,
+        id=id, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -271,7 +272,7 @@ class TestPlaces:
     def test_create(self, places):
         client, service = places
         service.create_place.return_value = _place()
-        r = client.post("/travel/places", headers=AUTH, json={"kind": "hotel", "name": "Hotel Example", "city": "Lisbon"})
+        r = client.post("/travel/places", headers=AUTH, json={"kind": "hotel", "name": "Hotel Example", "city": "Lisbon", "country": "Portugal"})
         assert r.status_code == 201
 
     def test_create_unknown_kind_is_422(self, places):
@@ -330,7 +331,7 @@ class TestTags:
 
 def _visit(id=11, status="planned", grade=None) -> VisitRead:
     return VisitRead(
-        id=id, place_id=3, place=VisitPlace(id=3, kind="restaurant", name="Cafe Example", city="Lisbon", maps_url=None, lat=None, lng=None),
+        id=id, place_id=3, place=VisitPlace(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=date(2026, 12, 18), visit_time=time(20, 0),
         notes=None, grade=grade, created_at=NOW, updated_at=NOW,
     )
@@ -414,7 +415,7 @@ class TestPlaceDetailAndFilters:
     def test_create_with_tags(self, places):
         client, service = places
         service.create_place.return_value = _place()
-        client.post("/travel/places", headers=AUTH, json={"kind": "cafe", "name": "X", "tags": [" Would return", "would return"]})
+        client.post("/travel/places", headers=AUTH, json={"kind": "cafe", "name": "X", "city_id": 1, "tags": [" Would return", "would return"]})
         assert service.create_place.await_args.args[0].tags == ["would return"]
 
 

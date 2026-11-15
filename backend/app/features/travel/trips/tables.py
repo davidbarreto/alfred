@@ -5,6 +5,7 @@ from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.features.travel.cities.tables import City
 from app.features.travel.tags.tables import TravelTag, trips_tags
 
 
@@ -42,16 +43,14 @@ class TripWeather(Base):
     """The last weather fetched for one day in one city of a trip (a forecast, last year's climate far ahead, or what actually happened for a trip never opened in time)."""
     __tablename__ = "trip_weather"
     __table_args__ = (
-        UniqueConstraint("trip_id", "city_key", "day", name="uq_travel_trip_weather_day"),
+        UniqueConstraint("trip_id", "city_id", "day", name="uq_travel_trip_weather_day"),
         CheckConstraint("source IN ('forecast', 'climate', 'actual')", name="ck_travel_trip_weather_source"),
         {"schema": "travel"},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     trip_id: Mapped[int] = mapped_column(ForeignKey("travel.trips.id", ondelete="CASCADE"), nullable=False)
-    # Lower-cased city, the key stays and legs are matched on; `city` keeps the spelling to display.
-    city_key: Mapped[str] = mapped_column(String(200), nullable=False)
-    city: Mapped[str] = mapped_column(String(200), nullable=False)
+    city_id: Mapped[int] = mapped_column(ForeignKey("travel.cities.id", ondelete="CASCADE"), nullable=False)
     day: Mapped[date] = mapped_column(Date, nullable=False)
     min_c: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     max_c: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -63,3 +62,5 @@ class TripWeather(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    city: Mapped[City] = relationship(City, lazy="joined")

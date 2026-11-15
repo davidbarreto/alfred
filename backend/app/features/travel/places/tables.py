@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import CheckConstraint, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.features.travel.cities.tables import City
 from app.features.travel.constants import PLACE_KINDS, in_clause
 from app.features.travel.tags.tables import TravelTag, places_tags
 
@@ -23,8 +24,7 @@ class Place(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    city_id: Mapped[int] = mapped_column(ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=False, index=True)
     maps_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -35,6 +35,7 @@ class Place(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    city: Mapped[City] = relationship(City, lazy="joined")
     tags: Mapped[List[TravelTag]] = relationship(
         TravelTag, secondary=places_tags, lazy="selectin", order_by=TravelTag.name
     )

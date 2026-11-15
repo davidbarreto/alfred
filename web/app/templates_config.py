@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
-from app.shared.flags import country_flag
+from app.shared.flags import country_flag, country_flag_of
 
 _DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(_DIR))
@@ -115,6 +115,7 @@ templates.env.filters["short_date"] = _short_date
 templates.env.filters["compact_number"] = _compact_number
 templates.env.filters["money"] = _money
 templates.env.filters["country_flag"] = country_flag
+templates.env.filters["country_flag_of"] = country_flag_of
 
 
 _LINK_ICONS = {

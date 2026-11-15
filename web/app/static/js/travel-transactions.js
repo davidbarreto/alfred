@@ -12,7 +12,7 @@ function initTravelTransactions() {
   let timer = null;
 
   const money = (value) => (value === null || value === undefined ? 'no EUR amount' : `${Number(value).toFixed(2)} €`);
-  const line = (t) => `${t.date.slice(0, 10)} · ${t.merchant || t.description || '(no name)'} · ${Number(t.amount).toFixed(2)} ${t.currency}`;
+  const line = (t) => `${t.date.slice(0, 10)} · ${t.merchant || t.description || t.bank_description || '(no name)'} · ${Number(t.amount).toFixed(2)} ${t.currency}`;
 
   async function call(method, url, body) {
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

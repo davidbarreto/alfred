@@ -1266,3 +1266,9 @@ class TestEmptyDays:
         assert 'id="empty-days"' not in client.get("/travel/1").text
         _route(mock_api, {"/travel/trips/1": _detail(visits=[]), "/travel/places": [], "/travel/trips/1/costs": None})
         assert 'id="empty-days"' not in client.get("/travel/1").text
+
+
+def test_link_dialog_falls_back_to_the_bank_description():
+    from pathlib import Path
+    script = (Path(__file__).parent.parent / "app/static/js/travel-transactions.js").read_text()
+    assert "t.merchant || t.description || t.bank_description" in script

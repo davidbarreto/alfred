@@ -8,6 +8,30 @@
   <div class="flex items-center gap-4">
     <a href="/travel" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Trips</a>
     <h1 class="text-base font-semibold text-gray-900">Places</h1>
+    <button type="button" class="btn btn-xs btn-outline ml-auto" id="toggle-new-place"><i class="ti ti-plus"></i> New place</button>
+  </div>
+
+  <div id="new-place-wrap" class="hidden card bg-white">
+    <form id="new-place" class="card-body p-5 flex flex-wrap items-end gap-3">
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span>
+        <input name="name" required maxlength="200" class="input input-sm input-bordered w-56"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+        <select name="kind" class="select select-sm select-bordered">{% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if k == 'other' }}>{{ k }}</option>{% endfor %}</select></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
+        <input name="city" class="input input-sm input-bordered w-36"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
+        <input name="country" class="input input-sm input-bordered w-36"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link</span>
+        <input name="maps_url" class="input input-sm input-bordered w-64"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Tags (comma separated)</span>
+        <input name="tags" class="input input-sm input-bordered w-56"></label>
+      <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Address</span>
+        <input name="address" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes</span>
+        <textarea name="notes" rows="2" class="textarea textarea-bordered w-full text-sm"></textarea></label>
+      <button type="submit" class="btn btn-sm btn-outline">Create place</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </form>
   </div>
 
   <form id="place-filters" class="flex flex-wrap items-end gap-3"
@@ -57,4 +81,28 @@
     {% include "_travel_places_list.html" %}
   </div>
 </div>
+
+<script src="/static/js/airport-input.js"></script>
+<script>
+const newPlaceForm = document.getElementById('new-place');
+initCityInput({ input: newPlaceForm.elements.city, countryInput: newPlaceForm.elements.country });
+document.getElementById('toggle-new-place').addEventListener('click', () => {
+  document.getElementById('new-place-wrap').classList.toggle('hidden');
+  newPlaceForm.elements.name.focus();
+});
+newPlaceForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const body = { name: form.elements.name.value.trim(), kind: form.elements.kind.value };
+  for (const name of ['city', 'country', 'maps_url', 'address', 'notes']) {
+    const value = form.elements[name].value.trim();
+    if (value) body[name] = value;
+  }
+  body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
+  const res = await fetch('/travel/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { form.querySelector('.form-error').textContent = data.error || 'Could not create the place.'; return; }
+  location.href = `/travel/places/${data.id}`;
+});
+</script>
 {% endblock %}

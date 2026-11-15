@@ -404,6 +404,14 @@ class TestPlacesPage:
         assert 'list="city-options"' in html and 'list="country-options"' in html
         assert '<option value="Alpha">' in html and '<option value="Examplia">' in html
 
+    def test_has_a_form_to_create_a_place_outside_any_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/places": [], "/travel/tags": []})
+        html = client.get("/travel/places").text
+        assert 'id="new-place"' in html and "New place" in html
+        assert "fetch('/travel/places', { method: 'POST'" in html
+        for kind in ("hotel", "restaurant", "museum"):
+            assert f'<option value="{kind}"' in html
+
     def test_lists_places_with_grade_and_tags(self, client, mock_api):
         _route(mock_api, {"/travel/places": [_place(tags=["Would return"], grade=4.5, grade_count=2)], "/travel/tags": [{"id": 1, "name": "Would return", "trip_count": 0, "place_count": 1}]})
         html = client.get("/travel/places").text

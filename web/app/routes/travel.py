@@ -374,6 +374,7 @@ async def place_page(place_id: int, request: Request):
     costs = await safe_get(f"/travel/places/{place_id}/costs")
     return templates.TemplateResponse(request, "travel_place.html", {
         "place": place, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
+        "entity_costs": {"visits": {c["id"]: c for c in (costs or {}).get("visits", [])}},
     })
 
 

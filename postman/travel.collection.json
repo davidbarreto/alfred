@@ -2906,7 +2906,8 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Stay payments counted', () => pm.expect(pm.response.json().total.total_eur).to.eql('25.50'));"
+              "pm.test('Stay payments counted', () => pm.expect(pm.response.json().total.total_eur).to.eql('25.50'));",
+              "pm.test('Per-visit costs are listed', () => pm.expect(pm.response.json().visits).to.be.an('array'));"
             ],
             "type": "text/javascript"
           }

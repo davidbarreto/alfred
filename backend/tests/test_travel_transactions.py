@@ -234,7 +234,11 @@ class TestTransactionLinkService:
     async def test_place_costs(self, links):
         links._place_repo.get_place.return_value = SimpleNamespace(id=3)
         links._repo.get_place_total.return_value = (Decimal("80.00"), 2, 0)
-        assert (await links.get_place_costs(3)).total.total_eur == Decimal("80.00")
+        links._visit_repo.get_place_visits.return_value = [SimpleNamespace(id=10), SimpleNamespace(id=11)]
+        links._repo.get_entity_costs.return_value = {10: (Decimal("80.00"), 2, 0)}
+        costs = await links.get_place_costs(3)
+        assert costs.total.total_eur == Decimal("80.00")
+        assert [(v.id, v.total_eur) for v in costs.visits] == [(10, Decimal("80.00"))]
         links._place_repo.get_place.return_value = None
         assert await links.get_place_costs(3) is None
 

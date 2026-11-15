@@ -167,4 +167,9 @@ class TransactionLinkService:
     async def get_place_costs(self, place_id: int) -> PlaceCosts | None:
         if await self._place_repo.get_place(place_id) is None:
             return None
-        return PlaceCosts(total=_cost(await self._repo.get_place_total(place_id)))
+        visits = await self._visit_repo.get_place_visits(place_id)
+        per_visit = await self._repo.get_entity_costs("visits", [v.id for v in visits])
+        return PlaceCosts(
+            total=_cost(await self._repo.get_place_total(place_id)),
+            visits=[EntityCost(id=v.id, **_cost(per_visit[v.id]).model_dump()) for v in visits if v.id in per_visit],
+        )

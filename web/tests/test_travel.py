@@ -553,6 +553,13 @@ class TestCosts:
         _route(mock_api, {"/travel/places/3/costs": {"total": _cost("80.00", 2)}, "/travel/places/3": place})
         assert "80.00 €" in client.get("/travel/places/3").text
 
+    def test_place_page_shows_each_visits_cost(self, client, mock_api):
+        place = _place(visits=[_visit(id=7)], stays=[])
+        costs = {"total": _cost("80.00", 2), "visits": [{"id": 7, **_cost("45.00")}]}
+        _route(mock_api, {"/travel/places/3/costs": costs, "/travel/places/3": place})
+        html = client.get("/travel/places/3").text
+        assert 'id="visit-7"' in html and "45.00 €" in html
+
 
 class TestTransactionLinkProxies:
     def test_search_needs_a_query(self, client, mock_api):

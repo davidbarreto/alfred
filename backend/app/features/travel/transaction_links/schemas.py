@@ -79,6 +79,8 @@ class PlaceCosts(BaseModel):
     """Lifetime cost of a place: its visits plus (for a hotel) its stays."""
 
     total: Cost
+    # Cost of each visit that has linked charges (visits with none are left out).
+    visits: list[EntityCost] = []
 
 
 class ApplyDefaultTagsResult(BaseModel):

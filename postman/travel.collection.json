@@ -5181,7 +5181,7 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities?country_id={{travel_country_id}}&q=postman city {{travel_ts}}",
+          "raw": "{{base_url}}/travel/cities?country_id={{travel_country_id}}&q=postman city",
           "host": [
             "{{base_url}}"
           ],
@@ -5196,7 +5196,7 @@
             },
             {
               "key": "q",
-              "value": "postman city {{travel_ts}}"
+              "value": "postman city"
             }
           ]
         }

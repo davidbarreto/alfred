@@ -111,6 +111,25 @@ class TestCityService:
         assert (created.id, created.country.name) == (5, "Newland")
         repo.commit.assert_awaited_once()
 
+    async def test_the_conflict_message_does_not_touch_an_expired_country(self, service, repo):
+        """After a rollback a loaded country is expired and reading it in async code raises: read the name first."""
+        class _Expiring:
+            id = 1
+            expired = False
+
+            @property
+            def name(self):
+                if self.expired:
+                    raise RuntimeError("MissingGreenlet")
+                return "Examplia"
+
+        country = _Expiring()
+        repo.get_country.return_value = country
+        repo.get_city_in_country.return_value = _city()
+        repo.rollback.side_effect = lambda: setattr(country, "expired", True)
+        with pytest.raises(TravelConflictError, match="Examplia"):
+            await service.create_city(CityCreate(name="Alpha", country_id=1))
+
     async def test_a_unique_index_violation_is_a_conflict(self, service, repo):
         from sqlalchemy.exc import IntegrityError
 

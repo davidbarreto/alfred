@@ -1750,7 +1750,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\"\n  },\n  \"source\": \"mcp\"\n}"
+          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     },

@@ -61,14 +61,15 @@ class CityService:
                 raise TravelNotFoundError(f"Country {data.country_id} not found")
         else:
             country = await self._resolver.resolve_country(data.country or "", data.country_code)
+        # Read the names now: a rollback expires the loaded country, and reading it afterwards fails in async code.
+        taken = f"{data.name.strip()} already exists in {country.name}"
         if await self._repo.get_city_in_country(data.name, country.id) is not None:
-            await self._repo.rollback()
-            raise TravelConflictError(f"{data.name.strip()} already exists in {country.name}")
+            raise TravelConflictError(taken)
         try:
             city = await self._resolver.resolve_city(data.name, country)
             await self._repo.commit()
             await self._repo.refresh(city)
         except IntegrityError as exc:
             await self._repo.rollback()
-            raise TravelConflictError(f"{data.name.strip()} already exists in {country.name}") from exc
+            raise TravelConflictError(taken) from exc
         return CityRead.model_validate(city)

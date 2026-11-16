@@ -6,7 +6,7 @@
 <div class="page space-y-6">
 
   <!-- Breadcrumb -->
-  <div class="flex items-center gap-2 text-xs text-gray-400">
+  <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
     <a href="/languages/" class="hover:text-gray-600">Languages</a>
     <i class="ti ti-chevron-right text-gray-300"></i>
     <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
@@ -23,7 +23,7 @@
 
       <div class="card bg-white">
         <div class="card-body p-5 space-y-4">
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 class="text-lg font-semibold text-gray-900">{{ chunk.text }}</h1>
               <p class="text-sm text-gray-500 mt-0.5">{{ chunk.translation }}</p>

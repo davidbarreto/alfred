@@ -32,7 +32,7 @@ Build pages from these classes instead of ad-hoc grids, so every page lines up t
 | `card-columns` | Cards of different heights and no popups inside (dashboard): packed in two columns, no holes |
 | `split` + `card-stack` | Two independent stacks of cards (trip page, calendar); one column below `lg`. `split-wide-left` makes it 3:2 |
 | `filter-bar` | Filters above a list: two-column grid on a phone, wrapping row from `sm`; `filter-wide` spans both columns |
-| `detail-row` | Text left, row buttons right; the buttons move to their own line when both do not fit |
+| `action-row` | A list row with text left and its buttons right; the buttons move to their own line when both do not fit. The text is the first child, the buttons the last |
 | `chart-box` | Fixed-height box for a Chart.js canvas (`chart-box-lg` for 14rem); the chart needs `maintainAspectRatio: false` |
 | `table-scroll` | Wrapper for a table that may be wider than its card; give the table a `min-w-[..]` |
 
@@ -41,12 +41,15 @@ Rules that follow from it:
 - **No bare `grid-cols-2`** (or more) for cards: a fixed column count is what squeezes cards on a phone. Use the classes above, or a responsive pair (`grid-cols-1 sm:grid-cols-2`) inside a form.
 - **Never give a `<canvas>` a `height` attribute or leave it without a sized parent**: Chart.js then keeps the aspect ratio and the chart grows with the card's width.
 - **List rows on a phone**: the title keeps the width; secondary text (location, tags, date column) is hidden below `sm` (`hidden sm:inline`) or moves to the line under the title.
+- On a phone no item of a wrapping row is wider than the screen, and any group of controls inside `page-head` wraps: both come from `portal.css`, so a long `<select>` or a row of header buttons needs no per-page fix.
 - Controls shown only on hover (`opacity-0 group-hover:opacity-100`) are always visible on touch screens; inputs are 16px on a phone (iOS zooms the page otherwise). Both are handled in `portal.css`.
 - A new class name must not collide with a DaisyUI component (`stack`, `join`, `divider`, `steps`, ...): check before adding one.
 
 The sidebar groups its links (Organize, Life, Learning, Assistant); below `md` it is a drawer opened from the top bar, which shows the page title (the `title` block). A new page goes into the fitting group in `base.html`.
 
-Status: the system is applied to the dashboard, tasks, finance (dashboard, transactions, insights), insights, calendar and the trip page; every other page uses `page` and still needs its grids, headers and tables moved over.
+Every page is on this system. Two grids are deliberately plain responsive grids, because their tiles should keep one size and stay left-aligned: the task cards and the note cards.
+
+A card that is a link must not contain other links (the browser splits nested `<a>` tags and the card falls apart): make the card a `relative` `<div>`, give the title link `after:absolute after:inset-0`, and put the inner links on `relative z-10` (see `_travel_places_list.html`).
 
 ## Interaction rules
 

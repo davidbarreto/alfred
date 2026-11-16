@@ -100,7 +100,8 @@
     {% if tag_top %}
     <div>
       <h3 class="text-xs font-medium text-gray-500 mb-2">Biggest expenses</h3>
-      <table class="table table-sm w-full text-sm">
+      <div class="table-scroll">
+      <table class="table table-sm w-full text-sm min-w-[30rem]">
         <tbody>
           {% for t in tag_top %}
           <tr>
@@ -111,6 +112,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
     {% endif %}
     {% endif %}

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-5">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <div>
       <h1 class="text-base font-semibold text-gray-900">Evening Digest</h1>
       {% if digest %}<p class="text-xs text-gray-400 mt-0.5">{{ digest.date }}</p>{% endif %}
@@ -21,7 +21,7 @@
     </button>
   </div>
 
-  <div class="tabs tabs-boxed w-fit">
+  <div class="tabs tabs-boxed w-fit max-w-full overflow-x-auto">
     <a href="/briefing/" class="tab">Morning</a>
     <span class="tab tab-active">Evening</span>
     <a href="/briefing/history" class="tab">History</a>

@@ -10,7 +10,7 @@
 
   <div class="card bg-white">
     <div class="card-body p-5 space-y-3">
-      <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 class="text-base font-semibold text-gray-900">{{ place.name }}</h1>
           <p class="text-xs text-gray-500">{{ place.kind }} · {{ place.city.country | country_flag_of }} <a class="hover:underline text-[#378ADD]" href="/travel/cities/{{ place.city.id }}">{{ place.city.name }}</a>, <a class="hover:underline text-[#378ADD]" href="/travel/countries/{{ place.city.country.id }}">{{ place.city.country.name }}</a></p>

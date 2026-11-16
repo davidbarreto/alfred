@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-4">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Contacts</h1>
     <button onclick="openNewContact()" class="btn btn-sm btn-primary gap-1">
       <i class="ti ti-plus text-sm"></i>New contact
@@ -19,7 +19,7 @@
   {% endif %}
 
   <!-- Text filters -->
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="filter-bar">
     <input
       id="filter-name"
       type="text"

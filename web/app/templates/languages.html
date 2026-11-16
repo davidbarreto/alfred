@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-6">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Languages</h1>
     <div class="flex items-center gap-2">
       {% if total_triage > 0 %}
@@ -43,7 +43,7 @@
   </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <div class="card-row">
     {% for track in tracks %}
     <div class="card {% if track.paused_at %}bg-gray-50 opacity-60{% else %}bg-white hover:shadow-sm{% endif %} transition-shadow">
       <div class="card-body p-5 space-y-4">

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-4">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Interviews</h1>
     <div class="flex items-center gap-2">
       <a href="/interview-prep/stories" class="btn btn-sm btn-ghost text-gray-600 gap-1">
@@ -116,7 +116,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Priority</label>
           <select name="priority" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
@@ -142,7 +142,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Source</label>
           <input name="source" type="text" placeholder="e.g. LinkedIn, referral"
@@ -160,7 +160,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Salary min</label>
           <input name="salary_min" id="salary-min" type="number"

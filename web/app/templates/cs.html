@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-6">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">CS</h1>
     <div class="flex flex-col items-end gap-1">
       {% if sync_status_text %}
@@ -25,7 +25,7 @@
   </div>
 
   <!-- Stat cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div class="stat-row">
     <div class="card bg-white">
       <div class="card-body p-5">
         <p class="text-xs text-gray-400">Current streak</p>

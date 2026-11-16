@@ -89,12 +89,12 @@
   {% endif %}
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <div class="flex items-center justify-between mb-2">
-      <form method="get" action="/finance/installments" class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <form method="get" action="/finance/installments" class="flex items-center gap-2 min-w-0">
         {% if hide_completed %}<input type="hidden" name="hide_completed" value="true" />{% endif %}
         <label for="plan-account-filter" class="text-xs text-gray-500">Account</label>
         <select id="plan-account-filter" name="account_id" onchange="this.form.submit()"
-                class="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+                class="min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           <option value="">All accounts</option>
           {% for acc in accounts %}
           <option value="{{ acc.id }}" {% if query_account_id | string == acc.id | string %}selected{% endif %}>{{ acc.name }}</option>
@@ -109,7 +109,7 @@
       </a>
     </div>
     {% if plans %}
-    <div class="flex items-center justify-end gap-3 text-xs text-gray-500 mb-1" id="plan-cost-totals">
+    <div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-gray-500 mb-1" id="plan-cost-totals">
       <span>Interest: €{{ interest_total | money }}</span>
       <span>Duty: €{{ duty_total | money }}</span>
       <span class="font-medium text-[#E24B4A]" title="Interest + stamp duty paid across the plans listed here">Total cost: €{{ (interest_total + duty_total) | money }}</span>
@@ -128,7 +128,7 @@
             {% endif %}
           </div>
         </div>
-        <div class="w-40 flex-shrink-0">
+        <div class="w-20 sm:w-40 flex-shrink-0">
           {% set pct = (plan.captured_installments / plan.total_installments * 100) if plan.total_installments else 0 %}
           <div class="flex items-center gap-2">
             <div class="h-1 bg-gray-100 rounded-full overflow-hidden flex-1">

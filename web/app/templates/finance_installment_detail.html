@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-4">
 
-  <div class="flex items-center justify-between gap-2">
+  <div class="page-head">
     <div class="flex items-center gap-2">
       <a href="/finance/installments" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
       <h1 class="text-base font-semibold text-gray-900">{{ plan.description }}</h1>
@@ -79,11 +79,12 @@
     <ul>
       {% for txn in transactions %}
       {% set can_find_match = not txn.counterpart_transaction_id %}
-      <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
-        <div class="w-24 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
+      <li class="flex items-center gap-2 sm:gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
+        <div class="hidden sm:block w-24 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
         <div class="flex-1 min-w-0 cursor-pointer" onclick='openTransactionDetailModal({{ txn | tojson }}, {{ accounts_by_id.get(txn.account_id, "?") | tojson }})'>
-          <div class="text-sm text-gray-800 truncate flex items-center gap-1.5">
-            <span class="truncate">{{ txn.description or txn.bank_description or "—" }}</span>
+          <div class="sm:hidden text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
+          <div class="text-sm text-gray-800 flex flex-wrap sm:flex-nowrap items-center gap-x-1.5 gap-y-1">
+            <span class="truncate max-w-full">{{ txn.description or txn.bank_description or "—" }}</span>
             {% if txn.note %}
             <i class="ti ti-note flex-shrink-0 text-gray-400 text-xs" title="{{ txn.note }}"></i>
             {% endif %}

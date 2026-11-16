@@ -12,7 +12,7 @@
     <h2 class="text-sm font-medium text-gray-900 mb-3">Habits</h2>
 
     <!-- Stat cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+    <div class="stat-row mb-4">
       <a href="/tasks/?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active habits</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ active_habits }}</p>
@@ -78,7 +78,8 @@
     <!-- Habits table -->
     {% if recurring_tasks %}
     <div id="habits-table" class="card bg-white"><div class="card-body p-0">
-      <table class="w-full text-sm">
+      <div class="table-scroll">
+      <table class="w-full text-sm min-w-[30rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Habit</th>
@@ -147,6 +148,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div></div>
     {% else %}
     <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No recurring habits yet.</div></div>
@@ -162,7 +164,8 @@
       <div class="card bg-white"><div class="card-body p-0">
         <p class="text-xs text-gray-400 uppercase tracking-wide px-4 pt-4 pb-2">One-off, overdue</p>
         {% if missed_one_off %}
-        <table class="w-full text-sm">
+        <div class="table-scroll">
+        <table class="w-full text-sm min-w-[30rem]">
           <tbody class="divide-y divide-gray-50">
             {% for t in missed_one_off %}
             <tr class="hover:bg-gray-50">
@@ -174,6 +177,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
         {% else %}
         <p class="text-sm text-gray-300 py-6 text-center">No overdue one-off tasks.</p>
         {% endif %}
@@ -183,7 +187,8 @@
       <div class="card bg-white"><div class="card-body p-0">
         <p class="text-xs text-gray-400 uppercase tracking-wide px-4 pt-4 pb-2">Habits behind</p>
         {% if missed_habits %}
-        <table class="w-full text-sm">
+        <div class="table-scroll">
+        <table class="w-full text-sm min-w-[30rem]">
           <tbody class="divide-y divide-gray-50">
             {% for t in missed_habits %}
             <tr class="hover:bg-gray-50">
@@ -195,6 +200,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
         {% else %}
         <p class="text-sm text-gray-300 py-6 text-center">No habits behind.</p>
         {% endif %}
@@ -249,7 +255,7 @@
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Overload <span class="text-xs font-normal text-gray-400">last {{ overload_days }} days</span></h2>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+    <div class="stat-row mb-4">
       <div class="card bg-white"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Right now</p>
         {% if overload.status %}
@@ -301,7 +307,7 @@
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Pauses</h2>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+    <div class="stat-row mb-4">
       <div class="card bg-white"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Times paused</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_pauses }}</p>
@@ -322,7 +328,8 @@
 
     {% if pause_rows %}
     <div class="card bg-white"><div class="card-body p-0">
-      <table class="w-full text-sm">
+      <div class="table-scroll">
+      <table class="w-full text-sm min-w-[30rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Paused since</th>
@@ -350,6 +357,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div></div>
     {% else %}
     <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No pauses yet.</div></div>

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-6">
 
-  <div class="flex items-center justify-between gap-3 flex-wrap">
+  <div class="page-head">
     <div>
       <h1 class="text-base font-semibold text-gray-900">Activities</h1>
       <p class="text-xs text-gray-400">Optional things for spare time. Logging one is what counts as done.</p>
@@ -83,7 +83,7 @@
   {% elif not cards %}
   <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No activities yet. Add things you would like to do when you have spare time.</p></div></div>
   {% else %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+  <div class="card-row">
     {% for a in cards %}
     <div class="card bg-white {% if a.archived_at %}opacity-60{% endif %}" id="activity-{{ a.id }}">
       <div class="card-body p-5 space-y-3">

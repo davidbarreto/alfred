@@ -6,7 +6,7 @@
 <div class="page space-y-5">
 
   <!-- Breadcrumb -->
-  <div class="flex items-center gap-2 text-xs text-gray-400">
+  <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
     <a href="/languages/" class="hover:text-gray-600">Languages</a>
     <i class="ti ti-chevron-right text-gray-300"></i>
     <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
@@ -14,7 +14,7 @@
     <span class="text-gray-700 font-medium">Chunks</span>
   </div>
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">{{ flag }} {{ track.name }} — Chunks</h1>
     <div class="flex items-center gap-3">
       <span id="suggest-tags-status" class="text-xs text-gray-400"></span>

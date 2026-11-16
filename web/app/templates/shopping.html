@@ -11,13 +11,22 @@
   </div>
   {% endif %}
 
-  <div class="flex justify-end">
-    <a href="/shopping/insights" class="text-xs text-[#378ADD] hover:underline">View insights →</a>
+  <div class="page-head">
+    <h1 class="text-base font-semibold text-gray-900">Shopping</h1>
+    <div class="page-actions">
+      <a href="/shopping/insights" class="text-xs text-[#378ADD] hover:underline mr-1">View insights →</a>
+      <button
+        class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+        id="clear-checked-btn"
+        hx-get="/shopping/list?status=pending&category_id={{ active_category_id or '' }}"
+        hx-target="#shopping-list"
+      >Clear checked</button>
+    </div>
   </div>
 
-  <!-- Header with tabs -->
-  <div class="flex items-center justify-between">
-    <div class="flex gap-1 border-b border-gray-100" id="shopping-tabs">
+  <!-- Tabs: one sideways-scrolling line on a phone -->
+  <div>
+    <div class="scroll-row border-b border-gray-100" id="shopping-tabs">
       <button onclick="showShoppingTab('list')" id="stab-list"
         class="px-3 py-1.5 text-xs font-medium border-b-2 border-[#378ADD] text-[#0C447C] transition-colors">
         Shopping List
@@ -35,12 +44,6 @@
         Products <span class="ml-1 text-gray-300 font-normal">{{ products | length }}</span>
       </button>
     </div>
-    <button
-      class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
-      id="clear-checked-btn"
-      hx-get="/shopping/list?status=pending&category_id={{ active_category_id or '' }}"
-      hx-target="#shopping-list"
-    >Clear checked</button>
   </div>
 
   <!-- Shopping list panel -->
@@ -56,8 +59,8 @@
       class="space-y-2"
       hx-on::after-request="if (event.detail.elt === this) { this.reset(); document.getElementById('shopping-name-suggestions').innerHTML = ''; }"
     >
-      <div class="flex gap-2">
-        <div class="relative flex-1">
+      <div class="flex flex-wrap gap-2">
+        <div class="relative flex-1 basis-full sm:basis-0 sm:min-w-[12rem]">
           <input
             name="name"
             id="shopping-name-input"
@@ -74,9 +77,9 @@
           <div id="shopping-name-suggestions" class="absolute z-10 left-0 right-0 mt-1"></div>
         </div>
         <input name="quantity" type="number" step="0.01" min="0" placeholder="Qty"
-          class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+          class="input input-sm w-20 flex-1 sm:flex-none border border-gray-200 bg-white rounded-lg px-3 text-sm" />
         <input name="unit" type="text" placeholder="Unit" list="shopping-units"
-          class="input input-sm w-24 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+          class="input input-sm w-24 flex-1 sm:flex-none border border-gray-200 bg-white rounded-lg px-3 text-sm" />
         <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           {% for cat in categories %}
           <option value="{{ cat.id }}" {% if cat.name == "grocery" %}selected{% endif %}>{{ cat.name }}</option>

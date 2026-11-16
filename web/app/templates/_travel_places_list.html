@@ -5,11 +5,12 @@
 {% else %}
 <div class="space-y-3">
   {% for p in places %}
-  <a href="/travel/places/{{ p.id }}" class="card bg-white hover:shadow-md transition-shadow" id="place-{{ p.id }}">
+  <div class="card bg-white hover:shadow-md transition-shadow relative" id="place-{{ p.id }}">
     <div class="card-body p-4 flex flex-row items-start justify-between gap-3">
-      <div class="space-y-1">
-        <p class="text-sm font-semibold text-gray-900">{{ p.name }}</p>
-        <p class="text-xs text-gray-500">{{ p.kind }} · <a class="hover:underline" href="/travel/cities/{{ p.city.id }}">{{ p.city.name }}</a>, <a class="hover:underline" href="/travel/countries/{{ p.city.country.id }}">{{ p.city.country.name }}</a></p>
+      <div class="space-y-1 min-w-0">
+        {# The name link covers the whole card; the city and country links sit above it. #}
+        <p class="text-sm font-semibold text-gray-900"><a href="/travel/places/{{ p.id }}" class="after:absolute after:inset-0">{{ p.name }}</a></p>
+        <p class="text-xs text-gray-500">{{ p.kind }} · <a class="relative z-10 hover:underline" href="/travel/cities/{{ p.city.id }}">{{ p.city.name }}</a>, <a class="relative z-10 hover:underline" href="/travel/countries/{{ p.city.country.id }}">{{ p.city.country.name }}</a></p>
         {% if p.tags %}
         <div class="flex flex-wrap gap-1">{% for tag in p.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
         {% endif %}
@@ -18,7 +19,7 @@
       <span class="text-xs font-medium text-amber-600 whitespace-nowrap" title="Average of {{ p.grade_count }} grade(s)">{{ p.grade | number }}/5 <span class="text-gray-400">({{ p.grade_count }})</span></span>
       {% endif %}
     </div>
-  </a>
+  </div>
   {% endfor %}
 </div>
 {% if has_prev or has_next %}

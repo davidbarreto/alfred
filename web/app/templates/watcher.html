@@ -5,9 +5,9 @@
 {% block content %}
 <div class="page space-y-6">
 
-  <div class="flex items-center justify-between gap-3 flex-wrap">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Watcher</h1>
-    <div class="flex gap-2">
+    <div class="page-actions">
       <button
         class="btn btn-sm btn-ghost gap-1 text-gray-500"
         hx-post="/watcher/run"
@@ -32,7 +32,7 @@
   {% endif %}
 
   <!-- Summary cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <div class="stat-row">
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Active monitors</div>
       <div class="text-2xl font-semibold text-gray-900 mt-1">{{ enabled_count }} <span class="text-sm text-gray-400 font-normal">/ {{ monitors | length }}</span></div>
@@ -53,13 +53,13 @@
     {% if status_chart %}
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h2 class="text-sm font-medium text-gray-900 mb-3">Execution status</h2>
-      <canvas id="chart-status" height="220"></canvas>
+      <div class="chart-box chart-box-lg"><canvas id="chart-status"></canvas></div>
     </div>
     {% endif %}
     {% if time_chart %}
     <div class="bg-white border border-gray-200 rounded-lg p-4 {% if status_chart %}sm:col-span-2{% else %}sm:col-span-3{% endif %}">
       <h2 class="text-sm font-medium text-gray-900 mb-3">Executions over time</h2>
-      <canvas id="chart-time" height="220"></canvas>
+      <div class="chart-box chart-box-lg"><canvas id="chart-time"></canvas></div>
     </div>
     {% endif %}
   </div>
@@ -147,7 +147,7 @@
         <label class="text-xs text-gray-500 mb-1 block">JSON path</label>
         <input name="json_path" placeholder="e.g. content" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
       </div>
-      <div class="monitor-field-api grid grid-cols-3 gap-3">
+      <div class="monitor-field-api grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Page size</label>
           <input name="page_size" type="number" min="1" value="32" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
@@ -247,6 +247,7 @@ async function submitNewMonitor(e) {
       }]
     },
     options: {
+      maintainAspectRatio: false,
       plugins: {
         legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } }
       },
@@ -271,6 +272,7 @@ async function submitNewMonitor(e) {
       }]
     },
     options: {
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 10 } } },

@@ -130,7 +130,7 @@
   {% else %}
 
   <!-- Headline -->
-  <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+  <div class="stat-row">
     {% set o = stats.overall %}
     {% if s.kind == 'count' %}
     <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Events</p><p class="text-xl font-semibold text-gray-900">{{ o.n }}</p></div></div>
@@ -192,7 +192,7 @@
   {% endif %}
 
   <!-- Breakdowns -->
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  <div class="card-row" style="--card-min: 24rem">
     {{ breakdown('By tag', stats.by_tag, 'The options you compare') }}
     {{ breakdown('By hour of day', stats.by_hour, 'When the entry started') }}
     {{ breakdown('By weekday', stats.by_weekday) }}

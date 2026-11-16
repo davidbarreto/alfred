@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page space-y-4 max-w-2xl mx-auto">
   <a href="{{ back_url }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ owner_name }}</a>
-  <div class="flex items-center justify-between gap-3">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Links <span class="text-xs font-normal text-gray-400">{{ web_links | length }}</span></h1>
     <button type="button" class="btn btn-xs btn-outline add-web-link" data-owner-kind="{{ owner_kind }}" data-owner-id="{{ owner_id }}">Add link</button>
   </div>

@@ -267,7 +267,7 @@
       </div>
       {% for leg in trip.legs %}
       {% set lw = warnings_for(trip.warnings, 'leg_id', leg.id) %}
-      <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }} data-detail-kind="leg" data-detail="{{ leg | tojson | forceescape }}">
+      <div class="detail-row action-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }} data-detail-kind="leg" data-detail="{{ leg | tojson | forceescape }}">
         <div>
           {% for message in lw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
           <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }} {% if leg.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ leg.notes | e }}"></i>{% endif %}</p>
@@ -296,7 +296,7 @@
       </div>
       {% for stay in trip.stays %}
       {% set sw = warnings_for(trip.warnings, 'stay_id', stay.id) %}
-      <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
+      <div class="detail-row action-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
           <p class="text-gray-900">{{ stay.place.name }}<a href="/travel/cities/{{ stay.place.city.id }}" class="ml-1 text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>

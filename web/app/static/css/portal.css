@@ -172,6 +172,9 @@ html[data-theme="dark"] {
   justify-content: space-between;
   gap: 0.5rem 0.75rem;
 }
+/* Any group of controls in the head wraps too, so a long set of buttons never runs off a phone. */
+.page-head > * { min-width: 0; }
+.page-head > div { flex-wrap: wrap; row-gap: 0.375rem; }
 .page-actions {
   display: flex;
   flex-wrap: wrap;
@@ -267,12 +270,12 @@ html[data-theme="dark"] {
 
 /*
  * A list row with text on the left and its buttons on the right (trip legs,
- * stays, visits). When both do not fit on one line the buttons drop to their
+ * stays, visits, interview questions). When both do not fit on one line the buttons drop to their
  * own line, right-aligned, instead of squeezing the text into a narrow column.
  */
-.detail-row { flex-wrap: wrap; }
-.detail-row > :first-child { flex: 1 1 16rem; min-width: 0; }
-.detail-row > :last-child:not(:first-child) {
+.action-row { flex-wrap: wrap; }
+.action-row > :first-child { flex: 1 1 16rem; min-width: 0; }
+.action-row > :last-child:not(:first-child) {
   margin-left: auto;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -333,6 +336,8 @@ html[data-theme="dark"] {
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
   /* No field is ever wider than the screen. */
   input, select, textarea { max-width: 100%; }
+  /* Nor is any item of a wrapping row (a labelled field in a form, a chip, a button group). */
+  .flex-wrap > * { max-width: 100%; }
   /* A dropdown menu spans the screen instead of hanging off its edge. */
   .dropdown .dropdown-content { position: fixed; left: 1rem; right: 1rem; width: auto; }
   /* DaisyUI dialogs: nearly full width, and scroll inside when taller than the screen. */

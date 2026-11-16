@@ -6,7 +6,7 @@
 <div class="page space-y-6">
 
   <!-- Breadcrumb -->
-  <div class="flex items-center gap-2 text-xs text-gray-400">
+  <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
     <a href="/languages/" class="hover:text-gray-600">Languages</a>
     <i class="ti ti-chevron-right text-gray-300"></i>
     <span class="text-gray-700 font-medium">{{ flag }} {{ track.name }}</span>
@@ -93,7 +93,7 @@
   </form>
 
   <!-- Stats strip -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div class="stat-row">
     <div class="card bg-white"><div class="card-body p-4">
       <p class="text-xs text-gray-400 uppercase tracking-wide">Active chunks</p>
       <p class="text-2xl font-semibold text-gray-900 mt-1">{{ chunk_counts.active }}</p>

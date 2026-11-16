@@ -5,18 +5,18 @@
 {% block content %}
 <div class="page space-y-5">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Briefing History</h1>
   </div>
 
-  <div class="flex items-center justify-between">
-    <div class="tabs tabs-boxed w-fit">
+  <div class="page-head">
+    <div class="tabs tabs-boxed w-fit max-w-full overflow-x-auto">
       <a href="/briefing/" class="tab">Morning</a>
       <a href="/briefing/evening" class="tab">Evening</a>
       <span class="tab tab-active">History</span>
     </div>
 
-    <div class="tabs tabs-boxed w-fit">
+    <div class="tabs tabs-boxed w-fit max-w-full overflow-x-auto">
       <a href="/briefing/history" class="tab {% if not type_filter %}tab-active{% endif %}">All</a>
       <a href="/briefing/history?type=morning" class="tab {% if type_filter == 'morning' %}tab-active{% endif %}">Morning</a>
       <a href="/briefing/history?type=evening" class="tab {% if type_filter == 'evening' %}tab-active{% endif %}">Evening</a>

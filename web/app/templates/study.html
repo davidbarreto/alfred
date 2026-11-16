@@ -14,7 +14,7 @@
 {% set max_active = overview.max_active_plans if overview else 0 %}
 <div class="page space-y-6">
 
-  <div class="flex items-center justify-between">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Study</h1>
     <button onclick="generatePlan()" id="generate-plan"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
@@ -41,7 +41,7 @@
   <div class="space-y-3">
     <p class="text-sm font-semibold text-gray-900">Active plans <span class="font-normal text-gray-400">({{ active | length }}/{{ max_active }})</span></p>
     {% if active %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card-row" style="--card-min: 24rem">
       {% for plan in active %}
       {% set done = plan['items'] | selectattr('is_done') | list | length %}
       <div class="card bg-white" id="plan-{{ plan.id }}">

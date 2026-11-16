@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_travel_macros.html" import cost_chip, tx_button %}
+{% from "_travel_macros.html" import cost_chip, tx_button, charges_url %}
 {% set active_page = "travel" %}
 {% block title %}{{ trip.name }}{% endblock %}
 
@@ -118,15 +118,15 @@
     <div class="card-body p-5 space-y-2">
       <div class="flex items-baseline justify-between gap-3">
         <h2 class="text-sm font-semibold text-gray-900">Cost</h2>
-        <p class="text-lg ml-3 font-semibold text-gray-900">{{ costs.overall.total_eur | money }} €</p>
+        <a class="text-lg ml-3 font-semibold text-gray-900 hover:underline" id="cost-overall" href="{{ charges_url('trip', trip.id, part='overall', name=trip.name) | trim }}">{{ costs.overall.total_eur | money }} €</a>
       </div>
       <p class="text-xs text-gray-400">Linked charges plus tagged charges, each counted once{% if costs.overall.unconverted_count %} · {{ costs.overall.unconverted_count }} without an EUR amount yet, not included{% endif %}</p>
       <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600" id="cost-parts">
-        <span>Linked to the trip: <strong>{{ costs.total.total_eur | money }} €</strong> <span class="text-gray-400">({{ costs.total.transaction_count }})</span></span>
-        {% if costs.tagged.transaction_count %}<span id="cost-tagged">Tagged, not linked: <strong>{{ costs.tagged.total_eur | money }} €</strong> <span class="text-gray-400">({{ costs.tagged.transaction_count }})</span></span>{% endif %}
+        <span>Linked to the trip: <a class="hover:underline" id="cost-linked" href="{{ charges_url('trip', trip.id, part='linked', name=trip.name) | trim }}"><strong>{{ costs.total.total_eur | money }} €</strong></a> <span class="text-gray-400">({{ costs.total.transaction_count }})</span></span>
+        {% if costs.tagged.transaction_count %}<span id="cost-tagged">Tagged, not linked: <a class="hover:underline" href="{{ charges_url('trip', trip.id, part='tagged', name=trip.name) | trim }}"><strong>{{ costs.tagged.total_eur | money }} €</strong></a> <span class="text-gray-400">({{ costs.tagged.transaction_count }})</span></span>{% endif %}
       </div>
       <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600">
-        {% for k in costs.by_kind %}<span>{{ k.kind }}: <strong>{{ k.total_eur | money }} €</strong></span>{% endfor %}
+        {% for k in costs.by_kind %}<span>{{ k.kind }}: <a class="hover:underline" href="{{ charges_url('trip', trip.id, part='linked', kind=k.kind, name=trip.name) | trim }}"><strong>{{ k.total_eur | money }} €</strong></a></span>{% endfor %}
       </div>
     </div>
   </div>
@@ -270,7 +270,7 @@
       <div class="detail-row action-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }} data-detail-kind="leg" data-detail="{{ leg | tojson | forceescape }}">
         <div>
           {% for message in lw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }} {% if leg.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ leg.notes | e }}"></i>{% endif %}</p>
+          <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id), 'leg', leg.id, leg.origin ~ ' → ' ~ leg.destination, request.url.path) }} {% if leg.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ leg.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
           {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
           {% if leg.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ leg.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
@@ -299,7 +299,7 @@
       <div class="detail-row action-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ stay.place.name }}<a href="/travel/cities/{{ stay.place.city.id }}" class="ml-1 text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
+          <p class="text-gray-900">{{ stay.place.name }}<a href="/travel/cities/{{ stay.place.city.id }}" class="ml-1 text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id), 'stay', stay.id, stay.place.name, request.url.path) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
           {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
           <p class="text-xs space-x-3">

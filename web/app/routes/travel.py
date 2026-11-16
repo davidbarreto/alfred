@@ -753,6 +753,37 @@ async def warnings_page(trip_id: int, request: Request):
     })
 
 
+# What a charges page can list: where to fetch the transactions, and where "back" goes.
+_CHARGE_SCOPES = {
+    "trip": ("/travel/trips/{id}/charges", "/travel/{id}"),
+    "place": ("/travel/places/{id}/charges", "/travel/places/{id}"),
+    "city": ("/travel/cities/{id}/charges", "/travel/cities/{id}"),
+    "country": ("/travel/countries/{id}/charges", "/travel/countries/{id}"),
+    "leg": ("/travel/legs/{id}/transactions", None),
+    "stay": ("/travel/stays/{id}/transactions", None),
+    "visit": ("/travel/visits/{id}/transactions", None),
+}
+_CHARGE_PARTS = {"linked": "Linked charges", "tagged": "Tagged, not linked", "overall": "All charges"}
+
+
+@router.get("/charges", response_class=HTMLResponse)
+async def charges_page(request: Request, scope: str, id: int, part: str = "overall", kind: str | None = None, name: str = "", back: str = ""):
+    """The transactions that add up to a cost figure. `back` is only followed when it is a portal path."""
+    if scope not in _CHARGE_SCOPES or part not in _CHARGE_PARTS:
+        raise HTTPException(status_code=404)
+    path, back_url = _CHARGE_SCOPES[scope]
+    params = {"part": part, **({"kind": kind} if kind else {})} if scope in ("trip", "city", "country") else None
+    found = await safe_get(path.format(id=id), params=params)
+    if back_url:
+        back = back_url.format(id=id)
+    elif not back.startswith("/") or back.startswith("//"):
+        back = "/travel"
+    label = kind or _CHARGE_PARTS[part] if scope in ("trip", "city", "country") else "Linked charges"
+    return templates.TemplateResponse(request, "travel_charges.html", {
+        "charges": found or {"transactions": [], "cost": None}, "label": label, "name": name, "back_url": back,
+    })
+
+
 @router.get("/{trip_id}/unlinked", response_class=HTMLResponse)
 async def unlinked_page(trip_id: int, request: Request):
     trip = await safe_get(f"/travel/trips/{trip_id}")

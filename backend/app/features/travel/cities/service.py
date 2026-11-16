@@ -17,7 +17,7 @@ from app.features.travel.notes_index import WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.default_tags import parse_default_tag_names
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
-from app.features.travel.transaction_links.schemas import Cost, LocationCosts
+from app.features.travel.transaction_links.schemas import ChargePart, Cost, LinkedTransaction, LinkedTransactions, LocationCosts
 from app.features.travel.trips.repository import TripRepository
 
 _PLACES_SHOWN = 5
@@ -118,17 +118,47 @@ class CityService:
                 means[city_id] = mean
         return place_ids, means
 
-    async def _costs(self, place_ids: list[int], tag_groups: list[list[str]]) -> LocationCosts:
-        """Linked spend at the places, plus charges carrying a group's tags that nothing else counts (any date)."""
+    async def _charge_ids(self, place_ids: list[int], tag_groups: list[list[str]]) -> tuple[set[int], set[int]]:
+        """Linked spend at the places, and charges carrying a group's tags that nothing else counts (any date)."""
         linked = await self._cost_repo.get_place_linked_ids(place_ids)
         tagged: set[int] = set()
         for names in tag_groups:
             tagged |= await self._cost_repo.get_unlinked_tagged_ids(names)
-        tagged -= linked
+        return linked, tagged - linked
+
+    async def _costs(self, place_ids: list[int], tag_groups: list[list[str]]) -> LocationCosts:
+        linked, tagged = await self._charge_ids(place_ids, tag_groups)
         return LocationCosts(
             linked=_cost(await self._cost_repo.get_cost(linked)),
             tagged=_cost(await self._cost_repo.get_cost(tagged)),
             overall=_cost(await self._cost_repo.get_cost(linked | tagged)),
+        )
+
+    async def get_city_charges(self, city_id: int, part: ChargePart) -> LinkedTransactions | None:
+        """The transactions behind a figure of the city's spend card."""
+        city = await self._repo.get_city(city_id)
+        if city is None:
+            return None
+        place_ids, _ = await self._city_grades([city_id])
+        return await self._charges(place_ids[city_id], [parse_default_tag_names(city.default_tag_names)], part)
+
+    async def get_country_charges(self, country_id: int, part: ChargePart) -> LinkedTransactions | None:
+        country = await self._repo.get_country(country_id)
+        if country is None:
+            return None
+        cities = await self._repo.get_country_cities(country_id)
+        place_ids, _ = await self._city_grades([c.id for c in cities])
+        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
+        return await self._charges([p for ids in place_ids.values() for p in ids], tag_groups, part)
+
+    async def _charges(self, place_ids: list[int], tag_groups: list[list[str]], part: ChargePart) -> LinkedTransactions:
+        linked, tagged = await self._charge_ids(place_ids, tag_groups)
+        ids = {"linked": linked, "tagged": tagged, "overall": linked | tagged}[part]
+        transactions = await self._cost_repo.get_transactions(ids)
+        logger.debug("Location charges listed: part=%s count=%d", part, len(transactions))
+        return LinkedTransactions(
+            transactions=[LinkedTransaction.model_validate(t) for t in transactions],
+            cost=_cost(await self._cost_repo.get_cost(ids)),
         )
 
     async def _is_home(self, city_id: int) -> bool:

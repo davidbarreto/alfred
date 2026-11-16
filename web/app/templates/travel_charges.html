@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}{{ label }}{% if name %}: {{ name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page space-y-4 max-w-2xl mx-auto">
+  <a href="{{ back_url }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Back{% if name %} to {{ name }}{% endif %}</a>
+  <h1 class="text-base font-semibold text-gray-900">{{ label | capitalize }}{% if name %} <span class="text-xs font-normal text-gray-400">{{ name }}</span>{% endif %}</h1>
+  {% if charges.cost %}
+  <p class="text-xs text-gray-400" id="charges-total">{{ charges.cost.total_eur | money }} € from {{ charges.transactions|length }} charge{{ '' if charges.transactions|length == 1 else 's' }}{% if charges.cost.unconverted_count %} · {{ charges.cost.unconverted_count }} without an EUR amount yet, not included{% endif %}. Refunds count down.</p>
+  {% endif %}
+  <div class="card bg-white" id="charges">
+    <div class="card-body p-5 space-y-2">
+      {% for t in charges.transactions %}
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <span class="text-gray-500 text-xs sm:text-sm w-full sm:w-24">{{ t.date | short_date }}</span>
+        <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or t.bank_description or 'Charge' }} <button type="button" class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="{{ t.id }}">Details</button></span>
+        <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400">No charges here.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% include "_travel_tx_detail_dialog.html" %}
+<script src="/static/js/travel-unlinked.js"></script>
+{% endblock %}

@@ -5,6 +5,7 @@ from app.dependencies import TransactionLinkServiceDep, TripDefaultTagServiceDep
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.transaction_links.schemas import (
     ApplyDefaultTagsResult,
+    ChargePart,
     LinkedTransaction,
     LinkedTransactions,
     LinkKind,
@@ -24,6 +25,18 @@ async def get_trip_costs(trip_id: int, service: TransactionLinkServiceDep) -> Tr
     if costs is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return costs
+
+
+@router.get("/trips/{trip_id}/charges", response_model=LinkedTransactions)
+async def get_trip_charges(
+    trip_id: int, service: TransactionLinkServiceDep, part: ChargePart = "overall", kind: str | None = None
+) -> LinkedTransactions:
+    """The transactions that add up to a trip cost figure: `part` picks linked, tagged-not-linked or both;
+    `kind` narrows `linked` to one breakdown kind (a leg mode, `lodging` or a place kind)."""
+    found = await service.get_trip_charges(trip_id, part, kind)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return found
 
 
 @router.get("/trips/{trip_id}/unlinked-transactions", response_model=list[LinkedTransaction])
@@ -59,6 +72,14 @@ async def get_place_costs(place_id: int, service: TransactionLinkServiceDep) -> 
     if costs is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Place not found")
     return costs
+
+
+@router.get("/places/{place_id}/charges", response_model=LinkedTransactions)
+async def get_place_charges(place_id: int, service: TransactionLinkServiceDep) -> LinkedTransactions:
+    found = await service.get_place_charges(place_id)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Place not found")
+    return found
 
 
 @router.get("/{kind}/{entity_id}/transactions", response_model=LinkedTransactions)

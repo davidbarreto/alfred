@@ -445,3 +445,47 @@ class TestImportedEventsAreImportedOnce:
         with pytest.raises(TravelConflictError):
             await svc.create_stay(data)
         svc._repo.create_stay.assert_not_awaited()
+
+
+class TestChargesBehindACost:
+    @pytest.fixture
+    def trip(self, links):
+        links._trip_repo.get_trip.return_value = SimpleNamespace(
+            id=1, start_date=date(2026, 12, 17), end_date=date(2026, 12, 24), default_tag_names="Travel",
+        )
+        links._repo.get_transactions.side_effect = lambda ids: [_txn(id=i) for i in sorted(ids)]
+        links._repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
+        return links
+
+    async def test_linked_part_lists_only_linked_charges_of_a_kind(self, trip):
+        trip._repo.get_trip_linked_ids.return_value = {4, 5}
+        result = await trip.get_trip_charges(1, "linked", "lodging")
+        trip._repo.get_trip_linked_ids.assert_awaited_once_with(1, "lodging")
+        assert [t.id for t in result.transactions] == [4, 5] and result.cost.transaction_count == 2
+
+    async def test_overall_adds_tagged_charges_nothing_links_and_counts_each_once(self, trip):
+        trip._repo.get_trip_linked_ids.return_value = {4, 5}
+        trip._repo.get_tagged.return_value = [(_txn(id=5), True), (_txn(id=6), False)]
+        result = await trip.get_trip_charges(1, "overall")
+        assert [t.id for t in result.transactions] == [4, 5, 6]
+
+    async def test_tagged_part_leaves_out_linked_ones(self, trip):
+        trip._repo.get_tagged.return_value = [(_txn(id=5), True), (_txn(id=6), False)]
+        result = await trip.get_trip_charges(1, "tagged")
+        trip._repo.get_trip_linked_ids.assert_not_awaited()
+        assert [t.id for t in result.transactions] == [6]
+
+    async def test_unknown_trip_and_place(self, links):
+        links._trip_repo.get_trip.return_value = None
+        links._place_repo.get_place.return_value = None
+        assert await links.get_trip_charges(9, "overall") is None
+        assert await links.get_place_charges(9) is None
+
+    async def test_place_charges_are_its_visits_and_stays(self, links):
+        links._place_repo.get_place.return_value = SimpleNamespace(id=3)
+        links._repo.get_place_linked_ids.return_value = {7}
+        links._repo.get_transactions.return_value = [_txn(id=7)]
+        links._repo.get_cost.return_value = (Decimal("10.00"), 1, 0)
+        result = await links.get_place_charges(3)
+        links._repo.get_place_linked_ids.assert_awaited_once_with([3])
+        assert result.cost.total_eur == Decimal("10.00")

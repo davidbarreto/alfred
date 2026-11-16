@@ -394,6 +394,39 @@ class TestSpendAndTags:
         assert detail.costs.tagged.transaction_count == 3  # 5, 6 and 7, with 6 counted once
         assert detail.costs.overall.transaction_count == 3
 
+    async def test_city_charges_are_the_ids_behind_each_spend_part(self, service):
+        service._repo.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Trip"})
+        service._repo.get_place_ids_by_city.return_value = {1: [10]}
+        service._place_repo.get_grades.return_value = {}
+        service._cost_repo.get_place_linked_ids.return_value = {1, 2}
+        service._cost_repo.get_unlinked_tagged_ids.return_value = {2, 3}
+        service._cost_repo.get_transactions.side_effect = lambda ids: [
+            SimpleNamespace(id=i, date=NOW, merchant="M", description=None, bank_description=None, type="expense",
+                            amount=Decimal("1.00"), currency="EUR", amount_eur=Decimal("1.00"))
+            for i in sorted(ids)
+        ]
+        service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
+        found = {part: await service.get_city_charges(1, part) for part in ("linked", "tagged", "overall")}
+        assert {part: [t.id for t in f.transactions] for part, f in found.items()} == {
+            "linked": [1, 2], "tagged": [3], "overall": [1, 2, 3],  # 2 is linked, so not tagged
+        }
+
+    async def test_country_charges_merge_every_tag_group_once_and_unknowns_are_none(self, service):
+        service._repo.get_country.return_value = SimpleNamespace(id=2, default_tag_names="spain")
+        service._repo.get_country_cities.return_value = [SimpleNamespace(id=1, default_tag_names="alpha")]
+        service._repo.get_place_ids_by_city.return_value = {1: [10]}
+        service._place_repo.get_grades.return_value = {}
+        service._cost_repo.get_place_linked_ids.return_value = set()
+        by_tags = {("spain",): {5, 6}, ("alpha",): {6, 7}}
+        service._cost_repo.get_unlinked_tagged_ids.side_effect = lambda names: by_tags[tuple(names)]
+        service._cost_repo.get_transactions.return_value = []
+        service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
+        assert (await service.get_country_charges(2, "tagged")).cost.transaction_count == 3
+        service._repo.get_country.return_value = None
+        service._repo.get_city.return_value = None
+        assert await service.get_country_charges(9, "overall") is None
+        assert await service.get_city_charges(9, "overall") is None
+
     async def test_blank_default_tags_are_stored_as_null(self, service):
         service._repo.get_city.return_value = _city_row()
         await service.update_city(1, CityUpdate(default_tag_names="  "))

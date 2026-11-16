@@ -116,8 +116,9 @@ class TransactionLinkRepository:
         stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(select(ids.c.transaction_id)))
         return _row_to_cost(*(await self._session.execute(stmt)).one())
 
-    async def get_trip_costs_by_kind(self, trip_id: int) -> dict[str, tuple[Decimal, int, int]]:
-        kinds = union(
+    def _trip_kind_rows(self, trip_id: int):
+        """(kind, transaction_id) for every link in a trip: legs by mode, stays as lodging, visits by place kind."""
+        return union(
             select(Leg.mode.label("kind"), legs_transactions.c.transaction_id.label("transaction_id"))
             .join(Leg, Leg.id == legs_transactions.c.leg_id).where(Leg.trip_id == trip_id),
             select(literal("lodging").label("kind"), stays_transactions.c.transaction_id.label("transaction_id"))
@@ -126,6 +127,9 @@ class TransactionLinkRepository:
             .join(Visit, Visit.id == visits_transactions.c.visit_id)
             .join(Place, Place.id == Visit.place_id).where(Visit.trip_id == trip_id),
         ).subquery()
+
+    async def get_trip_costs_by_kind(self, trip_id: int) -> dict[str, tuple[Decimal, int, int]]:
+        kinds = self._trip_kind_rows(trip_id)
         stmt = (
             select(kinds.c.kind, *_sum_columns())
             .select_from(kinds.join(Transaction, Transaction.id == kinds.c.transaction_id))
@@ -133,6 +137,19 @@ class TransactionLinkRepository:
             .order_by(kinds.c.kind)
         )
         return {row[0]: _row_to_cost(*row[1:]) for row in (await self._session.execute(stmt)).all()}
+
+    async def get_trip_linked_ids(self, trip_id: int, kind: str | None = None) -> set[int]:
+        """Transactions linked anywhere in a trip, or only under one kind of the cost breakdown."""
+        if kind is None:
+            return set((await self._session.scalars(select(self._trip_transaction_ids(trip_id).subquery().c.transaction_id))).all())
+        kinds = self._trip_kind_rows(trip_id)
+        return set((await self._session.scalars(select(kinds.c.transaction_id).where(kinds.c.kind == kind))).all())
+
+    async def get_transactions(self, transaction_ids: set[int]) -> list[Transaction]:
+        if not transaction_ids:
+            return []
+        stmt = select(Transaction).where(Transaction.id.in_(sorted(transaction_ids))).order_by(Transaction.date, Transaction.id)
+        return list((await self._session.scalars(stmt)).all())
 
     async def get_place_total(self, place_id: int) -> tuple[Decimal, int, int]:
         ids = union(

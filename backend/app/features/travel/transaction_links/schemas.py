@@ -52,6 +52,9 @@ class LinkedTransactions(BaseModel):
     cost: Cost
 
 
+ChargePart: TypeAlias = Literal["linked", "tagged", "overall"]
+
+
 class KindCost(Cost):
     kind: str
 

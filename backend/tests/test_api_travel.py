@@ -552,6 +552,17 @@ class TestCostsAndDefaultTags:
         service.get_place_costs.return_value = None
         assert client.get("/travel/places/3/costs", headers=AUTH).status_code == 404
 
+    def test_trip_and_place_charges(self, link_service):
+        client, service = link_service
+        service.get_trip_charges.return_value = LinkedTransactions(transactions=[], cost=Cost())
+        assert client.get("/travel/trips/1/charges?part=tagged&kind=lodging", headers=AUTH).status_code == 200
+        service.get_trip_charges.assert_awaited_once_with(1, "tagged", "lodging")
+        assert client.get("/travel/trips/1/charges?part=bogus", headers=AUTH).status_code == 422
+        service.get_trip_charges.return_value = None
+        assert client.get("/travel/trips/1/charges", headers=AUTH).status_code == 404
+        service.get_place_charges.return_value = None
+        assert client.get("/travel/places/3/charges", headers=AUTH).status_code == 404
+
     def test_apply_default_tags(self, tag_service):
         client, service = tag_service
         service.apply_to_existing.return_value = (["Travel", "Hotel"], 5)

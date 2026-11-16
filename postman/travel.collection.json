@@ -1835,6 +1835,131 @@
       }
     },
     {
+      "name": "46a - Get Trip Charges Behind The Cost",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Same charges as the cost total', () => { pm.expect(j.transactions.length).to.eql(2); pm.expect(j.cost.total_eur).to.eql('25.50'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/charges?part=linked",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "charges"
+          ],
+          "query": [
+            {
+              "key": "part",
+              "value": "linked"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "46b - Get Trip Charges Of One Kind",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Only the lodging charges', () => pm.expect(j.cost.total_eur).to.eql('25.50'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/charges?part=linked&kind=lodging",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "charges"
+          ],
+          "query": [
+            {
+              "key": "part",
+              "value": "linked"
+            },
+            {
+              "key": "kind",
+              "value": "lodging"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "46c - Get Charges Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999/charges",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999",
+            "charges"
+          ]
+        }
+      }
+    },
+    {
       "name": "47 - Get Trip Recap",
       "event": [
         {
@@ -2931,6 +3056,78 @@
             "places",
             "{{travel_place_id}}",
             "costs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "71a - Get Place Charges",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('A list with a cost', () => { pm.expect(j.transactions).to.be.an('array'); pm.expect(j.cost).to.have.property('total_eur'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}/charges",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}",
+            "charges"
+          ]
+        }
+      }
+    },
+    {
+      "name": "71b - Get Charges Of Unknown Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/999999/charges",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "999999",
+            "charges"
           ]
         }
       }
@@ -5922,6 +6119,84 @@
       }
     },
     {
+      "name": "152a - Get City Charges",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('A list with a cost', () => { pm.expect(j.transactions).to.be.an('array'); pm.expect(j.cost).to.have.property('total_eur'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}/charges?part=overall",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_id}}",
+            "charges"
+          ],
+          "query": [
+            {
+              "key": "part",
+              "value": "overall"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "152b - Get Charges Of Unknown City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/999999/charges",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "999999",
+            "charges"
+          ]
+        }
+      }
+    },
+    {
       "name": "153 - Get Unknown City",
       "event": [
         {
@@ -5987,6 +6262,84 @@
             "travel",
             "countries",
             "{{travel_country_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "154a - Get Country Charges",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('A list with a cost', () => { pm.expect(j.transactions).to.be.an('array'); pm.expect(j.cost).to.have.property('total_eur'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}/charges?part=tagged",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}",
+            "charges"
+          ],
+          "query": [
+            {
+              "key": "part",
+              "value": "tagged"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "154b - Get Charges Of Unknown Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/999999/charges",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "999999",
+            "charges"
           ]
         }
       }

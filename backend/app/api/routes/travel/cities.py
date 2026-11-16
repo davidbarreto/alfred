@@ -7,6 +7,7 @@ from app.dependencies import CityServiceDep
 from app.features.travel.cities.schemas import (
     CityCreate, CityDetail, CityFilters, CityRead, CityUpdate, CountryDetail, CountryRef, CountryUpdate,
 )
+from app.features.travel.transaction_links.schemas import ChargePart, LinkedTransactions
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 
 router = APIRouter(prefix="/travel", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -40,6 +41,15 @@ async def get_city(city_id: int, service: CityServiceDep) -> CityDetail:
     return city
 
 
+@router.get("/cities/{city_id}/charges", response_model=LinkedTransactions)
+async def get_city_charges(city_id: int, service: CityServiceDep, part: ChargePart = "overall") -> LinkedTransactions:
+    """The transactions behind the city's spend figures."""
+    found = await service.get_city_charges(city_id, part)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="City not found")
+    return found
+
+
 @router.patch("/cities/{city_id}", response_model=CityRead)
 async def update_city(city_id: int, request: CityUpdate, service: CityServiceDep) -> CityRead:
     try:
@@ -70,6 +80,14 @@ async def get_country(country_id: int, service: CityServiceDep) -> CountryDetail
     if country is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
     return country
+
+
+@router.get("/countries/{country_id}/charges", response_model=LinkedTransactions)
+async def get_country_charges(country_id: int, service: CityServiceDep, part: ChargePart = "overall") -> LinkedTransactions:
+    found = await service.get_country_charges(country_id, part)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
+    return found
 
 
 @router.patch("/countries/{country_id}", response_model=CountryRef)

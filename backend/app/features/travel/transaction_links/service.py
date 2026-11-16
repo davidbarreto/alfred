@@ -10,6 +10,7 @@ from app.features.travel.legs.repository import LegRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.transaction_links.schemas import (
+    ChargePart,
     Cost,
     EntityCost,
     KindCost,
@@ -172,4 +173,31 @@ class TransactionLinkService:
         return PlaceCosts(
             total=_cost(await self._repo.get_place_total(place_id)),
             visits=[EntityCost(id=v.id, **_cost(per_visit[v.id]).model_dump()) for v in visits if v.id in per_visit],
+        )
+
+    async def get_trip_charges(self, trip_id: int, part: ChargePart, kind: str | None = None) -> LinkedTransactions | None:
+        """The transactions behind a trip cost figure: `linked` (optionally one breakdown kind), `tagged` (tagged
+        and not linked) or `overall` (both). Each transaction once, so the list adds up to the figure."""
+        trip = await self._trip_repo.get_trip(trip_id)
+        if trip is None:
+            return None
+        ids: set[int] = set()
+        if part in ("linked", "overall"):
+            ids |= await self._repo.get_trip_linked_ids(trip_id, kind)
+        if part in ("tagged", "overall") and kind is None:
+            ids |= {t.id for t in (await self._tagged(trip)).transactions if not t.linked}
+        return await self.charges_for(ids)
+
+    async def get_place_charges(self, place_id: int) -> LinkedTransactions | None:
+        if await self._place_repo.get_place(place_id) is None:
+            return None
+        return await self.charges_for(await self._repo.get_place_linked_ids([place_id]))
+
+    async def charges_for(self, ids: set[int]) -> LinkedTransactions:
+        """The transactions with these ids and what they add up to (the same rule as every other cost)."""
+        transactions = await self._repo.get_transactions(ids)
+        logger.debug("Charges listed: count=%d", len(transactions))
+        return LinkedTransactions(
+            transactions=[LinkedTransaction.model_validate(t) for t in transactions],
+            cost=_cost(await self._repo.get_cost(ids)),
         )

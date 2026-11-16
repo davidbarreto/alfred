@@ -18,7 +18,7 @@
           <a class="text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener">Open in maps</a>
         </div>
         <div class="flex items-center gap-2">
-          {{ cost_chip(place_cost) }}
+          {{ cost_chip(place_cost, 'place', place.id, place.name, request.url.path) }}
           {% if place.grade %}<span class="text-sm font-medium text-amber-600" id="place-grade">{{ place.grade | number }}/5 <span class="text-xs text-gray-400">({{ place.grade_count }} grade{{ '' if place.grade_count == 1 else 's' }})</span></span>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-place-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-place">Delete</button>

@@ -564,7 +564,7 @@ class TestCosts:
         html = client.get("/travel/1").text
         assert 'id="trip-costs"' in html and "250.00 €" in html and "each counted once" in html
         assert "1 without an EUR amount yet" in html
-        assert "flight: <strong>120.00 €</strong>" in html and "lodging: <strong>130.00 €</strong>" in html
+        assert "flight: <a" in html and "<strong>120.00 €</strong>" in html and "<strong>130.00 €</strong>" in html
         assert "120.00 €" in html.split('id="leg-1"')[1].split("</div>")[0]
         assert "1 unconverted" in html.split('id="stay-7"')[1].split("</div>")[0]
         assert "35.50 €" in html.split('id="visit-11"')[1].split("</div>")[0]
@@ -998,7 +998,7 @@ class TestTaggedCharges:
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": self._costs()})
         html = client.get("/travel/1").text
         assert "115.00 €" in html and 'id="cost-tagged"' in html
-        assert "Linked to the trip: <strong>100.00 €" in html and "Tagged, not linked: <strong>15.00 €" in html
+        assert "Linked to the trip: <a" in html and "<strong>100.00 €" in html and "Tagged, not linked: <a" in html and "<strong>15.00 €" in html
 
     def test_cost_card_appears_for_tagged_charges_alone(self, client, mock_api):
         costs = {**self._costs(), "total": _cost("0.00", 0), "overall": _cost("15.00", 3)}
@@ -1551,7 +1551,8 @@ class TestSpendAndHome:
         _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(trips=[])})
         html = client.get("/travel/cities/4").text
         assert 'id="location-spend"' in html and "100.00 €" in html and "3 charges" in html
-        assert "Linked to a stay or visit here: 80.00 €" in html and "tagged <em>alpha</em>: 20.00 €" in html
+        assert "Linked to a stay or visit here: <a" in html and ">80.00 €</a>" in html and ">20.00 €</a>" in html
+        assert "tagged <em>alpha</em>" in html and "scope=city&id=4&part=tagged" in html
         assert 'name="default_tag_names" value="alpha"' in html
 
     def test_city_page_with_nothing_spent_says_how_to_set_tags(self, client, mock_api):
@@ -1651,3 +1652,46 @@ class TestLinkGroups:
         assert "Links · Beta" in html and "https://city.example/" in html
         assert "Links · Testland" not in html
         assert all(c.args[0] != "/travel/countries/1/links" for c in mock_api["get"].await_args_list)
+
+
+class TestChargesPage:
+    def _charges(self):
+        return {"transactions": [
+            {"id": 1, "date": "2026-12-18", "merchant": "Shop A", "amount": "10.00", "currency": "EUR", "type": "expense"},
+            {"id": 2, "date": "2026-12-19", "merchant": "Shop B", "amount": "4.00", "currency": "EUR", "type": "income"},
+        ], "cost": _cost("6.00", 2, 1)}
+
+    def test_trip_cost_figures_link_to_the_charges_behind_them(self, client, mock_api):
+        costs = {**_costs(), "tagged": _cost("15.00", 3), "overall": _cost("265.00", 6)}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": costs})
+        html = client.get("/travel/1").text
+        assert 'href="/travel/charges?scope=trip&id=1&part=overall&name=Example%20trip"' in html
+        assert "part=linked&name=" in html and "part=tagged&name=" in html
+        assert "part=linked&kind=lodging&name=" in html
+        assert "scope=leg&id=1&" in html and "scope=stay&id=7&" in html
+
+    def test_place_and_visit_amounts_link_too(self, client, mock_api):
+        place = {**_place(name="Cafe Example"), "visits": [_visit()]}
+        _route(mock_api, {"/travel/places/3": place, "/travel/places/3/costs": {"total": _cost("80.00", 2), "visits": [{"id": 11, **_cost("35.50")}]}})
+        html = client.get("/travel/places/3").text
+        assert 'href="/travel/charges?scope=place&id=3&name=Cafe%20Example&back=/travel/places/3"' in html
+        assert "scope=visit&id=11&" in html
+
+    def test_the_page_lists_the_charges_with_the_total_and_marks_refunds(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/charges": self._charges()})
+        html = client.get("/travel/charges?scope=trip&id=1&part=linked&name=Example%20trip").text
+        assert "Shop A" in html and "Shop B" in html and "text-green-700" in html
+        assert "6.00 € from 2 charges" in html and "1 without an EUR amount" in html
+        assert 'href="/travel/1"' in html and "Linked charges" in html
+
+    def test_leg_charges_come_from_the_existing_link_endpoint_and_go_back_where_you_came_from(self, client, mock_api):
+        _route(mock_api, {"/travel/legs/4/transactions": self._charges()})
+        html = client.get("/travel/charges?scope=leg&id=4&name=Alpha&back=/travel/1").text
+        assert "Shop A" in html and 'href="/travel/1"' in html
+
+    def test_an_outside_back_url_is_ignored_and_unknown_scopes_are_404(self, client, mock_api):
+        _route(mock_api, {"/travel/legs/4/transactions": self._charges()})
+        html = client.get("/travel/charges?scope=leg&id=4&back=//evil.example").text
+        assert "evil.example" not in html and 'href="/travel"' in html
+        assert client.get("/travel/charges?scope=nope&id=1").status_code == 404
+        assert client.get("/travel/charges?scope=trip&id=1&part=nope").status_code == 404

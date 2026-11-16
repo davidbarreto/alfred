@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  {% set costs = country.costs %}{% set tags = country.default_tag_names %}{% include "_travel_location_spend.html" %}
+  {% set scope = 'country' %}{% set owner = country %}{% set costs = country.costs %}{% set tags = country.default_tag_names %}{% include "_travel_location_spend.html" %}
 
   <div class="card bg-white" id="country-cities">
     <div class="card-body p-5 space-y-2">

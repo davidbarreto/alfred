@@ -692,6 +692,7 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
         places=get_place_service(session), visits=get_visit_service(session),
         links=TransactionLinkService(session), default_tags=TripDefaultTagService(session),
         recap=TripRecapService(session),
+        web_links=get_web_link_service(session), cities=CityService(session),
     )
 
 def get_checklist_service(session: AsyncSession = Depends(get_session)) -> ChecklistService:

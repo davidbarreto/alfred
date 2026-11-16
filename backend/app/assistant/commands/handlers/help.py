@@ -26,6 +26,7 @@ _GROUP_LABELS = {
     "travel_stay": "Travel: stays",
     "travel_place": "Travel: places",
     "travel_visit": "Travel: visits",
+    "travel_link": "Travel: links",
 }
 
 

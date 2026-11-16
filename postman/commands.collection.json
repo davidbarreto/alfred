@@ -1903,6 +1903,382 @@
           "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
+    },
+    {
+      "name": "43 - Execute: travel link place for the owner",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.set('travel_cmd_link_place_id', pm.response.json().result.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Link Place {{$timestamp}}\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "44 - Execute: travel link add on a place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json().result;",
+              "pm.test('Saved with the given title', () => pm.expect(j.title).to.eql('Postman tip'));",
+              "pm.environment.set('travel_cmd_link_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"add\",\n  \"args\": {\n    \"url\": \"https://example.com/?postman-cmd={{$timestamp}}\",\n    \"place\": \"{{travel_cmd_link_place_id}}\",\n    \"title\": \"Postman tip\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "45 - Execute: travel link list of the place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Listed', () => pm.expect(pm.response.json().result.links.map(l => l.id)).to.include(Number(pm.environment.get('travel_cmd_link_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"list\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_link_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "46 - Execute: travel link without an owner",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"list\",\n  \"args\": {},\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "47 - Execute: travel link with two owners",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"list\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_link_place_id}}\",\n    \"trip\": \"1\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "48 - Execute: travel link update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Renamed', () => pm.expect(pm.response.json().result.title).to.eql('Renamed tip'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"update\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_link_id}}\",\n    \"title\": \"Renamed tip\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "49 - Execute: travel link on an unknown city",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"add\",\n  \"args\": {\n    \"url\": \"https://example.com/x\",\n    \"city\": \"Nowhere {{$timestamp}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "50 - Execute: travel link delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_link_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "51 - Execute: travel link delete again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_link\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_link_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "52 - Execute: travel link place cleanup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_link_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
     }
   ]
 }

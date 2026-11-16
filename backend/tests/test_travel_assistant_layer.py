@@ -10,7 +10,7 @@ from app.assistant.intents.intent_service import get_operation_type
 from app.features.travel.notes_index import NOTE_SOURCE_TYPES, TravelNoteIndex, note_text
 from unittest.mock import AsyncMock, MagicMock
 
-_TRAVEL_GROUPS = ("travel_trip", "travel_leg", "travel_stay", "travel_place", "travel_visit")
+_TRAVEL_GROUPS = ("travel_trip", "travel_leg", "travel_stay", "travel_place", "travel_visit", "travel_link")
 
 
 class TestRegistry:
@@ -31,7 +31,8 @@ class TestRegistry:
         ("/trips", "travel_trip", "list"), ("/trip", "travel_trip", "get"), ("/tripadd", "travel_trip", "add"),
         ("/legadd", "travel_leg", "add"), ("/stayadd", "travel_stay", "add"), ("/places", "travel_place", "list"),
         ("/place", "travel_place", "get"), ("/visitadd", "travel_visit", "add"), ("/visited", "travel_visit", "visited"),
-        ("/missed", "travel_visit", "missed"), ("/leglink", "travel_leg", "link"),
+        ("/missed", "travel_visit", "missed"), ("/leglink", "travel_leg", "link"), ("/linkadd", "travel_link", "add"),
+        ("/links", "travel_link", "list"), ("/linksuggest", "travel_link", "suggest"),
     ])
     def test_aliases(self, alias, group, action):
         meta = COMMAND_REGISTRY[alias]
@@ -40,6 +41,21 @@ class TestRegistry:
     def test_every_action_that_needs_a_trip_or_place_says_so(self):
         assert COMMAND_REGISTRY["/legadd"].arg_keys == ["trip_id", "mode"]
         assert COMMAND_REGISTRY["/trip"].requires_args and COMMAND_REGISTRY["/trips"].requires_args is False
+
+
+class TestLinkParsing:
+    def test_add_takes_the_address_and_the_owner_flag(self):
+        detail = _resolve_fragment("/linkadd", ["https://example.com/a", "--city", "Alpha", "--country", "Examplia", "--title", "Official", "--kind", "website"])
+        assert (detail.type, detail.command) == ("travel_link", "add")
+        assert detail.args["url"] == "https://example.com/a" and detail.args["city"] == "Alpha" and detail.args["country"] == "Examplia"
+        assert detail.args["title"] == "Official" and detail.args["kind"] == "website"
+
+    def test_list_needs_no_positional_argument(self):
+        detail = _resolve_fragment("/links", ["--trip", "Summer"])
+        assert detail.args["trip"] == "Summer"
+
+    def test_the_catalog_mentions_that_alfred_never_searches_the_web(self):
+        assert "never searches the web" in COMMAND_DEFINITIONS["travel_link"]["suggest"]["details"]
 
 
 class TestParsing:

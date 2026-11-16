@@ -283,6 +283,13 @@ _VISIT_OVERVIEW = (
     "place is an id or a name: a name reuses an existing place (same name, and city if given) or creates one of the given "
     "kind (default other); a new place needs city and country. grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
 )
+_LINK_OVERVIEW = (
+    "A link is a saved web address (official site, tips, Instagram or TikTok page, video, article, booking page) owned by "
+    "exactly one trip, place, city or country: pass one of trip, place, city, country, each an id or a name. A city name "
+    "that exists in several countries is refused with the list of countries (add country to pick one). kind is guessed "
+    "from the domain (website, instagram, tiktok, video, article, map, booking, other) unless given; the title and a "
+    "thumbnail are fetched from the page. A city's links also show on its places and trips, a country's on trips there."
+)
 _TRAVEL_LINK_DETAILS = (
     "Links a finance transaction (by id) to this item as what paid for it; one transaction can be linked to several items "
     "and counts once in the trip total. Transfers can't be linked. Costs are derived from the linked transactions."
@@ -306,6 +313,10 @@ STAY_FLAGS = {
 PLACE_FLAGS = {
     "--kind": "kind", "--city": "city", "--country": "country", "--maps-url": "maps_url", "--lat": "lat", "--lng": "lng",
     "--address": "address", "--notes": "notes", **FLAG_TAGS,
+}
+LINK_FLAGS = {
+    "--trip": "trip", "--place": "place", "--city": "city", "--country": "country", "--title": "title", "--kind": "kind",
+    "--notes": "notes", "--url": "url",
 }
 PLACE_LIST_FLAGS = {
     "--kind": "kind", "--city": "city", "--country": "country", "--tag": "tag", "--min-grade": "min_grade",
@@ -1329,6 +1340,49 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"],
+        },
+    },
+    "travel_link": {
+        "add": {
+            "description": "Save a link: the address, then --trip, --place, --city or --country (an id or a name), optional --title, --kind, --notes",
+            "details": _LINK_OVERVIEW,
+            "aliases": ["/linkadd"],
+            "flags": LINK_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["url"],
+        },
+        "list": {
+            "description": "List the links of a trip, place, city or country: --trip, --place, --city or --country (an id or a name)",
+            "details": _LINK_OVERVIEW,
+            "aliases": ["/links", "/linklist"],
+            "flags": LINK_FLAGS,
+        },
+        "update": {
+            "description": "Update a link by ID (url, title, kind, notes); a blank value clears the title or notes",
+            "details": _LINK_OVERVIEW + " Changing the url fetches the new page's title and thumbnail.",
+            "aliases": ["/linkupdate"],
+            "flags": LINK_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a link by ID",
+            "aliases": ["/linkdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "suggest": {
+            "description": "Where to look for links for a trip: its home and stayed cities and their countries, with the links already saved",
+            "details": (
+                "Returns the cities and countries worth researching and what is saved already. Alfred never searches the web: "
+                "search for official tourism sites and tips yourself, show the candidates to the user and add only the ones "
+                "they pick with travel_link add. Skip addresses already saved."
+            ),
+            "aliases": ["/linksuggest"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["trip"],
         },
     },
     "travel_visit": {

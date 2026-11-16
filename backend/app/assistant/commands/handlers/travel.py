@@ -7,10 +7,14 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import build_model, optional_int, parse_int, parse_tags, require_int
+from app.features.travel.cities.schemas import CityFilters
+from app.features.travel.cities.service import CityService
 from app.features.travel.constants import TRIP_STATUS_FILTERS
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
+from app.features.travel.links.schemas import WebLinkCreate, WebLinkRead, WebLinkUpdate
+from app.features.travel.links.service import WebLinkService
 from app.features.travel.legs.service import LegService
 from app.features.travel.recap.service import TripRecapService
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
@@ -37,6 +41,8 @@ class TravelServices:
     links: TransactionLinkService
     default_tags: TripDefaultTagService
     recap: TripRecapService
+    web_links: WebLinkService | None = None
+    cities: CityService | None = None
 
 
 def _bad_request(detail: str) -> HTTPException:
@@ -185,12 +191,113 @@ def _place_summary(place: PlaceRead) -> dict[str, Any]:
     }
 
 
+# ---- links -------------------------------------------------------------------
+
+_OWNERS = ("trip", "place", "city", "country")
+
+
+def _link_summary(link: WebLinkRead) -> dict[str, Any]:
+    return {"id": link.id, "url": link.url, "title": link.title, "kind": link.kind, "notes": link.notes}
+
+
+async def _find_city(services: TravelServices, ref: str, country: str | None) -> int:
+    """A city by id, or by exact name (case-insensitive); a name found in several countries is refused, never guessed."""
+    if _is_id(ref):
+        return int(ref)
+    found = await services.cities.get_cities(CityFilters(country_id=None, q=ref))
+    matches = [c for c in found if c.name.lower() == ref.lower()]
+    if country:
+        matches = [c for c in matches if c.country.name.lower() == country.lower()]
+    if not matches:
+        raise _not_found("City", repr(ref))
+    if len(matches) > 1:
+        countries = ", ".join(c.country.name for c in matches)
+        raise _bad_request(f"{ref} exists in several countries ({countries}): add the country")
+    return matches[0].id
+
+
+async def _find_country(services: TravelServices, ref: str) -> int:
+    if _is_id(ref):
+        return int(ref)
+    matches = [c for c in await services.cities.get_countries() if c.name.lower() == ref.lower()]
+    if not matches:
+        raise _not_found("Country", repr(ref))
+    return matches[0].id
+
+
+async def _link_owner(arguments: dict[str, Any], services: TravelServices) -> tuple[str, int]:
+    """The one owner (trip, place, city or country) a link command is about, by id or name."""
+    given = [(kind, _text(arguments, kind)) for kind in _OWNERS if _text(arguments, kind)]
+    # A country given next to a city only narrows the city.
+    if len(given) == 2 and {k for k, _ in given} == {"city", "country"}:
+        given = [g for g in given if g[0] == "city"]
+    if len(given) != 1:
+        raise _bad_request("Give exactly one of trip, place, city or country (an id or a name)")
+    kind, ref = given[0]
+    if kind == "trip":
+        return kind, (await _find_trip(services, ref)).id
+    if kind == "place":
+        return kind, (await _find_place(services, ref)).id
+    if kind == "city":
+        return kind, await _find_city(services, ref, _text(arguments, "country"))
+    return kind, await _find_country(services, ref)
+
+
+async def _web_link(command: str, arguments: dict[str, Any], services: TravelServices) -> Any:
+    if command == "suggest":
+        ref = _text(arguments, "trip")
+        if not ref:
+            raise _bad_request("trip is required")
+        trip = await _find_trip(services, ref)
+        detail = await services.trips.get_trip_detail(trip.id)
+        cities = [c.city for c in detail.cities if c.role in ("home", "stayed")]
+        countries = {c.country.id: c.country for c in cities}
+        return {
+            "trip": trip.name,
+            "cities": [{"id": c.id, "name": c.name, "country": c.country.name,
+                        "saved": [link.url for link in await services.web_links.get_city_links(c.id)]} for c in cities],
+            "countries": [{"id": c.id, "name": c.name,
+                           "saved": [link.url for link in await services.web_links.get_country_links(c.id)]} for c in countries.values()],
+        }
+
+    if command == "list":
+        kind, owner_id = await _link_owner(arguments, services)
+        links = await getattr(services.web_links, f"get_{kind}_links")(owner_id)
+        return {"count": len(links), "links": [_link_summary(link) for link in links]}
+
+    if command == "add":
+        url = _text(arguments, "url")
+        kind, owner_id = await _link_owner(arguments, services)
+        data = build_model(WebLinkCreate, url=url, kind=_text(arguments, "kind"), title=_text(arguments, "title"), notes=_text(arguments, "notes"))
+        link = await getattr(services.web_links, f"create_{kind}_link")(owner_id, data)
+        return {"id": link.id, "message": f"Link saved on {kind} {owner_id}", **_link_summary(link)}
+
+    if command == "update":
+        link_id = require_int(arguments, "id")
+        fields = _present(arguments, ("url", "kind", "title", "notes"))
+        if not fields:
+            raise _bad_request("Nothing to update")
+        link = await services.web_links.update_link(link_id, build_model(WebLinkUpdate, **fields))
+        if link is None:
+            raise _not_found("Link", link_id)
+        return {"id": link.id, "message": f"Link {link.id} updated", **_link_summary(link)}
+
+    if command == "delete":
+        link_id = require_int(arguments, "id")
+        if not await services.web_links.delete_link(link_id):
+            raise _not_found("Link", link_id)
+        return {"message": f"Link {link_id} deleted"}
+
+    raise _bad_request(f"Unknown link command: {command}")
+
+
 # ---- dispatch ------------------------------------------------------------------
 
 async def handle_travel(cmd_type: str, command: str, arguments: dict[str, Any], services: TravelServices) -> Any:
     logger.debug("handle_travel: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
     handlers = {
         "travel_trip": _trip, "travel_leg": _leg, "travel_stay": _stay, "travel_place": _place, "travel_visit": _visit,
+        "travel_link": _web_link,
     }
     handler = handlers.get(cmd_type)
     if handler is None:

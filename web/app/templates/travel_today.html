@@ -3,7 +3,7 @@
 {% block title %}Today: {{ today.trip_name }}{% endblock %}
 
 {% block content %}
-<div class="p-4 sm:p-6 space-y-4 max-w-xl mx-auto">
+<div class="page space-y-4 max-w-xl mx-auto">
 
   <a href="/travel/{{ today.trip_id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ today.trip_name }}</a>
   <h1 class="text-base font-semibold text-gray-900">Today <span class="text-xs font-normal text-gray-400">{{ today.date | short_date }} · {{ today.timezone }}</span></h1>

@@ -3,14 +3,17 @@
 {% block title %}Finance{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-6">
+<div class="page space-y-4">
 
-  <div class="flex items-center justify-between gap-3 flex-wrap">
-    <div class="flex items-center gap-3 flex-wrap">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Finance</h1>
-    {% include "_finance_range_bar.html" %}
-    </div>
-    <div class="flex gap-2">
+    <button onclick="openNewTransaction()" class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-plus text-sm"></i>New transaction
+    </button>
+  </div>
+
+  <!-- Sections of the finance area: one sideways-scrolling line on a phone -->
+  <nav class="scroll-row" aria-label="Finance sections">
       <a href="/finance/insights" class="btn btn-sm btn-ghost gap-1 text-gray-500">
         <i class="ti ti-chart-bar text-sm"></i>Insights
       </a>
@@ -39,15 +42,12 @@
       <a href="/finance/settings" class="btn btn-sm btn-ghost gap-1 text-gray-500">
         <i class="ti ti-calendar-time text-sm"></i>Cycle
       </a>
-      <button onclick="openNewTransaction()"
-              class="btn btn-sm btn-primary gap-1">
-        <i class="ti ti-plus text-sm"></i>New transaction
-      </button>
-    </div>
-  </div>
+  </nav>
+
+  {% include "_finance_range_bar.html" %}
 
   <!-- 4 summary cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="stat-row">
     <a href="/finance/transactions?type=income&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Income</div>
       <div class="text-2xl font-semibold text-[#639922] mt-1">
@@ -99,11 +99,12 @@
     {% endif %}
   </div>
 
-  <!-- Category breakdown with progress bars -->
+  <!-- Category breakdown beside the recent transactions (stacked below lg) -->
+  <div class="{% if category_items %}split{% endif %}">
   {% if category_items %}
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-medium text-gray-900 mb-4">Category breakdown</h2>
-    <div class="space-y-4">
+    <div class="space-y-3">
       {% for item in category_items %}
       <div>
         <div class="flex justify-between text-xs mb-1">
@@ -131,6 +132,7 @@
     <div id="transaction-list">
       {% include "_finance_transactions.html" %}
     </div>
+  </div>
   </div>
 
 </div>
@@ -258,6 +260,8 @@ async function submitManageForm(e, url, targetId) {
 }
 </script>
 
+<!-- New / edit transaction -->
+<dialog id="new-txn-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
     <h3 id="txn-form-title" class="text-sm font-semibold text-gray-900 mb-4">New transaction</h3>
     <form id="new-txn-form" onsubmit="submitNewTxn(event)" class="flex flex-col gap-3">

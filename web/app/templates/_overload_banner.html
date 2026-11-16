@@ -24,12 +24,13 @@
   </div>
 </div>
 {% elif status.level == "elevated" %}
-<div class="rounded-lg bg-[#FAEEDA] border border-[#BA7517]/20 px-4 py-2.5 text-xs text-[#8A5A00] flex items-center gap-2">
-  <i class="ti ti-alert-circle"></i>
-  Backlog building up: {{ status.overdue }} overdue, {{ status.urgent }} urgent.
-  Reminders switch to limited mode at {{ status.overdue_threshold }} overdue or {{ status.urgent_threshold }} urgent.
-  <button type="button" class="ml-auto text-[#378ADD] hover:underline"
+<div class="rounded-lg bg-[#FAEEDA] border border-[#BA7517]/20 px-4 py-2.5 text-xs text-[#8A5A00] flex flex-wrap items-center gap-x-3 gap-y-1.5">
+  <span class="flex-1 min-w-[14rem]">
+    <i class="ti ti-alert-circle mr-1"></i>Backlog building up: {{ status.overdue }} overdue, {{ status.urgent }} urgent.
+    Reminders switch to limited mode at {{ status.overdue_threshold }} overdue or {{ status.urgent_threshold }} urgent.
+  </span>
+  <button type="button" class="text-[#378ADD] hover:underline whitespace-nowrap"
           hx-get="/overload/catchup" hx-target="#catchup-panel" hx-swap="innerHTML">Catch-up plan →</button>
-  <a href="/tasks/" class="text-[#378ADD] hover:underline">Review tasks →</a>
+  <a href="/tasks/" class="text-[#378ADD] hover:underline whitespace-nowrap">Review tasks →</a>
 </div>
 {% endif %}

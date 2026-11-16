@@ -3,12 +3,12 @@
 {% block title %}Tasks{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-4">
-  <div class="flex items-center justify-between">
+<div class="page space-y-4">
+  <div class="page-head">
     <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
-    <div class="flex items-center gap-3">
+    <div class="page-actions">
       <span id="reset-urgency-msg" class="text-xs text-[#639922] hidden"></span>
-      <a href="/tasks/insights" class="text-xs text-[#378ADD] hover:underline">View insights →</a>
+      <a href="/tasks/insights" class="text-xs text-[#378ADD] hover:underline mr-1">View insights →</a>
       <button id="reset-urgency-btn" onclick="resetUrgency()"
               title="Clear Urgent on all tasks and give them a fresh escalation clock"
               class="btn btn-sm btn-ghost gap-1">
@@ -32,7 +32,7 @@
   {% endif %}
 
   <!-- Filter pills — full navigation so active state re-renders server-side -->
-  <div class="flex flex-wrap gap-1.5 border-b border-gray-200 pb-4">
+  <div class="scroll-row border-b border-gray-200 pb-3">
     {% for key, defn in filters.items() %}
     <a
       href="/tasks/?filter={{ key }}"
@@ -44,7 +44,7 @@
 
   <!-- Tag pills — smaller than the category filters above, so those stand out -->
   {% if tag_chips %}
-  <div class="flex flex-wrap items-center gap-1 -mt-2 pb-2">
+  <div class="scroll-row">
     <i class="ti ti-tag text-[10px] text-gray-300"></i>
     {% for chip in tag_chips %}
     <a

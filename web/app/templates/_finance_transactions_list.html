@@ -1,6 +1,6 @@
 {% if txn_sum %}
 {% set other_currencies = txn_sum.by_currency | rejectattr("currency", "equalto", "EUR") | list %}
-<div class="flex items-center justify-between text-xs text-gray-500 mb-2 pb-2 border-b border-gray-100 gap-3">
+<div class="flex flex-wrap items-center justify-between text-xs text-gray-500 mb-2 pb-2 border-b border-gray-100 gap-x-3 gap-y-1">
   <span>{{ txn_sum.transaction_count }} transaction{% if txn_sum.transaction_count != 1 %}s{% endif %} matching filters</span>
   <div class="flex items-center gap-2">
     {% if other_currencies %}
@@ -34,8 +34,8 @@
 {% if transactions %}
 <ul>
   {% for txn in transactions %}
-  <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
-    <div class="w-16 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
+  <li class="flex items-center gap-2 sm:gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
+    <div class="hidden sm:block w-16 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
     <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
       <span class="text-xs font-medium text-gray-500">
         {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
@@ -45,8 +45,8 @@
     {% set can_find_match = not txn.counterpart_transaction_id %}
     {% set unconfirmed_transfer = txn.type == 'transfer' and txn.counterpart_account_id and not txn.counterpart_transaction_id %}
     <div class="flex-1 min-w-0 cursor-pointer" onclick='openTransactionDetailModal({{ txn | tojson }}, {{ accounts_by_id.get(txn.account_id, "?") | tojson }})'>
-      <div class="text-sm text-gray-800 truncate flex items-center gap-1.5">
-        <span class="truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
+      <div class="text-sm text-gray-800 flex flex-wrap sm:flex-nowrap items-center gap-x-1.5 gap-y-1">
+        <span class="truncate max-w-full">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
         {% if txn.note %}
         <i class="ti ti-note flex-shrink-0 text-gray-400 text-xs" title="{{ txn.note }}"></i>
         {% endif %}
@@ -60,6 +60,7 @@
         {% endif %}
       </div>
       <div class="text-xs text-gray-400">
+        <span class="sm:hidden tabular-nums">{{ txn.date[:10] }} · </span>
         {%- if accounts_by_id.get(txn.account_id) %}{{ accounts_by_id.get(txn.account_id) }}{% endif %}
         {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
         {% if txn.type == 'transfer' and txn.counterpart_account_id %} · → {{ accounts_by_id.get(txn.counterpart_account_id, "?") }}{% endif %}

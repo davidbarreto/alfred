@@ -4,19 +4,19 @@
 {% block title %}{{ trip.name }}{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-6">
+<div class="page space-y-4">
 
   <a href="/travel" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> All trips</a>
 
   <div class="card bg-white">
     <div class="card-body p-5 space-y-3">
-      <div class="flex items-start justify-between gap-3">
-        <div>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
           <h1 class="text-base font-semibold text-gray-900">{{ trip.name }}</h1>
           <p class="text-xs text-gray-500">{{ trip.start_date | short_date }} → {{ trip.end_date | short_date }}</p>
           {% if trip.travelers %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ trip.travelers }}</p>{% endif %}
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
           <span class="px-2 py-0.5 rounded-full text-xs font-medium
             {% if trip.status == 'ongoing' %}text-green-700 bg-green-50{% elif trip.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ trip.status }}</span>
           {% if trip.status == 'ongoing' %}<a class="btn btn-xs btn-outline" href="/travel/{{ trip.id }}/today">Today</a>{% endif %}
@@ -110,6 +110,9 @@
   </a>
   {% endif %}
 
+  <!-- Two independent stacks from lg up (see .split): the trip as it unfolds on the left, bookings and plans on the right -->
+  <div class="split">
+  <div class="card-stack">
   {% if costs and (costs.total.transaction_count or costs.tagged.transaction_count) %}
   <div class="card bg-white" id="trip-costs">
     <div class="card-body p-5 space-y-2">
@@ -129,6 +132,91 @@
   </div>
   {% endif %}
 
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-4" id="timeline">
+      <h2 class="text-sm font-semibold text-gray-900">Timeline</h2>
+      {% include "_travel_timeline_days.html" %}
+      {% if timeline_total > timeline_shown %}
+      <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/timeline">See all {{ timeline_total }} steps</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% set home_cities = trip.cities | selectattr('role', 'equalto', 'home') | list %}
+  {% set stayed = trip.cities | selectattr('role', 'equalto', 'stayed') | list %}
+  {% set passed = trip.cities | selectattr('role', 'equalto', 'passed') | list %}
+  {% if home_cities or stayed or passed or trip.unmatched_leg_ends %}
+  <div class="card bg-white" id="trip-cities">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Cities</h2>
+      {% if home_cities or stayed %}
+      <div class="flex flex-wrap gap-2">
+        {% for c in home_cities %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100" title="Where this trip starts from{{ ' (set for this trip)' if trip.home and trip.home.from_trip }}"><i class="ti ti-home"></i> {{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
+        {% for c in stayed %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">{{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
+      </div>
+      {% endif %}
+      {% if passed %}
+      <p class="text-xs text-gray-500">Passed through:
+        {% for c in passed %}<a href="/travel/cities/{{ c.city.id }}" class="hover:underline text-[#378ADD]">{{ c.city.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+      {% if trip.unmatched_leg_ends %}
+      <p class="text-xs text-amber-700" id="unmatched-leg-ends"><i class="ti ti-alert-triangle"></i> {{ trip.unmatched_leg_ends }} leg end{{ '' if trip.unmatched_leg_ends == 1 else 's' }} {{ 'has' if trip.unmatched_leg_ends == 1 else 'have' }} no city: edit the leg to pick one, or create the city under <a class="underline" href="/travel/cities">Cities</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if forecast and forecast.mode != 'none' %}
+  <div class="card bg-white" id="forecast">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Weather <span class="text-xs font-normal text-gray-400">{{ {'forecast': 'forecast', 'climate': "last year's same dates", 'actual': 'actual weather', 'mixed': 'forecast and actual'}[forecast.mode] }}{% if forecast.as_of %} · {{ 'saved, ' if forecast.finished }}updated {{ forecast.as_of | short_date }}{% endif %}</span></h2>
+      {% if forecast.available %}
+      {% for city in forecast.cities %}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 mb-1">{{ city.city }}</p>
+        <div class="flex flex-wrap gap-2">
+          {% for d in city.days %}
+          {# Tile colour follows the day's max temperature (°C): <5 freezing, <12 cold, <18 cool, <24 mild, <30 warm, <35 hot, else very hot #}
+          {% set t = d.max_c %}
+          {% set tone = 'bg-gray-50 border-gray-200' if t is none else 'bg-indigo-100 border-indigo-300' if t < 5 else 'bg-sky-100 border-sky-300' if t < 12 else 'bg-teal-100 border-teal-300' if t < 18 else 'bg-lime-100 border-lime-300' if t < 24 else 'bg-amber-100 border-amber-300' if t < 30 else 'bg-orange-200 border-orange-400' if t < 35 else 'bg-red-200 border-red-400' %}
+          <div class="rounded-md border px-2 py-1 text-center text-xs {{ tone }}" data-weather-day="{{ d.date }}">
+            <p class="text-gray-400">{{ d.date | short_date }}</p>
+            <p class="text-gray-900">{{ d.min_c|round|int if d.min_c is not none else '–' }}° / {{ d.max_c|round|int if d.max_c is not none else '–' }}°</p>
+            <p class="text-sky-700">{% if d.rain %}<i class="ti ti-umbrella"></i> {{ d.precip_mm|round(1) }} mm{% else %}&nbsp;{% endif %}</p>
+            {% if d.rain and not forecast.finished and trip.visits|selectattr('visit_date', 'equalto', d.date|string)|selectattr('status', 'equalto', 'planned')|list %}
+            <button type="button" class="btn btn-xs btn-ghost move-day" data-from="{{ d.date }}" title="Move this day's planned visits to another day">Move visits</button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="text-sm text-gray-400">{{ forecast.message or 'No weather available.' }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% set owner_kind = 'trip' %}{% set owner_id = trip.id %}{% set links_url = '/travel/' ~ trip.id ~ '/links' %}
+  {% include "_travel_web_links_card.html" %}
+  {% include "_travel_link_groups.html" %}
+
+  <div class="card bg-white" id="while-away">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">While you are away</h2>
+      {% if while_away and while_away.birthdays %}<div><p class="text-xs font-semibold text-gray-500">Birthdays</p>
+        {% for b in while_away.birthdays %}<p class="text-sm">{{ b.date | short_date }} · {{ b.name }}</p>{% endfor %}</div>{% endif %}
+      {% if while_away and while_away.tasks %}<div><p class="text-xs font-semibold text-gray-500">Tasks due</p>
+        {% for t in while_away.tasks %}<p class="text-sm">{{ t.due | short_date }} · {{ t.title }}</p>{% endfor %}</div>{% endif %}
+      {% if while_away and while_away.charges %}<div><p class="text-xs font-semibold text-gray-500">Recurring charges</p>
+        {% for c in while_away.charges %}<p class="text-sm">{{ c.date | short_date }} · {{ c.merchant or 'Charge' }} · {{ c.amount }} {{ c.currency }}</p>{% endfor %}</div>{% endif %}
+      {% if not (while_away and (while_away.birthdays or while_away.tasks or while_away.charges)) %}<p class="text-sm text-gray-400">No birthdays, tasks or recurring charges fall on these dates.</p>{% endif %}
+    </div>
+  </div>
+  </div>
+
+  <div class="card-stack">
   <div class="card bg-white" id="tagged">
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Charges with the trip's tags <span class="text-xs font-normal text-gray-400">{{ tagged.transactions|length }}</span></h2>
@@ -139,17 +227,6 @@
       <p class="text-xs text-gray-500">{% if trip.default_tag_names %}No charges carry the trip's tags yet ({{ trip.default_tag_names }}).{% else %}This trip has no default tags yet; set them in the trip's edit form.{% endif %}</p>
       {% endfor %}
       {% if tagged.transactions|length > preview_size %}<a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/tagged">See all {{ tagged.transactions|length }}</a>{% endif %}
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-  <div class="card bg-white">
-    <div class="card-body p-5 space-y-4" id="timeline">
-      <h2 class="text-sm font-semibold text-gray-900">Timeline</h2>
-      {% include "_travel_timeline_days.html" %}
-      {% if timeline_total > timeline_shown %}
-      <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/timeline">See all {{ timeline_total }} steps</a>
-      {% endif %}
     </div>
   </div>
 
@@ -181,30 +258,6 @@
       {% endfor %}
     </div>
   </div>
-
-  {% set home_cities = trip.cities | selectattr('role', 'equalto', 'home') | list %}
-  {% set stayed = trip.cities | selectattr('role', 'equalto', 'stayed') | list %}
-  {% set passed = trip.cities | selectattr('role', 'equalto', 'passed') | list %}
-  {% if home_cities or stayed or passed or trip.unmatched_leg_ends %}
-  <div class="card bg-white" id="trip-cities">
-    <div class="card-body p-5 space-y-2">
-      <h2 class="text-sm font-semibold text-gray-900">Cities</h2>
-      {% if home_cities or stayed %}
-      <div class="flex flex-wrap gap-2">
-        {% for c in home_cities %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100" title="Where this trip starts from{{ ' (set for this trip)' if trip.home and trip.home.from_trip }}"><i class="ti ti-home"></i> {{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
-        {% for c in stayed %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">{{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
-      </div>
-      {% endif %}
-      {% if passed %}
-      <p class="text-xs text-gray-500">Passed through:
-        {% for c in passed %}<a href="/travel/cities/{{ c.city.id }}" class="hover:underline text-[#378ADD]">{{ c.city.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
-      {% endif %}
-      {% if trip.unmatched_leg_ends %}
-      <p class="text-xs text-amber-700" id="unmatched-leg-ends"><i class="ti ti-alert-triangle"></i> {{ trip.unmatched_leg_ends }} leg end{{ '' if trip.unmatched_leg_ends == 1 else 's' }} {{ 'has' if trip.unmatched_leg_ends == 1 else 'have' }} no city: edit the leg to pick one, or create the city under <a class="underline" href="/travel/cities">Cities</a>.</p>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
 
   <div class="card bg-white">
     <div class="card-body p-5 space-y-3">
@@ -268,42 +321,6 @@
     </div>
   </div>
 
-  {% set owner_kind = 'trip' %}{% set owner_id = trip.id %}{% set links_url = '/travel/' ~ trip.id ~ '/links' %}
-  {% include "_travel_web_links_card.html" %}
-  {% include "_travel_link_groups.html" %}
-
-  {% if forecast and forecast.mode != 'none' %}
-  <div class="card bg-white" id="forecast">
-    <div class="card-body p-5 space-y-2">
-      <h2 class="text-sm font-semibold text-gray-900">Weather <span class="text-xs font-normal text-gray-400">{{ {'forecast': 'forecast', 'climate': "last year's same dates", 'actual': 'actual weather', 'mixed': 'forecast and actual'}[forecast.mode] }}{% if forecast.as_of %} · {{ 'saved, ' if forecast.finished }}updated {{ forecast.as_of | short_date }}{% endif %}</span></h2>
-      {% if forecast.available %}
-      {% for city in forecast.cities %}
-      <div>
-        <p class="text-xs font-semibold text-gray-500 mb-1">{{ city.city }}</p>
-        <div class="flex flex-wrap gap-2">
-          {% for d in city.days %}
-          {# Tile colour follows the day's max temperature (°C): <5 freezing, <12 cold, <18 cool, <24 mild, <30 warm, <35 hot, else very hot #}
-          {% set t = d.max_c %}
-          {% set tone = 'bg-gray-50 border-gray-200' if t is none else 'bg-indigo-100 border-indigo-300' if t < 5 else 'bg-sky-100 border-sky-300' if t < 12 else 'bg-teal-100 border-teal-300' if t < 18 else 'bg-lime-100 border-lime-300' if t < 24 else 'bg-amber-100 border-amber-300' if t < 30 else 'bg-orange-200 border-orange-400' if t < 35 else 'bg-red-200 border-red-400' %}
-          <div class="rounded-md border px-2 py-1 text-center text-xs {{ tone }}" data-weather-day="{{ d.date }}">
-            <p class="text-gray-400">{{ d.date | short_date }}</p>
-            <p class="text-gray-900">{{ d.min_c|round|int if d.min_c is not none else '–' }}° / {{ d.max_c|round|int if d.max_c is not none else '–' }}°</p>
-            <p class="text-sky-700">{% if d.rain %}<i class="ti ti-umbrella"></i> {{ d.precip_mm|round(1) }} mm{% else %}&nbsp;{% endif %}</p>
-            {% if d.rain and not forecast.finished and trip.visits|selectattr('visit_date', 'equalto', d.date|string)|selectattr('status', 'equalto', 'planned')|list %}
-            <button type="button" class="btn btn-xs btn-ghost move-day" data-from="{{ d.date }}" title="Move this day's planned visits to another day">Move visits</button>
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-      {% else %}
-      <p class="text-sm text-gray-400">{{ forecast.message or 'No weather available.' }}</p>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-
   {% if unlinked %}
   <div class="card bg-white" id="unlinked">
     <div class="card-body p-5 space-y-2">
@@ -316,19 +333,6 @@
     </div>
   </div>
   {% endif %}
-
-  <div class="card bg-white" id="while-away">
-    <div class="card-body p-5 space-y-2">
-      <h2 class="text-sm font-semibold text-gray-900">While you are away</h2>
-      {% if while_away and while_away.birthdays %}<div><p class="text-xs font-semibold text-gray-500">Birthdays</p>
-        {% for b in while_away.birthdays %}<p class="text-sm">{{ b.date | short_date }} · {{ b.name }}</p>{% endfor %}</div>{% endif %}
-      {% if while_away and while_away.tasks %}<div><p class="text-xs font-semibold text-gray-500">Tasks due</p>
-        {% for t in while_away.tasks %}<p class="text-sm">{{ t.due | short_date }} · {{ t.title }}</p>{% endfor %}</div>{% endif %}
-      {% if while_away and while_away.charges %}<div><p class="text-xs font-semibold text-gray-500">Recurring charges</p>
-        {% for c in while_away.charges %}<p class="text-sm">{{ c.date | short_date }} · {{ c.merchant or 'Charge' }} · {{ c.amount }} {{ c.currency }}</p>{% endfor %}</div>{% endif %}
-      {% if not (while_away and (while_away.birthdays or while_away.tasks or while_away.charges)) %}<p class="text-sm text-gray-400">No birthdays, tasks or recurring charges fall on these dates.</p>{% endif %}
-    </div>
-  </div>
 
   <div class="card bg-white" id="ideas">
     <div class="card-body p-5 space-y-3">
@@ -352,6 +356,7 @@
       <p class="text-sm text-gray-400">No ideas left to plan.</p>
       {% endfor %}
     </div>
+  </div>
   </div>
   </div>
 

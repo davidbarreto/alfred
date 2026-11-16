@@ -2397,3 +2397,16 @@ class TestBudgetedTagNames:
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/tags/budgeted", follow_redirects=False)
         assert resp.status_code == 302
+
+
+class TestDashboardDialogs:
+    def test_new_transaction_form_sits_in_its_dialog(self, client, mock_api):
+        """The form must be inside <dialog id="new-txn-modal">: without the tag it renders at the page bottom and the button fails."""
+        mock_api["get"].return_value = []
+
+        resp = client.get("/finance/")
+
+        assert resp.status_code == 200
+        dialog = resp.text.index('<dialog id="new-txn-modal"')
+        assert dialog < resp.text.index('id="new-txn-form"') < resp.text.index("</dialog>", dialog)
+

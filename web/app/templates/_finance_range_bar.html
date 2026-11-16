@@ -1,7 +1,7 @@
 {# Period + currency chips and the custom-range dialog. Needs: base_path, period, is_custom,
    custom_from, custom_to, currency, range_qs, account_currencies. #}
-<div class="flex items-center gap-3 flex-wrap">
-    <div class="flex gap-1.5 flex-wrap">
+<div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1.5 sm:gap-3 min-w-0">
+    <div class="scroll-row">
       {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this quarter", "This quarter"), ("this semester", "This semester"), ("this year", "This year")] %}
       <a
         href="{{ base_path }}?period={{ p }}&currency={{ currency }}"
@@ -19,7 +19,7 @@
       </button>
     </div>
     {% if account_currencies | length > 1 %}
-    <div class="flex gap-1.5 flex-wrap border-l border-gray-200 pl-3">
+    <div class="scroll-row sm:border-l sm:border-gray-200 sm:pl-3">
       {% for c in account_currencies %}
       <a
         href="{{ base_path }}?{{ range_qs }}&currency={{ c }}"

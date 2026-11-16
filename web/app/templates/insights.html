@@ -3,11 +3,11 @@
 {% block title %}Insights{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-8">
+<div class="page space-y-6">
   <h1 class="text-base font-semibold text-gray-900">Insights</h1>
 
   <!-- ── Stat cards ─────────────────────────────────────────── -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div class="stat-row">
     <div class="card bg-white"><div class="card-body p-4">
       <p class="text-xs text-gray-400 uppercase tracking-wide">Memories</p>
       <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ total_memories }}</p>
@@ -41,7 +41,7 @@
   <!-- ── LLM Usage ──────────────────────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">LLM Usage</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card-row" style="--card-min: 16rem">
 
       <!-- By model -->
       <div class="card bg-white">
@@ -105,7 +105,7 @@
       <a href="/insights/llm-calls" class="text-xs text-[#378ADD] hover:underline">View all →</a>
     </div>
     <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm min-w-[34rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Model</th>
@@ -140,7 +140,7 @@
   <!-- ── Provider Calls ─────────────────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Provider Calls</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card-row" style="--card-min: 16rem">
 
       <!-- By provider -->
       <div class="card bg-white">
@@ -204,7 +204,7 @@
       <a href="/insights/provider-calls" class="text-xs text-[#378ADD] hover:underline">View all →</a>
     </div>
     <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm min-w-[34rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Provider</th>
@@ -260,16 +260,16 @@
       <h2 class="text-sm font-medium text-gray-900">API &amp; MCP Usage</h2>
       <span class="text-xs text-gray-400">{{ total_api_requests }} requests · last {{ api_usage_days }} days</span>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card-row" style="--card-min: 16rem">
       {{ chart_card("api-clients", "API requests by caller", api_by_client) }}
       {{ chart_card("api-errors", "Error rate by caller (%)", api_error_rate) }}
       {{ chart_card("api-latency", "Avg latency by caller (ms)", api_latency) }}
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+    <div class="card-row mt-4" style="--card-min: 16rem">
       {{ chart_card("cmd-source", "Commands by source", cmd_by_source) }}
       {{ chart_card("mcp-commands", "MCP commands", mcp_cmd_by_name) }}
     </div>
-    <div class="grid grid-cols-1 gap-4 mt-4">
+    <div class="mt-4">
       {{ chart_card("api-routes", "Top routes by caller", api_top_routes, "h-64") }}
     </div>
   </section>
@@ -277,7 +277,7 @@
   <!-- ── Chats (Messages & Sessions) ───────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Chats</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card-row" style="--card-min: 16rem">
 
       <!-- Messages by role -->
       <div class="card bg-white">
@@ -323,7 +323,7 @@
       <a href="/insights/messages" class="text-xs text-[#378ADD] hover:underline">View all →</a>
     </div>
     <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm min-w-[34rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Role</th>
@@ -359,7 +359,7 @@
       <a href="/insights/sessions" class="text-xs text-[#378ADD] hover:underline">View all →</a>
     </div>
     <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm min-w-[34rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Source</th>
@@ -400,8 +400,8 @@
         <span class="text-xs text-gray-400">{{ total_embedding_calls }} total</span>
       </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="card bg-white sm:col-span-1">
+    <div class="card-row" style="--card-min: 16rem">
+      <div class="card bg-white">
         {% if embedding_calls_by_feature %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('embedding-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
@@ -426,7 +426,7 @@
       <a href="/insights/embedding-calls" class="text-xs text-[#378ADD] hover:underline">View all →</a>
     </div>
     <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm min-w-[34rem]">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Feature</th>

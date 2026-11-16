@@ -11,6 +11,8 @@ from app.shared.flags import country_flag, country_flag_of
 _DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(_DIR))
 templates.env.globals["is_dev"] = get_settings().env.lower() not in ("production", "prod")
+# Cache-buster for /static/css/portal.css: browsers keep a stylesheet across deploys unless its URL changes.
+templates.env.globals["static_version"] = int((_DIR.parent / "static" / "css" / "portal.css").stat().st_mtime)
 
 
 def _timeago(dt_str: str | None) -> str:

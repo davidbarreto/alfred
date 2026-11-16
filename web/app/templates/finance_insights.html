@@ -3,15 +3,16 @@
 {% block title %}Finance insights{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-6">
+<div class="page space-y-4">
 
-  <div class="flex items-center justify-between gap-3 flex-wrap">
-    <div class="flex items-center gap-3 flex-wrap">
-      <a href="/finance/" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+  <div class="page-head">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="/finance/" class="text-gray-400 hover:text-gray-600" aria-label="Back to Finance"><i class="ti ti-arrow-left text-sm"></i></a>
       <h1 class="text-base font-semibold text-gray-900">Finance insights</h1>
-      {% include "_finance_range_bar.html" %}
     </div>
   </div>
+
+  {% include "_finance_range_bar.html" %}
 
   {% if not (category_chart or time_spending or account_chart or income_expense_chart or net_worth_chart or budget_chart) %}
   <div class="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-400 text-center">No data to chart for this range.</div>
@@ -162,7 +163,7 @@
   <a href="/finance/budgets/overview" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors relative group">
     <i class="ti ti-arrow-up-right text-gray-300 group-hover:text-gray-500 absolute top-4 right-4 text-sm"></i>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Budget utilization</h2>
-    <div class="relative h-20">
+    <div class="relative h-56">
       <canvas id="chart-budget"></canvas>
     </div>
   </a>

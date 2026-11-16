@@ -95,7 +95,7 @@ Storage is UTC and containers run in UTC. Never call `date.today()`, naive `date
 - Keep each command `description` in `COMMAND_DEFINITIONS` at 200 characters or less: Telegram rejects the *whole* menu (not just one command) above 256 per description or ~5.7k combined. Only commands in `_MENU_COMMANDS` are registered with Telegram. Details: `docs/assistant-layer.md`
 
 ### Web portal
-Route handlers stay thin and fetch through `web/app/client.py`. **Cap list-like cards**: a detail page shows only the first 5 plus a "See all N" link to a **separate page**; never an in-place expand, never an unbounded list. Full conventions: `docs/portal.md`.
+Route handlers stay thin and fetch through `web/app/client.py`. Lay pages out with the classes in `web/app/static/css/portal.css` (`page`, `page-head`, `card-row`, `split`, ...), never a bare `grid-cols-2` for cards: every page must work at phone width and in dark mode. **Cap list-like cards**: a detail page shows only the first 5 plus a "See all N" link to a **separate page**; never an in-place expand, never an unbounded list. Full conventions: `docs/portal.md`.
 
 ---
 

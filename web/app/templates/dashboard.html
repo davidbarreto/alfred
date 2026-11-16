@@ -3,7 +3,7 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-6">
+<div class="page space-y-4">
   <h1 class="text-base font-semibold text-gray-900">Good day</h1>
 
   <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load, catchup-applied from:body" hx-swap="innerHTML"></div>
@@ -19,7 +19,7 @@
   {% endif %}
 
   <!-- 4 metric cards -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div class="stat-row">
     <a href="/tasks/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide"><i class="ti ti-checklist mr-1"></i>Active tasks</p>
@@ -48,8 +48,8 @@
     </a>
   </div>
 
-  <!-- Today's plan + next trip -->
-  <div class="grid grid-cols-2 gap-4">
+  <!-- Cards of uneven height: packed in two columns (one on a phone), see .card-columns -->
+  <div class="card-columns">
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
@@ -93,7 +93,7 @@
         </p>
         <p class="text-xs text-gray-400 mt-1">{{ trip.start | short_date }} – {{ trip.end | short_date }}</p>
         {% if trip.warnings %}
-        <a href="/travel/{{ trip.id }}/warnings" class="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517]">
+        <a href="/travel/{{ trip.id }}/warnings" class="self-start mt-2 text-xs px-2 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517]">
           {{ trip.warnings }} warning{{ 's' if trip.warnings != 1 }}
         </a>
         {% endif %}
@@ -102,7 +102,6 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
   <!-- Language -->
   {% if language %}
@@ -125,9 +124,6 @@
     </div>
   </div>
   {% endif %}
-
-  <!-- 2-column row: tasks left, shopping right -->
-  <div class="grid grid-cols-2 gap-4">
 
     <div class="card bg-white">
       <div class="card-body p-4">
@@ -180,10 +176,7 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <!-- Today's events + upcoming events -->
-  <div class="grid grid-cols-2 gap-4">
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
@@ -200,7 +193,7 @@
               {% else %}{{ ev.start_datetime[11:16] }}–{{ ev.end_datetime[11:16] }}{% endif %}
             </span>
             <span class="flex-1 truncate text-gray-700">{{ ev.title }}</span>
-            {% if ev.location %}<span class="text-xs text-gray-400 truncate flex-shrink-0 max-w-[10rem]">{{ ev.location }}</span>{% endif %}
+            {% if ev.location %}<span class="hidden sm:inline text-xs text-gray-400 truncate flex-shrink-0 max-w-[10rem]">{{ ev.location }}</span>{% endif %}
           </li>
           {% endfor %}
         </ul>
@@ -225,7 +218,7 @@
               · {% if ev.all_day %}All day{% else %}{{ ev.start_time[:5] }}{% endif %}
             </span>
             <span class="flex-1 truncate text-gray-700">{{ ev.title }}</span>
-            {% if ev.location %}<span class="text-xs text-gray-400 truncate flex-shrink-0 max-w-[10rem]">{{ ev.location }}</span>{% endif %}
+            {% if ev.location %}<span class="hidden sm:inline text-xs text-gray-400 truncate flex-shrink-0 max-w-[10rem]">{{ ev.location }}</span>{% endif %}
           </li>
           {% endfor %}
         </ul>
@@ -234,10 +227,7 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <!-- Budgets + birthdays -->
-  <div class="grid grid-cols-2 gap-4">
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
@@ -248,7 +238,7 @@
         <ul class="space-y-3">
           {% for row in budgets %}
           <li>
-            <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center justify-between gap-2 text-sm">
               <span class="truncate text-gray-700">{{ row.name }}</span>
               <span class="text-xs text-gray-400 flex-shrink-0">€{{ row.spent | money(0) }} / €{{ row.limit | money(0) }}</span>
             </div>
@@ -287,10 +277,7 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <!-- Weather + holidays -->
-  <div class="grid grid-cols-2 gap-4">
     <div class="card bg-white">
       <div class="card-body p-4">
         <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-cloud mr-1"></i>Weather</h2>
@@ -349,7 +336,6 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
   <!-- Study plans -->
   {% if study %}
@@ -362,7 +348,7 @@
       <ul class="space-y-3">
         {% for plan in study %}
         <li>
-          <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center justify-between gap-2 text-sm">
             <span class="truncate text-gray-700">{{ plan.title }}</span>
             <span class="text-xs text-gray-400 flex-shrink-0">{{ plan.done }} / {{ plan.total }}</span>
           </div>
@@ -377,6 +363,21 @@
   </div>
   {% endif %}
 
+  <!-- Latest saved briefing: evening digest at night, morning briefing otherwise -->
+  {% if briefing %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti {{ 'ti-moon' if briefing_kind == 'evening' else 'ti-sun' }} mr-1"></i>{{ 'Evening digest' if briefing_kind == 'evening' else 'Morning briefing' }}{% if briefing.date != today %} <span class="text-xs font-normal text-gray-400">· {{ briefing.date | short_date }}</span>{% endif %}</h2>
+        <a href="{{ '/briefing/evening' if briefing_kind == 'evening' else '/briefing/' }}" class="text-xs text-[#378ADD] hover:underline">Read full →</a>
+      </div>
+      <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">{{ briefing.text }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  </div>
+
   <!-- Metrics sparklines -->
   {% if metrics %}
   <div>
@@ -384,7 +385,7 @@
       <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-chart-line mr-1"></i>Metrics · last 14 days</h2>
       <a href="/metrics" class="text-xs text-[#378ADD] hover:underline">All metrics →</a>
     </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="stat-row">
       {% for m in metrics %}
       <a href="/metrics/{{ m.name | urlencode }}" class="card bg-white hover:shadow-sm transition-shadow">
         <div class="card-body p-3">
@@ -403,22 +404,9 @@
   </div>
   {% endif %}
 
-  <!-- Latest saved briefing: evening digest at night, morning briefing otherwise -->
-  {% if briefing %}
-  <div class="card bg-white">
-    <div class="card-body p-4">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-medium text-gray-900"><i class="ti {{ 'ti-moon' if briefing_kind == 'evening' else 'ti-sun' }} mr-1"></i>{{ 'Evening digest' if briefing_kind == 'evening' else 'Morning briefing' }}{% if briefing.date != today %} <span class="text-xs font-normal text-gray-400">· {{ briefing.date | short_date }}</span>{% endif %}</h2>
-        <a href="{{ '/briefing/evening' if briefing_kind == 'evening' else '/briefing/' }}" class="text-xs text-[#378ADD] hover:underline">Read full →</a>
-      </div>
-      <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">{{ briefing.text }}</div>
-    </div>
-  </div>
-  {% endif %}
-
   <!-- Chat panel -->
   <div class="card bg-white">
-    <div class="card-body p-4 flex flex-row items-center justify-between">
+    <div class="card-body p-4 flex flex-row flex-wrap items-center justify-between gap-3">
       <div>
         <p class="text-sm font-medium text-gray-900"><i class="ti ti-message-circle mr-1"></i>Chat with Alfred</p>
         <p class="text-xs text-gray-400 mt-0.5">Ask anything or give instructions</p>

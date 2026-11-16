@@ -9,11 +9,44 @@ Conventions for `web/app/`. The portal is a thin client: it fetches from the bac
 | `web/app/routes/<page>.py` | Route handlers; thin — fetch from backend API, pass to template |
 | `web/app/templates/<page>.html` | Full-page Jinja2 templates; always extend `base.html` |
 | `web/app/templates/_<partial>.html` | HTMX partial templates; prefixed with `_`; never extend `base.html` |
+| `web/app/static/css/portal.css` | Theme variables (light/dark) and the layout classes (see Layout system) |
 | `web/app/client.py` | Thin async HTTP wrapper around the backend API (`api.get()`, `api.post()`, ...) |
 | `web/app/shared/forward.py` | Proxies portal writes to the backend and relays its error message |
 | `web/app/shared/timezone.py` | `local_today()` and friends; same helpers as the backend |
 
 The client sends `X-Alfred-Client: web` on every backend call.
+
+## Layout system
+
+Tailwind and DaisyUI come from a CDN; everything the portal defines itself is in `web/app/static/css/portal.css` (theme variables for light and dark, and the layout classes below). `base.html` links it with `?v={{ static_version }}` (the file's mtime), so a deploy never serves a stale stylesheet. It loads before Tailwind, so a Tailwind utility on the same element wins.
+
+Build pages from these classes instead of ad-hoc grids, so every page lines up the same way on a desktop and on a phone:
+
+| Class | Use |
+|---|---|
+| `page` | Outer wrapper of every page: gutter (16px phone, 24px from `sm`) and the 80rem maximum width. Add `space-y-4` and, for a narrow page, `max-w-2xl` etc. |
+| `page-head` + `page-actions` | Title left, buttons right; the buttons drop under the title when they do not fit |
+| `scroll-row` | A line of tabs or chips that can outgrow the screen: scrolls sideways on a phone, wraps from `sm` |
+| `stat-row` | Number tiles: two per row on a phone, one line on a desktop |
+| `card-row` | Equal cards (charts, previews): as many per row as fit, same height, and a short last row stretches. Narrowest card: `style="--card-min: 16rem"` |
+| `card-columns` | Cards of different heights and no popups inside (dashboard): packed in two columns, no holes |
+| `split` + `card-stack` | Two independent stacks of cards (trip page, calendar); one column below `lg`. `split-wide-left` makes it 3:2 |
+| `filter-bar` | Filters above a list: two-column grid on a phone, wrapping row from `sm`; `filter-wide` spans both columns |
+| `detail-row` | Text left, row buttons right; the buttons move to their own line when both do not fit |
+| `chart-box` | Fixed-height box for a Chart.js canvas (`chart-box-lg` for 14rem); the chart needs `maintainAspectRatio: false` |
+| `table-scroll` | Wrapper for a table that may be wider than its card; give the table a `min-w-[..]` |
+
+Rules that follow from it:
+
+- **No bare `grid-cols-2`** (or more) for cards: a fixed column count is what squeezes cards on a phone. Use the classes above, or a responsive pair (`grid-cols-1 sm:grid-cols-2`) inside a form.
+- **Never give a `<canvas>` a `height` attribute or leave it without a sized parent**: Chart.js then keeps the aspect ratio and the chart grows with the card's width.
+- **List rows on a phone**: the title keeps the width; secondary text (location, tags, date column) is hidden below `sm` (`hidden sm:inline`) or moves to the line under the title.
+- Controls shown only on hover (`opacity-0 group-hover:opacity-100`) are always visible on touch screens; inputs are 16px on a phone (iOS zooms the page otherwise). Both are handled in `portal.css`.
+- A new class name must not collide with a DaisyUI component (`stack`, `join`, `divider`, `steps`, ...): check before adding one.
+
+The sidebar groups its links (Organize, Life, Learning, Assistant); below `md` it is a drawer opened from the top bar, which shows the page title (the `title` block). A new page goes into the fitting group in `base.html`.
+
+Status: the system is applied to the dashboard, tasks, finance (dashboard, transactions, insights), insights, calendar and the trip page; every other page uses `page` and still needs its grids, headers and tables moved over.
 
 ## Interaction rules
 

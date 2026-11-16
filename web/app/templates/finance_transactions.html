@@ -3,7 +3,7 @@
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
-<div class="p-6 space-y-4">
+<div class="page space-y-4">
 
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
@@ -12,7 +12,7 @@
     </div>
   </div>
 
-  <div class="flex flex-wrap items-end gap-2">
+  <div class="filter-bar">
     <div>
       <label class="text-xs text-gray-500 mb-1 block">Type</label>
       <select id="txn-filter-type" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
@@ -122,7 +122,7 @@
         class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         onchange="applyTxnFilters()" />
     </div>
-    <div>
+    <div class="filter-wide">
       <label class="text-xs text-gray-500 mb-1 block">Amount (min – max)</label>
       <div class="flex items-center gap-1">
         <input id="txn-filter-min-amount" type="number" min="0" step="0.01" inputmode="decimal"
@@ -148,7 +148,7 @@
       </select>
     </div>
     <div>
-      <label class="text-xs text-gray-500 mb-1 block">&nbsp;</label>
+      <label class="text-xs text-gray-500 mb-1 hidden sm:block">&nbsp;</label>
       <label class="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white cursor-pointer">
         <input
           id="txn-filter-unconfirmed-transfer"

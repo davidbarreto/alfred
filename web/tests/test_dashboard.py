@@ -433,3 +433,23 @@ class TestBriefingCardByTime:
 
         assert "Good morning David" in text and "Morning briefing" in text
         assert "Wins of the day" not in text
+
+
+class TestBaseLayout:
+    def test_page_links_the_versioned_stylesheet_and_grouped_nav(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/")
+
+        assert resp.status_code == 200
+        assert '/static/css/portal.css?v=' in resp.text
+        assert '<div class="page ' in resp.text
+        for group in ("Organize", "Life", "Learning", "Assistant"):
+            assert f'<p class="nav-group">{group}</p>' in resp.text
+
+    def test_stylesheet_is_served(self, client):
+        resp = client.get("/static/css/portal.css")
+
+        assert resp.status_code == 200
+        assert ".card-row" in resp.text
+

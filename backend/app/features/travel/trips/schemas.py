@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from fastapi import Query
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
+from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import TripStatusFilter
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
@@ -55,6 +56,11 @@ class TripUpdate(BaseModel):
     notes: str | None = None
     default_tag_names: str | None = None
     tags: list[str] | None = None
+    # The trip's own home and airport times; null makes the trip follow the travel settings again.
+    home_city_id: int | None = None
+    home_address: str | None = Field(default=None, max_length=300)
+    airport_buffer_min: int | None = Field(default=None, ge=0, le=600)
+    home_to_airport_min: int | None = Field(default=None, ge=0, le=600)
 
     @field_validator("tags")
     @classmethod
@@ -72,6 +78,10 @@ class TripRead(BaseModel):
     checklist_note_id: int | None
     notes: str | None
     default_tag_names: str | None
+    home_city_id: int | None = None
+    home_address: str | None = None
+    airport_buffer_min: int | None = None
+    home_to_airport_min: int | None = None
     tags: list[str]
     created_at: datetime
     updated_at: datetime
@@ -136,6 +146,17 @@ class IdeaGroup(BaseModel):
     visits: list[VisitRead]
 
 
+class TripHome(BaseModel):
+    """Where the trip starts from: its own values, else the travel settings'."""
+
+    city: CityRef | None = None
+    address: str | None = None
+    airport_buffer_min: int
+    home_to_airport_min: int
+    # The trip has a value of its own ("home for this trip").
+    from_trip: bool = False
+
+
 class TripDetail(TripRead):
     legs: list[LegRead]
     stays: list[StayRead]
@@ -149,4 +170,5 @@ class TripDetail(TripRead):
     ideas: list[IdeaGroup] = []
     # Where the trip went (stays, visits, leg ends), in order of first appearance, and the leg ends with no city.
     cities: list[TripCity] = []
+    home: TripHome | None = None
     unmatched_leg_ends: int = 0

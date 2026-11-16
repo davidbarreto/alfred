@@ -4,6 +4,8 @@ from typing import Annotated
 from fastapi import Query
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.features.travel.transaction_links.schemas import LocationCosts
+
 
 class CountryRef(BaseModel):
     id: int
@@ -54,12 +56,15 @@ class CityFilters:
 class CityUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     country_id: int | None = None
+    # Comma-separated finance tag names; blank or null clears them.
+    default_tag_names: str | None = None
 
 
 class CountryUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     # ISO 3166-1 alpha-2; null clears it.
     code: str | None = Field(default=None, min_length=2, max_length=2)
+    default_tag_names: str | None = None
 
     @field_validator("code")
     @classmethod
@@ -90,6 +95,10 @@ class CityPlace(BaseModel):
 
 
 class CityDetail(CityRead):
+    default_tag_names: str | None = None
+    # It is the travel settings' home city.
+    home: bool = False
+    costs: LocationCosts = LocationCosts()
     # Derived, never stored: the mean of the grades of this city's graded places.
     grade: float | None = None
     grade_count: int = 0
@@ -110,6 +119,8 @@ class CountryCity(BaseModel):
 class CountryDetail(CountryRef):
     created_at: datetime
     updated_at: datetime
+    default_tag_names: str | None = None
+    costs: LocationCosts = LocationCosts()
     # The mean of the grades of this country's graded cities.
     grade: float | None = None
     grade_count: int = 0

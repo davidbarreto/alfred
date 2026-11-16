@@ -28,6 +28,7 @@ def _trip(**kw):
     base = dict(
         id=1, name="Example trip", start_date=date(2026, 12, 17), end_date=date(2026, 12, 24), travelers=None,
         preferences=None, checklist_note_id=None, notes=None, default_tag_names=None, tags=[],
+        home_city_id=None, home_address=None, airport_buffer_min=None, home_to_airport_min=None,
         created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
@@ -68,6 +69,8 @@ def _stay(**kw):
 def trips():
     svc = TripService(AsyncMock())
     svc._repo = AsyncMock()
+    svc._city_repo = AsyncMock()
+    svc._city_repo.get_city.return_value = None
     svc._tag_repo = AsyncMock()
     svc._leg_repo = AsyncMock()
     svc._stay_repo = AsyncMock()
@@ -178,6 +181,25 @@ class TestTripService:
         assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "arrival", "check_in", "check_out"]
         assert detail.leave_home_at == datetime(2026, 12, 17, 3, tzinfo=timezone.utc)
         assert detail.status in ("upcoming", "ongoing", "past")
+
+    async def test_detail_uses_the_trips_own_home_values_over_the_settings(self, trips):
+        trips._repo.get_trip.return_value = _trip(home_city_id=4, home_address="Rua Antiga 2", airport_buffer_min=60, home_to_airport_min=0)
+        trips._city_repo.get_city.return_value = SimpleNamespace(
+            id=4, name="Alpha", country=SimpleNamespace(id=1, name="Examplia", code=None),
+        )
+        trips._leg_repo.get_legs.return_value = [_leg()]
+        trips._stay_repo.get_stays.return_value = [_stay()]
+        detail = await trips.get_trip_detail(1)
+        assert detail.leave_home_at == datetime(2026, 12, 17, 5, tzinfo=timezone.utc)  # 60 + 0 min before 06:00, not 180
+        assert (detail.home.city.name, detail.home.address, detail.home.from_trip) == ("Alpha", "Rua Antiga 2", True)
+
+    async def test_detail_home_follows_the_settings_when_the_trip_has_none(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = [_leg()]
+        trips._stay_repo.get_stays.return_value = []
+        detail = await trips.get_trip_detail(1)
+        assert (detail.home.airport_buffer_min, detail.home.home_to_airport_min, detail.home.from_trip) == (120, 60, False)
+        assert detail.home.city is None
 
     @freeze_time("2026-12-10 10:00:00")
     async def test_detail_warns_about_legs_without_a_linked_charge(self, trips):

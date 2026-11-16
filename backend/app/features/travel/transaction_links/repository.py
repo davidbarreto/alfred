@@ -144,6 +144,41 @@ class TransactionLinkRepository:
         stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(select(ids.c.transaction_id)))
         return _row_to_cost(*(await self._session.execute(stmt)).one())
 
+    async def get_place_linked_ids(self, place_ids: list[int]) -> set[int]:
+        """Transactions linked to a stay or visit at any of the places."""
+        if not place_ids:
+            return set()
+        ids = union(
+            select(visits_transactions.c.transaction_id)
+            .join(Visit, Visit.id == visits_transactions.c.visit_id).where(Visit.place_id.in_(place_ids)),
+            select(stays_transactions.c.transaction_id)
+            .join(Stay, Stay.id == stays_transactions.c.stay_id).where(Stay.place_id.in_(place_ids)),
+        )
+        return set((await self._session.scalars(select(ids.subquery().c.transaction_id))).all())
+
+    async def get_unlinked_tagged_ids(self, tag_names: list[str]) -> set[int]:
+        """Expenses and income carrying all the tags, whenever dated, that no leg, stay or visit is linked to."""
+        lowered = [n.lower() for n in tag_names]
+        if not lowered:
+            return set()
+        linked = union(
+            select(legs_transactions.c.transaction_id),
+            select(stays_transactions.c.transaction_id),
+            select(visits_transactions.c.transaction_id),
+        ).subquery()
+        stmt = select(Transaction.id).where(
+            Transaction.type.in_(("expense", "income")),
+            Transaction.id.in_(_carrying_all(lowered)),
+            Transaction.id.not_in(select(linked.c.transaction_id)),
+        )
+        return set((await self._session.scalars(stmt)).all())
+
+    async def get_cost(self, transaction_ids: set[int]) -> tuple[Decimal, int, int]:
+        if not transaction_ids:
+            return _row_to_cost(0, 0, 0)
+        stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(sorted(transaction_ids)))
+        return _row_to_cost(*(await self._session.execute(stmt)).one())
+
     async def get_unlinked(self, start: datetime, end: datetime, tag_names: list[str]) -> list[Transaction]:
         """Expenses dated in [start, end) that do not carry all the tags and that no leg, stay or visit is
         linked to: the ones to tag or link by hand. Tagged charges are listed apart (`get_tagged`)."""

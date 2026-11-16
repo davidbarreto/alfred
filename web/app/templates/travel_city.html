@@ -10,7 +10,7 @@
     <div class="card-body p-5 space-y-3">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h1 class="text-base font-semibold text-gray-900">{{ city.country | country_flag_of }} {{ city.name }}</h1>
+          <h1 class="text-base font-semibold text-gray-900">{{ city.country | country_flag_of }} {{ city.name }}{% if city.home %} <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 align-middle" id="city-home"><i class="ti ti-home"></i> home</span>{% endif %}</h1>
           <p class="text-xs text-gray-500"><a class="text-[#378ADD] hover:underline" href="/travel/countries/{{ city.country.id }}">{{ city.country.name }}</a></p>
         </div>
         <div class="flex items-center gap-2">
@@ -25,12 +25,16 @@
             <input name="name" value="{{ city.name }}" required maxlength="100" class="input input-sm input-bordered w-56"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
             <select name="country_id" class="select select-sm select-bordered">{% for c in countries %}<option value="{{ c.id }}" {{ 'selected' if c.id == city.country.id }}>{{ c.name }}</option>{% endfor %}</select></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Default tags (finance tags that count towards its spend)</span>
+            <input name="default_tag_names" value="{{ city.default_tag_names or '' }}" class="input input-sm input-bordered w-56"></label>
           <button type="submit" class="btn btn-sm btn-outline">Save</button>
           <span class="text-xs text-red-600 form-error"></span>
         </form>
       </div>
     </div>
   </div>
+
+  {% set costs = city.costs %}{% set tags = city.default_tag_names %}{% include "_travel_location_spend.html" %}
 
   <div class="card bg-white" id="city-trips">
     <div class="card-body p-5 space-y-2">
@@ -70,7 +74,7 @@ async function send(method, url, body) {
 document.getElementById('edit-city').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;
-  const { ok, data } = await send('PATCH', '/travel/cities/{{ city.id }}', { name: form.elements.name.value.trim(), country_id: Number(form.elements.country_id.value) });
+  const { ok, data } = await send('PATCH', '/travel/cities/{{ city.id }}', { name: form.elements.name.value.trim(), country_id: Number(form.elements.country_id.value), default_tag_names: form.elements.default_tag_names.value.trim() || null });
   if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
   location.reload();
 });

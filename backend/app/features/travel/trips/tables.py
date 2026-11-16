@@ -29,6 +29,13 @@ class Trip(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Comma-separated *finance* tag names stamped on transactions dated within the trip.
     default_tag_names: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # This trip's own home and airport times. NULL = follow the travel settings (see `effective_home`).
+    home_city_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    home_address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    airport_buffer_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    home_to_airport_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

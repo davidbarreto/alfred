@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import and_, case, delete, func, or_, select, union
+from sqlalchemy import and_, case, delete, func, or_, select, union, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.travel.cities.tables import City, Country
@@ -106,6 +106,18 @@ class TripRepository:
         cities = {city for city, _ in rows}
         countries = {country for _, country in rows}
         return sorted(cities, key=str.casefold), sorted(countries, key=str.casefold)
+
+    async def snapshot_home_value(self, field: str, value: Any, today: date) -> int:
+        """Write `value` into the trips that have started and have no value of their own for `field`. Returns the count."""
+        column = getattr(Trip, field)
+        result = await self._session.execute(
+            update(Trip).where(column.is_(None), Trip.start_date <= today).values({field: value})
+        )
+        await self._session.commit()
+        return result.rowcount or 0
+
+    async def count_home_city_trips(self, city_id: int) -> int:
+        return int(await self._session.scalar(select(func.count()).select_from(Trip).where(Trip.home_city_id == city_id)) or 0)
 
     async def get_trips_in_window(self, first_day: date, last_day: date) -> list[Trip]:
         """Trips that are ongoing or start by `last_day` and have not ended before `first_day`."""

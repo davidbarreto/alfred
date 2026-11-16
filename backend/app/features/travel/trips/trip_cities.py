@@ -9,7 +9,7 @@ from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.visits.schemas import VisitRead
 
-CityRole = Literal["stayed", "passed"]
+CityRole = Literal["home", "stayed", "passed"]
 
 # Visits with no day come after everything dated.
 _UNDATED = datetime.max.replace(tzinfo=timezone.utc)
@@ -21,11 +21,12 @@ class TripCity(BaseModel):
 
 
 def build_trip_cities(
-    legs: list[LegRead], stays: list[StayRead], visits: list[VisitRead], today: date, end_date: date
+    legs: list[LegRead], stays: list[StayRead], visits: list[VisitRead], today: date, end_date: date,
+    home_city_id: int | None = None,
 ) -> tuple[list[TripCity], int]:
     """The trip's cities by first appearance in time, and how many leg ends have no city.
 
-    `stayed`: a stay there, a visited visit, or a planned visit while the trip has not ended. `passed`: only a leg
+    `home`: the trip's home city, when the trip touches it (it wins over the other two). `stayed`: a stay there, a visited visit, or a planned visit while the trip has not ended. `passed`: only a leg
     end (or only missed visits, or planned ones on a finished trip, which are not listed at all unless a leg ends there).
     """
     ended = end_date < today
@@ -53,7 +54,7 @@ def build_trip_cities(
             stayed.add(city.id)
     leg_cities = {c.id for leg in legs for c in (leg.origin_city, leg.destination_city) if c is not None}
     result = [
-        TripCity(city=city, role="stayed" if city_id in stayed else "passed")
+        TripCity(city=city, role="home" if city_id == home_city_id else "stayed" if city_id in stayed else "passed")
         for city_id, city in cities.items() if city_id in stayed or city_id in leg_cities
     ]
     return result, unmatched

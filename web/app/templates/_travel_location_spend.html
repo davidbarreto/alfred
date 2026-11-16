@@ -1,0 +1,13 @@
+{# Spend card of a city or country. Needs `costs` (linked, tagged, overall) and `tags` (its default tag names or none). #}
+{% set paid = costs.overall.transaction_count %}
+<div class="card bg-white" id="location-spend">
+  <div class="card-body p-5 space-y-1">
+    <h2 class="text-sm font-semibold text-gray-900">Spend</h2>
+    {% if paid %}
+    <p class="text-sm text-gray-900"><span class="font-medium">{{ costs.overall.total_eur | money }} €</span> <span class="text-xs text-gray-400">{{ paid }} charge{{ '' if paid == 1 else 's' }}{% if costs.overall.unconverted_count %} · {{ costs.overall.unconverted_count }} not in EUR yet{% endif %}</span></p>
+    <p class="text-xs text-gray-500">Linked to a stay or visit here: {{ costs.linked.total_eur | money }} €{% if tags %} · tagged <em>{{ tags }}</em>: {{ costs.tagged.total_eur | money }} €{% endif %}</p>
+    {% else %}
+    <p class="text-sm text-gray-400">No charge is linked to a stay or visit here{% if not tags %}, and no default tags are set (Edit){% else %}, or carries all of: {{ tags }}{% endif %}.</p>
+    {% endif %}
+  </div>
+</div>

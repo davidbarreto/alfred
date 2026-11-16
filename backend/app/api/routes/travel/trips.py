@@ -118,6 +118,8 @@ async def get_trip(
 async def update_trip(trip_id: int, request: TripUpdate, service: TripServiceDep) -> TripRead:
     try:
         trip = await service.update_trip(trip_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if trip is None:

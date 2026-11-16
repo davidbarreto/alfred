@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -89,15 +90,23 @@ class TestTripCities:
 
 
 def _city_row(id=1, name="Alpha", country_id=2):
-    country = SimpleNamespace(id=country_id, name="Examplia", code=None, created_at=NOW, updated_at=NOW)
-    return SimpleNamespace(id=id, name=name, country_id=country_id, country=country, created_at=NOW, updated_at=NOW)
+    country = SimpleNamespace(id=country_id, name="Examplia", code=None, created_at=NOW, updated_at=NOW, default_tag_names=None)
+    return SimpleNamespace(
+        id=id, name=name, country_id=country_id, country=country, created_at=NOW, updated_at=NOW, default_tag_names=None,
+    )
 
 
 @pytest.fixture
 def service():
     svc = CityService(AsyncMock())
     svc._repo, svc._place_repo, svc._link_repo, svc._notes = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+    svc._cost_repo, svc._trip_repo, svc._settings = AsyncMock(), AsyncMock(), AsyncMock()
     svc._repo.get_city_in_country.return_value = None
+    svc._settings.get_value.return_value = None
+    svc._trip_repo.count_home_city_trips.return_value = 0
+    svc._cost_repo.get_place_linked_ids.return_value = set()
+    svc._cost_repo.get_unlinked_tagged_ids.return_value = set()
+    svc._cost_repo.get_cost.return_value = (Decimal("0.00"), 0, 0)
     return svc
 
 
@@ -137,7 +146,7 @@ class TestCityDetail:
 
 class TestCountryDetail:
     async def test_grade_is_the_mean_of_the_city_means(self, service):
-        country = SimpleNamespace(id=2, name="Examplia", code="EX", created_at=NOW, updated_at=NOW)
+        country = SimpleNamespace(id=2, name="Examplia", code="EX", created_at=NOW, updated_at=NOW, default_tag_names=None)
         service._repo.get_country.return_value = country
         service._repo.get_country_cities.return_value = [_city_row(1, "Alpha"), _city_row(3, "Beta"), _city_row(4, "Gamma")]
         service._repo.get_place_ids_by_city.return_value = {1: [10], 3: [11, 12], 4: []}
@@ -190,7 +199,7 @@ class TestDeletes:
         service._repo.get_city.return_value = _city_row()
         service._repo.count_places.return_value = 2
         service._repo.count_leg_ends.return_value = 3
-        with pytest.raises(TravelConflictError, match="2 place.*3 leg end"):
+        with pytest.raises(TravelConflictError, match="2 place.*3 leg end.*0 trip home"):
             await service.delete_city(1)
         service._repo.delete.assert_not_awaited()
 
@@ -339,3 +348,122 @@ class TestLinkRoutes:
         assert c.post("/travel/countries/9/links", headers=AUTH, json={"url": "https://example.com/a"}).status_code == 404
         svc.create_city_link.side_effect = TravelConflictError("dup")
         assert c.post("/travel/cities/4/links", headers=AUTH, json={"url": "https://example.com/a"}).status_code == 409
+
+
+class TestSpendAndTags:
+    async def test_linked_spend_comes_from_the_citys_places_and_tagged_spend_is_what_nothing_else_counts(self, service):
+        service._repo.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Lisbon, Trip"})
+        service._repo.get_place_ids_by_city.return_value = {1: [10, 11]}
+        service._place_repo.get_grades.return_value = {}
+        service._repo.get_places.return_value = []
+        service._repo.get_trips_of_cities.return_value = []
+        service._cost_repo.get_place_linked_ids.return_value = {1, 2}
+        service._cost_repo.get_unlinked_tagged_ids.return_value = {2, 3}
+        sums = {frozenset({1, 2}): "50.00", frozenset({3}): "20.00", frozenset({1, 2, 3}): "70.00"}
+        service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(sums[frozenset(ids)]), len(ids), 0)
+        detail = await service.get_city_detail(1)
+        service._cost_repo.get_place_linked_ids.assert_awaited_once_with([10, 11])
+        service._cost_repo.get_unlinked_tagged_ids.assert_awaited_once_with(["lisbon", "trip"])
+        assert (detail.costs.linked.total_eur, detail.costs.tagged.total_eur, detail.costs.overall.total_eur) == (
+            Decimal("50.00"), Decimal("20.00"), Decimal("70.00"))
+        assert detail.costs.tagged.transaction_count == 1 and detail.default_tag_names == "Lisbon, Trip"
+
+    async def test_a_city_without_tags_asks_for_no_tagged_charges_beyond_an_empty_set(self, service):
+        service._repo.get_city.return_value = _city_row()
+        service._repo.get_place_ids_by_city.return_value = {1: []}
+        service._place_repo.get_grades.return_value = {}
+        service._repo.get_places.return_value = []
+        service._repo.get_trips_of_cities.return_value = []
+        await service.get_city_detail(1)
+        service._cost_repo.get_unlinked_tagged_ids.assert_awaited_once_with([])
+
+    async def test_a_country_counts_each_transaction_once_across_its_cities_and_its_own_tags(self, service):
+        country = SimpleNamespace(id=2, name="Examplia", code=None, created_at=NOW, updated_at=NOW, default_tag_names="spain")
+        city_a = SimpleNamespace(**{**_city_row(1, "Alpha").__dict__, "default_tag_names": "alpha"})
+        city_b = SimpleNamespace(**{**_city_row(3, "Beta").__dict__, "default_tag_names": None})
+        service._repo.get_country.return_value = country
+        service._repo.get_country_cities.return_value = [city_a, city_b]
+        service._repo.get_place_ids_by_city.return_value = {1: [10], 3: [11]}
+        service._place_repo.get_grades.return_value = {}
+        service._repo.get_trips_of_cities.return_value = []
+        by_tags = {("spain",): {5, 6}, ("alpha",): {6, 7}, (): set()}
+        service._cost_repo.get_unlinked_tagged_ids.side_effect = lambda names: by_tags[tuple(names)]
+        service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
+        detail = await service.get_country_detail(2)
+        service._cost_repo.get_place_linked_ids.assert_awaited_once_with([10, 11])
+        assert detail.costs.tagged.transaction_count == 3  # 5, 6 and 7, with 6 counted once
+        assert detail.costs.overall.transaction_count == 3
+
+    async def test_blank_default_tags_are_stored_as_null(self, service):
+        service._repo.get_city.return_value = _city_row()
+        await service.update_city(1, CityUpdate(default_tag_names="  "))
+        assert service._repo.update.await_args.args[1] == {"default_tag_names": None}
+
+    async def test_the_tags_are_saved_trimmed(self, service):
+        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia", code=None)
+        await service.update_country(2, CountryUpdate(default_tag_names=" spain, travel "))
+        assert service._repo.update.await_args.args[1] == {"default_tag_names": "spain, travel"}
+
+
+class TestHome:
+    async def test_the_home_city_is_flagged_on_its_page(self, service):
+        service._repo.get_city.return_value = _city_row()
+        service._repo.get_place_ids_by_city.return_value = {1: []}
+        service._place_repo.get_grades.return_value = {}
+        service._repo.get_places.return_value = []
+        service._repo.get_trips_of_cities.return_value = []
+        service._settings.get_value.return_value = "1"
+        assert (await service.get_city_detail(1)).home is True
+        service._settings.get_value.return_value = "9"
+        assert (await service.get_city_detail(1)).home is False
+
+    async def test_the_home_city_cannot_be_deleted(self, service):
+        service._repo.get_city.return_value = _city_row()
+        service._repo.count_places.return_value = 0
+        service._repo.count_leg_ends.return_value = 0
+        service._settings.get_value.return_value = "1"
+        with pytest.raises(TravelConflictError, match="home city"):
+            await service.delete_city(1)
+
+    async def test_a_city_that_is_the_home_of_a_trip_cannot_be_deleted(self, service):
+        service._repo.get_city.return_value = _city_row()
+        service._repo.count_places.return_value = 0
+        service._repo.count_leg_ends.return_value = 0
+        service._trip_repo.count_home_city_trips.return_value = 2
+        with pytest.raises(TravelConflictError, match="2 trip home"):
+            await service.delete_city(1)
+
+
+class TestCostSql:
+    class _Session:
+        def __init__(self):
+            self.statement = None
+
+        async def scalars(self, stmt):
+            self.statement = stmt
+            return SimpleNamespace(all=lambda: [])
+
+    async def test_tagged_ids_have_no_date_window_and_leave_out_anything_linked(self):
+        from app.features.travel.transaction_links.repository import TransactionLinkRepository
+
+        session = self._Session()
+        assert await TransactionLinkRepository(session).get_unlinked_tagged_ids(["Spain", "Trip"]) == set()
+        sql = str(session.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+        assert "date" not in sql.lower().replace("transactions", "")
+        assert "NOT IN" in sql and "legs_transactions" in sql and "stays_transactions" in sql and "visits_transactions" in sql
+        assert "'expense', 'income'" in sql and "'spain'" in sql and "'trip'" in sql
+
+    async def test_no_tags_no_query(self):
+        from app.features.travel.transaction_links.repository import TransactionLinkRepository
+
+        session = self._Session()
+        assert await TransactionLinkRepository(session).get_unlinked_tagged_ids([]) == set()
+        assert session.statement is None
+
+    async def test_place_linked_ids_cover_stays_and_visits_of_the_places(self):
+        from app.features.travel.transaction_links.repository import TransactionLinkRepository
+
+        session = self._Session()
+        await TransactionLinkRepository(session).get_place_linked_ids([3, 4])
+        sql = str(session.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+        assert "UNION" in sql and "place_id IN (3, 4)" in sql

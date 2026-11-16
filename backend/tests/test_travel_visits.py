@@ -158,8 +158,9 @@ class TestTripItineraryHiding:
     @pytest.fixture
     def trips(self):
         svc = TripService(AsyncMock())
-        for name in ("_repo", "_tag_repo", "_leg_repo", "_stay_repo", "_visit_repo", "settings_service"):
+        for name in ("_repo", "_tag_repo", "_leg_repo", "_stay_repo", "_visit_repo", "settings_service", "_city_repo"):
             setattr(svc, name, AsyncMock())
+        svc._city_repo.get_city.return_value = None
         svc.settings_service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=60)
         svc._leg_repo.get_legs.return_value = []
         svc._stay_repo.get_stays.return_value = []
@@ -172,6 +173,7 @@ class TestTripItineraryHiding:
         return SimpleNamespace(
             id=1, name="T", start_date=date(2026, 5, 1), end_date=end, travelers=None, preferences=None,
             checklist_note_id=None, notes=None, default_tag_names=None, tags=[], created_at=NOW, updated_at=NOW,
+            home_city_id=None, home_address=None, airport_buffer_min=None, home_to_airport_min=None,
         )
 
     @freeze_time("2026-06-10 12:00:00")

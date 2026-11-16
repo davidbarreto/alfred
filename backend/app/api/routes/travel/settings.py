@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
 from app.dependencies import TravelSettingsServiceDep
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.settings_schemas import TravelSettingsRead, TravelSettingsUpdate
 
 router = APIRouter(prefix="/travel/settings", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -14,4 +15,7 @@ async def get_travel_settings(service: TravelSettingsServiceDep) -> TravelSettin
 
 @router.put("", response_model=TravelSettingsRead)
 async def update_travel_settings(request: TravelSettingsUpdate, service: TravelSettingsServiceDep) -> TravelSettingsRead:
-    return await service.update(request)
+    try:
+        return await service.update(request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

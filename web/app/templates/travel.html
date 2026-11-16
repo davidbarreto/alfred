@@ -56,6 +56,8 @@
           <input name="unpaid_leg_days" type="number" min="0" max="365" value="{{ settings.unpaid_leg_days }}" class="input input-sm input-bordered w-28"></label>
         <label class="flex items-center gap-2 pb-1 text-xs text-gray-600"><input type="checkbox" name="snooze_other_events" class="toggle toggle-sm" {{ 'checked' if settings.snooze_other_events }}>
           Snooze reminders of other calendar events during a trip</label>
+        <div class="space-y-1"><span class="block text-xs text-gray-500">Home city (trips already started keep the one they had)</span>
+          <div class="flex items-center gap-1"><input name="home_city_text" placeholder="Pick a city" class="input input-sm input-bordered w-56"><input type="hidden" name="home_city_id"><button type="button" class="btn btn-xs btn-ghost" id="clear-home-city" title="No home city">clear</button></div></div>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
           <input name="home_address" maxlength="300" value="{{ settings.home_address or '' }}" class="input input-sm input-bordered w-72"></label>
         <button type="submit" class="btn btn-sm btn-outline">Save</button>
@@ -135,7 +137,37 @@
   </div>
 </div>
 
+<dialog id="city-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-sm space-y-3">
+    <h3 class="text-sm font-semibold">New city</h3>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span><input name="name" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span><input name="country" required maxlength="100" class="input input-sm input-bordered w-full"><input type="hidden" name="country_code"></label>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Create</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+</dialog>
+
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
 <script>
+async function send(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+const settingsForm = document.getElementById('travel-settings-form');
+let homePicker = null;
+if (settingsForm) {
+  homePicker = initCityPicker({
+    input: settingsForm.elements.home_city_text, idInput: settingsForm.elements.home_city_id,
+    clearButton: document.getElementById('clear-home-city'), terminalInput: settingsForm.elements.home_city_text,
+    newCity: initNewCityDialog({ dialog: document.getElementById('city-dialog'), send }),
+  });
+  homePicker.reset({{ (settings.home_city or none) | tojson }});
+}
 document.getElementById('travel-settings-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);
@@ -145,6 +177,8 @@ document.getElementById('travel-settings-form')?.addEventListener('submit', asyn
     body: JSON.stringify({
       airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
       max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), unpaid_leg_days: Number(form.get('unpaid_leg_days')), snooze_other_events: form.get('snooze_other_events') === 'on', home_address: String(form.get('home_address') || ''),
+      // Only a picked or cleared city is sent; the trips that have started keep the old one.
+      ...(homePicker.touched() ? { home_city_id: homePicker.value() } : {}),
     }),
   });
   const data = await res.json().catch(() => ({}));

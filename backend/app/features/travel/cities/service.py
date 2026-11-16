@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.core.settings.service import SettingService
 from app.features.travel.cities.repository import CityRepository
 from app.features.travel.cities.schemas import (
     CityCreate, CityDetail, CityFilters, CityPlace, CityRead, CityUpdate, CountryCity, CountryDetail, CountryRef,
@@ -13,9 +14,22 @@ from app.features.travel.cities.tables import City, Country
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.links.repository import WebLinkRepository
 from app.features.travel.notes_index import WEB_LINK_NOTE, TravelNoteIndex
+from app.features.travel.default_tags import parse_default_tag_names
 from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.transaction_links.repository import TransactionLinkRepository
+from app.features.travel.transaction_links.schemas import Cost, LocationCosts
+from app.features.travel.trips.repository import TripRepository
 
 _PLACES_SHOWN = 5
+
+
+def _cost(row: tuple) -> Cost:
+    total, count, unconverted = row
+    return Cost(total_eur=total, transaction_count=count, unconverted_count=unconverted)
+
+
+def _clean_tags(text: str | None) -> str | None:
+    return text.strip() or None if text else None
 
 
 def _mean(values: list[float]) -> float | None:
@@ -60,6 +74,9 @@ class CityService:
         self._resolver = CityResolver(self._repo)
         self._place_repo = PlaceRepository(session)
         self._link_repo = WebLinkRepository(session)
+        self._cost_repo = TransactionLinkRepository(session)
+        self._trip_repo = TripRepository(session)
+        self._settings = SettingService(session)
         self._notes = TravelNoteIndex(embedding_service)
 
     async def get_countries(self) -> list[CountryRef]:
@@ -101,6 +118,22 @@ class CityService:
                 means[city_id] = mean
         return place_ids, means
 
+    async def _costs(self, place_ids: list[int], tag_groups: list[list[str]]) -> LocationCosts:
+        """Linked spend at the places, plus charges carrying a group's tags that nothing else counts (any date)."""
+        linked = await self._cost_repo.get_place_linked_ids(place_ids)
+        tagged: set[int] = set()
+        for names in tag_groups:
+            tagged |= await self._cost_repo.get_unlinked_tagged_ids(names)
+        tagged -= linked
+        return LocationCosts(
+            linked=_cost(await self._cost_repo.get_cost(linked)),
+            tagged=_cost(await self._cost_repo.get_cost(tagged)),
+            overall=_cost(await self._cost_repo.get_cost(linked | tagged)),
+        )
+
+    async def _is_home(self, city_id: int) -> bool:
+        return (await self._settings.get_value("travel.home_city_id")) == str(city_id)
+
     async def get_city_detail(self, city_id: int) -> CityDetail | None:
         city = await self._repo.get_city(city_id)
         if city is None:
@@ -116,7 +149,8 @@ class CityService:
         return CityDetail(
             **CityRead.model_validate(city).model_dump(), grade=means.get(city_id), grade_count=len(
                 [p for p in ids if p in grades]
-            ), place_count=len(ids), places=places, trips=trips,
+            ), place_count=len(ids), places=places, trips=trips, default_tag_names=city.default_tag_names,
+            home=await self._is_home(city_id), costs=await self._costs(ids, [parse_default_tag_names(city.default_tag_names)]),
         )
 
     async def get_country_detail(self, country_id: int) -> CountryDetail | None:
@@ -126,8 +160,11 @@ class CityService:
         cities = await self._repo.get_country_cities(country_id)
         place_ids, means = await self._city_grades([c.id for c in cities])
         trips = [LocationTrip.model_validate(t) for t in await self._repo.get_trips_of_cities([c.id for c in cities])]
+        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
+        costs = await self._costs([p for ids in place_ids.values() for p in ids], tag_groups)
         return CountryDetail(
             **CountryRef.model_validate(country).model_dump(), created_at=country.created_at, updated_at=country.updated_at,
+            default_tag_names=country.default_tag_names, costs=costs,
             grade=_mean(list(means.values())), grade_count=len(means),
             cities=[CountryCity(id=c.id, name=c.name, place_count=len(place_ids[c.id]), grade=means.get(c.id)) for c in cities],
             trips=trips,
@@ -137,7 +174,8 @@ class CityService:
         city = await self._repo.get_city(city_id)
         if city is None:
             return None
-        changes = data.model_dump(exclude_unset=True, exclude_none=True)
+        sent = data.model_dump(exclude_unset=True)
+        changes = {k: v for k, v in sent.items() if v is not None and k != "default_tag_names"}
         target_country = changes.get("country_id", city.country_id)
         if "country_id" in changes and await self._repo.get_country(target_country) is None:
             raise TravelNotFoundError(f"Country {target_country} not found")
@@ -147,6 +185,8 @@ class CityService:
             raise TravelConflictError(f"{name.strip()} already exists in that country")
         if "name" in changes:
             changes["name"] = changes["name"].strip()
+        if "default_tag_names" in sent:
+            changes["default_tag_names"] = _clean_tags(sent["default_tag_names"])
         await self._repo.update(city, changes)
         logger.info("City updated: id=%d fields=%s", city_id, list(changes.keys()))
         return CityRead.model_validate(city)
@@ -165,6 +205,8 @@ class CityService:
                 raise TravelConflictError(f"{changes['name']} already exists")
         if changes.get("code") and await self._repo.get_other_country_by_code(changes["code"], country_id) is not None:
             raise TravelConflictError(f"Code {changes['code']} belongs to another country")
+        if "default_tag_names" in changes:
+            changes["default_tag_names"] = _clean_tags(changes["default_tag_names"])
         await self._repo.update(country, changes)
         logger.info("Country updated: id=%d fields=%s", country_id, list(changes.keys()))
         return CountryRef.model_validate(country)
@@ -174,8 +216,13 @@ class CityService:
         if city is None:
             return False
         places, leg_ends = await self._repo.count_places(city_id), await self._repo.count_leg_ends(city_id)
-        if places or leg_ends:
-            raise TravelConflictError(f"{city.name} is used by {places} place(s) and {leg_ends} leg end(s)")
+        home_trips = await self._trip_repo.count_home_city_trips(city_id)
+        if await self._is_home(city_id):
+            raise TravelConflictError(f"{city.name} is the home city in the travel settings")
+        if places or leg_ends or home_trips:
+            raise TravelConflictError(
+                f"{city.name} is used by {places} place(s), {leg_ends} leg end(s) and {home_trips} trip home(s)"
+            )
         link_ids = await self._link_repo.get_link_ids(city_id=city_id)
         try:
             await self._repo.delete(city)

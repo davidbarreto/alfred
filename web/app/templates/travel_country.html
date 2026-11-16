@@ -25,12 +25,16 @@
             <input name="name" value="{{ country.name }}" required maxlength="100" class="input input-sm input-bordered w-56"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">ISO code (e.g. ES)</span>
             <input name="code" value="{{ country.code or '' }}" maxlength="2" class="input input-sm input-bordered w-20 uppercase"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Default tags (finance tags that count towards its spend)</span>
+            <input name="default_tag_names" value="{{ country.default_tag_names or '' }}" class="input input-sm input-bordered w-56"></label>
           <button type="submit" class="btn btn-sm btn-outline">Save</button>
           <span class="text-xs text-red-600 form-error"></span>
         </form>
       </div>
     </div>
   </div>
+
+  {% set costs = country.costs %}{% set tags = country.default_tag_names %}{% include "_travel_location_spend.html" %}
 
   <div class="card bg-white" id="country-cities">
     <div class="card-body p-5 space-y-2">
@@ -71,7 +75,7 @@ document.getElementById('edit-country').addEventListener('submit', async (event)
   event.preventDefault();
   const form = event.target;
   const code = form.elements.code.value.trim();
-  const { ok, data } = await send('PATCH', '/travel/countries/{{ country.id }}', { name: form.elements.name.value.trim(), code: code || null });
+  const { ok, data } = await send('PATCH', '/travel/countries/{{ country.id }}', { name: form.elements.name.value.trim(), code: code || null, default_tag_names: form.elements.default_tag_names.value.trim() || null });
   if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
   location.reload();
 });

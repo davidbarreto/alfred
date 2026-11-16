@@ -53,8 +53,12 @@ def build_travel_reminders(
     trips: list[TripDetail], now: datetime, today: date, settings: TravelSettingsRead
 ) -> list[TravelReminder]:
     reminders: list[TravelReminder] = []
-    leave_minutes = settings.airport_buffer_min + settings.home_to_airport_min
     for trip in trips:
+        # A trip planned before the settings changed keeps the times it was planned with.
+        home = trip.home
+        leave_minutes = (home.airport_buffer_min + home.home_to_airport_min) if home else (
+            settings.airport_buffer_min + settings.home_to_airport_min
+        )
         days_until = (trip.start_date - today).days
         if days_until in TRIP_START_REMINDER_DAYS:
             text = f"Trip '{trip.name}' starts in {_plural(days_until, 'day')}"

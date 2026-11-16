@@ -1424,10 +1424,16 @@ def _country(id=2, name="Examplia", code=None):
     return {"id": id, "name": name, "code": code}
 
 
+def _location_costs(linked="80.00", tagged="20.00", count=3):
+    def cost(total, n):
+        return {"total_eur": total, "transaction_count": n, "unconverted_count": 0}
+    return {"linked": cost(linked, 2), "tagged": cost(tagged, count - 2), "overall": cost("100.00", count)}
+
+
 def _city_detail(**kw):
     detail = {
         "id": 4, "name": "Alpha", "country": _country(), "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z",
-        "grade": 4.5, "grade_count": 2, "place_count": 7,
+        "grade": 4.5, "grade_count": 2, "place_count": 7, "default_tag_names": "alpha", "home": False, "costs": _location_costs(),
         "places": [{"id": 3, "name": "Hotel Example", "kind": "hotel", "grade": 4.0}],
         "trips": [{"id": i, "name": f"Trip {i}", "start_date": "2026-12-17", "end_date": "2026-12-24"} for i in range(1, 8)],
     }
@@ -1438,6 +1444,7 @@ def _city_detail(**kw):
 def _country_detail(**kw):
     detail = {
         **_country(), "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z", "grade": 3.5, "grade_count": 2,
+        "default_tag_names": None, "costs": _location_costs(),
         "cities": [{"id": i, "name": f"City {i}", "place_count": i, "grade": None} for i in range(1, 8)],
         "trips": [{"id": 1, "name": "Trip 1", "start_date": "2026-12-17", "end_date": "2026-12-24"}],
     }
@@ -1536,3 +1543,54 @@ class TestTripCitiesCard:
     def test_no_card_without_cities(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=[], unmatched_leg_ends=0), "/travel/places": []})
         assert 'id="trip-cities"' not in client.get("/travel/1").text
+
+
+class TestSpendAndHome:
+    def test_city_page_shows_the_spend_split_and_the_tags(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(trips=[])})
+        html = client.get("/travel/cities/4").text
+        assert 'id="location-spend"' in html and "100.00 €" in html and "3 charges" in html
+        assert "Linked to a stay or visit here: 80.00 €" in html and "tagged <em>alpha</em>: 20.00 €" in html
+        assert 'name="default_tag_names" value="alpha"' in html
+
+    def test_city_page_with_nothing_spent_says_how_to_set_tags(self, client, mock_api):
+        empty = {"linked": {"total_eur": "0.00", "transaction_count": 0, "unconverted_count": 0}}
+        empty["tagged"] = empty["overall"] = empty["linked"]
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(
+            trips=[], costs=empty, default_tag_names=None)})
+        assert "no default tags are set" in client.get("/travel/cities/4").text
+
+    def test_the_home_city_wears_a_badge(self, client, mock_api):
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(home=True, trips=[])})
+        assert 'id="city-home"' in client.get("/travel/cities/4").text
+        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(trips=[])})
+        assert 'id="city-home"' not in client.get("/travel/cities/4").text
+
+    def test_country_page_has_spend_and_tags(self, client, mock_api):
+        _route(mock_api, {"/travel/countries/2/links": [], "/travel/countries/2": _country_detail(default_tag_names="spain")})
+        html = client.get("/travel/countries/2").text
+        assert 'id="location-spend"' in html and "tagged <em>spain</em>" in html and 'name="default_tag_names" value="spain"' in html
+
+    def test_trip_card_puts_the_home_city_first_with_a_badge(self, client, mock_api):
+        cities = [{"city": {"id": 4, "name": "Alpha", "country": _country()}, "role": "stayed"},
+                  {"city": {"id": 5, "name": "Home", "country": _country()}, "role": "home"}]
+        home = {"city": cities[1]["city"], "address": None, "airport_buffer_min": 120, "home_to_airport_min": 45, "from_trip": True}
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, home=home, home_city_id=5), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert html.index('href="/travel/cities/5"') < html.index('href="/travel/cities/4"')
+        assert "ti-home" in html and "set for this trip" in html
+
+    def test_trip_form_offers_the_home_for_this_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'name="home_city_text"' in html and 'name="home_city_id"' in html and 'id="clear-trip-home-city"' in html
+        assert 'Home for this trip: address' in html
+
+    def test_settings_form_has_the_home_city_picker(self, client, mock_api):
+        settings = {"airport_buffer_min": 120, "home_to_airport_min": 45, "home_address": None, "max_visits_per_day": 4,
+                    "visit_duration_min": 90, "unpaid_leg_days": 30, "snooze_other_events": False,
+                    "home_city_id": 4, "home_city": {"id": 4, "name": "Alpha", "country": _country()}}
+        _route(mock_api, {"/travel/settings": settings, "/travel/trips": [], "/travel/tags": []})
+        html = client.get("/travel").text
+        assert 'name="home_city_text"' in html and 'id="clear-home-city"' in html and 'id="city-dialog"' in html
+        assert '"name": "Alpha"' in html

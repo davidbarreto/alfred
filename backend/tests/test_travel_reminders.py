@@ -131,6 +131,15 @@ class TestLeaveHome:
         assert "travel_leave_home" in _kinds(build_travel_reminders([trip], _utc(17, 10), date(2026, 12, 17), short))
 
 
+    def test_a_trip_keeps_the_times_it_was_planned_with_when_the_settings_change(self):
+        from app.features.travel.trips.schemas import TripHome
+
+        trip = _trip(legs=[_leg()]).model_copy(update={"home": TripHome(airport_buffer_min=30, home_to_airport_min=30, from_trip=True)})
+        later = TravelSettingsRead(airport_buffer_min=300, home_to_airport_min=60)  # the settings alone would remind at 06:00
+        assert "travel_leave_home" not in _kinds(build_travel_reminders([trip], _utc(17, 9), date(2026, 12, 17), later))
+        assert "travel_leave_home" in _kinds(build_travel_reminders([trip], _utc(17, 10), date(2026, 12, 17), later))
+
+
 class TestCheckOut:
     def test_on_check_out_day_before_check_out(self):
         trip = _trip(stays=[_stay()])  # out on the 19th 10:00

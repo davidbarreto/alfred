@@ -83,6 +83,15 @@ class PlaceCosts(BaseModel):
     visits: list[EntityCost] = []
 
 
+class LocationCosts(BaseModel):
+    """Spend of a city or country: `linked` = charges linked to a stay or visit at its places, `tagged` = charges
+    carrying all of its default tags that no leg, stay or visit is linked to (no date window), `overall` = both."""
+
+    linked: Cost = Cost()
+    tagged: Cost = Cost()
+    overall: Cost = Cost()
+
+
 class ApplyDefaultTagsResult(BaseModel):
     tags: list[str]
     # Transaction-tag rows added; expenses that already carried a tag are not counted for it.

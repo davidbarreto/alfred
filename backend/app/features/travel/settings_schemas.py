@@ -1,10 +1,15 @@
 from pydantic import BaseModel, Field
 
+from app.features.travel.cities.schemas import CityRef
+
 
 class TravelSettingsRead(BaseModel):
     airport_buffer_min: int
     home_to_airport_min: int
     home_address: str | None = None
+    # The city trips start from; trips started before it changes keep the old one (see the trips' own home columns).
+    home_city_id: int | None = None
+    home_city: CityRef | None = None
     max_visits_per_day: int = 4
     visit_duration_min: int = 90
     # Warn about legs with no linked charge when the trip starts within this many days (0 = never).
@@ -22,3 +27,5 @@ class TravelSettingsUpdate(BaseModel):
     snooze_other_events: bool | None = None
     # Where trips start; used for the home -> airport directions. An empty string clears it.
     home_address: str | None = Field(default=None, max_length=300)
+    # Send null to clear the home city (an unknown id is a 404).
+    home_city_id: int | None = None

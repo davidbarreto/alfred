@@ -11,12 +11,15 @@ from app.features.travel.legs.schemas import LegRead
 from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
+from app.features.travel.cities.repository import CityRepository
+from app.features.travel.cities.schemas import CityRef
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import (
-    TripCreate, TripDetail, TripFilters, TripListItem, TripLocations, TripRead, TripUpdate,
+    TripCreate, TripDetail, TripFilters, TripHome, TripListItem, TripLocations, TripRead, TripUpdate,
 )
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.links.repository import WebLinkRepository
@@ -29,6 +32,7 @@ from app.features.travel.trips.coverage_warnings import (
     find_outside_dates_warnings, find_stay_overlap_warnings, find_unpaid_leg_warnings, find_unpaid_stay_warnings,
     find_visit_overlap_warnings, find_visit_warnings,
 )
+from app.features.travel.trips.home import effective_home
 from app.features.travel.trips.trip_cities import build_trip_cities
 from app.features.travel.trips.timeline import TripWarning, build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_timezone, local_timezone_name, local_today
@@ -44,6 +48,7 @@ class TripService:
     def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = TripRepository(session)
+        self._city_repo = CityRepository(session)
         self._tag_repo = TravelTagRepository(session)
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
@@ -87,7 +92,8 @@ class TripService:
             shown = [v for v in visits if v.status == "visited"]
             hidden, visits = len(visits) - len(shown), shown
         settings = await self.settings_service.get()
-        leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
+        home = effective_home(trip, settings)
+        leave_at = leave_home_at(legs, home.airport_buffer_min + home.home_to_airport_min)
         today = local_today()
         paid_legs = await self._link_repo.get_linked_ids("legs", [leg.id for leg in legs])
         paid_stays = await self._link_repo.get_linked_ids("stays", [stay.id for stay in stays])
@@ -113,12 +119,12 @@ class TripService:
         if trip.end_date >= local_today():
             wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city.name for s in stays])
             ideas = build_ideas(all_visits, [VisitRead.model_validate(v) for v in wishlist], stays)
-        trip_cities, unmatched = build_trip_cities(legs, stays, all_visits, today, trip.end_date)
+        trip_cities, unmatched = build_trip_cities(legs, stays, all_visits, today, trip.end_date, home.city_id)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),
             legs=legs,
             stays=stays,
-            timeline=build_timeline(legs, stays, leave_at, settings.home_address, warnings),
+            timeline=build_timeline(legs, stays, leave_at, home.address, warnings),
             warnings=warnings,
             leave_home_at=leave_at,
             visits=visits,
@@ -126,7 +132,15 @@ class TripService:
             ideas=ideas,
             cities=trip_cities,
             unmatched_leg_ends=unmatched,
+            home=TripHome(
+                city=await self._home_city(home.city_id), address=home.address, airport_buffer_min=home.airport_buffer_min,
+                home_to_airport_min=home.home_to_airport_min, from_trip=home.from_trip,
+            ),
         )
+
+    async def _home_city(self, city_id: int | None) -> CityRef | None:
+        city = await self._city_repo.get_city(city_id) if city_id is not None else None
+        return CityRef.model_validate(city) if city else None
 
     async def _linked_events(self, visits: list[VisitRead]) -> dict:
         events = {}
@@ -174,6 +188,10 @@ class TripService:
                 raise ValueError(f"{field} cannot be null")
         if changes.get("end_date", trip.end_date) < changes.get("start_date", trip.start_date):
             raise ValueError("end_date cannot be before start_date")
+        if changes.get("home_city_id") is not None and await self._city_repo.get_city(changes["home_city_id"]) is None:
+            raise TravelNotFoundError(f"City {changes['home_city_id']} not found")
+        if "home_address" in changes and changes["home_address"] is not None:
+            changes["home_address"] = changes["home_address"].strip() or None
         tags = None
         if data.tags is not None:
             tags = await self._tag_repo.get_or_create_tags(data.tags)

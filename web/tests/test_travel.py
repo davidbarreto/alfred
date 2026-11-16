@@ -76,7 +76,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/links": [], "/travel/places/3/links": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/links": [], "/travel/places/3/links": [], "/travel/cities/1/links": [], "/travel/countries/1/links": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -1535,7 +1535,8 @@ class TestTripCitiesCard:
     def test_lists_stayed_cities_passed_through_and_the_unmatched_hint(self, client, mock_api):
         cities = [{"city": {"id": 4, "name": "Alpha", "country": _country()}, "role": "stayed"},
                   {"city": {"id": 5, "name": "Beta", "country": _country()}, "role": "passed"}]
-        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, unmatched_leg_ends=2), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, unmatched_leg_ends=2), "/travel/places": [],
+                          "/travel/cities/4/links": [], "/travel/countries/2/links": []})
         html = client.get("/travel/1").text
         assert 'id="trip-cities"' in html and 'href="/travel/cities/4"' in html and "Passed through" in html
         assert "2 leg ends have no city" in html
@@ -1575,7 +1576,8 @@ class TestSpendAndHome:
         cities = [{"city": {"id": 4, "name": "Alpha", "country": _country()}, "role": "stayed"},
                   {"city": {"id": 5, "name": "Home", "country": _country()}, "role": "home"}]
         home = {"city": cities[1]["city"], "address": None, "airport_buffer_min": 120, "home_to_airport_min": 45, "from_trip": True}
-        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, home=home, home_city_id=5), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(cities=cities, home=home, home_city_id=5), "/travel/places": [],
+                          "/travel/cities/4/links": [], "/travel/cities/5/links": [], "/travel/countries/2/links": []})
         html = client.get("/travel/1").text
         assert html.index('href="/travel/cities/5"') < html.index('href="/travel/cities/4"')
         assert "ti-home" in html and "set for this trip" in html
@@ -1594,3 +1596,58 @@ class TestSpendAndHome:
         html = client.get("/travel").text
         assert 'name="home_city_text"' in html and 'id="clear-home-city"' in html and 'id="city-dialog"' in html
         assert '"name": "Alpha"' in html
+
+
+def _lk(id, url, title=None):
+    return {"id": id, "trip_id": None, "place_id": None, "city_id": None, "country_id": None, "url": url, "kind": "website",
+            "title": title, "description": None, "image_url": None, "notes": None}
+
+
+class TestLinkGroups:
+    def _trip_with_cities(self):
+        alpha = {"id": 4, "name": "Alpha", "country": _country()}
+        beta = {"id": 5, "name": "Beta", "country": _country(3, "Otherland")}
+        passed = {"id": 6, "name": "Gamma", "country": _country(9, "Passland")}
+        home = {"id": 7, "name": "Home", "country": _country(2)}
+        cities = [{"city": home, "role": "home"}, {"city": alpha, "role": "stayed"}, {"city": beta, "role": "stayed"}, {"city": passed, "role": "passed"}]
+        return _detail(cities=cities, home={"city": home, "address": None, "airport_buffer_min": 120, "home_to_airport_min": 45, "from_trip": False})
+
+    def test_trip_page_shows_home_then_stayed_cities_then_their_countries_read_only(self, client, mock_api):
+        _route(mock_api, {
+            "/travel/trips/1/costs": None, "/travel/places": [], "/travel/trips/1": self._trip_with_cities(),
+            "/travel/trips/1/links": [_lk(1, "https://own.example/")],
+            "/travel/cities/7/links": [_lk(2, "https://home.example/")],
+            "/travel/cities/4/links": [_lk(3, "https://own.example/", "Dup"), _lk(4, "https://alpha.example/")],
+            "/travel/cities/5/links": [], "/travel/countries/2/links": [_lk(5, "https://country.example/")],
+            "/travel/countries/3/links": [_lk(6, "https://other.example/")],
+        })
+        html = client.get("/travel/1").text
+        assert html.index("Links · Home") < html.index("Links · Alpha") < html.index("Links · Examplia") < html.index("Links · Otherland")
+        assert "Links · Beta" not in html and "Links · Gamma" not in html and "Links · Passland" not in html
+        assert "Dup" not in html  # the trip's own link is not repeated in Alpha's group
+        assert "https://home.example/" in html and "https://alpha.example/" in html
+        assert 'data-id="3"' not in html and 'data-id="4"' not in html  # no edit or delete on another owner's links
+
+    def test_a_group_is_capped_and_links_to_the_full_page(self, client, mock_api):
+        many = [_lk(i, f"https://example.com/{i}") for i in range(10, 18)]
+        trip = _detail(cities=[{"city": {"id": 4, "name": "Alpha", "country": _country()}, "role": "stayed"}])
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/places": [], "/travel/trips/1": trip,
+                          "/travel/cities/4/links": many, "/travel/countries/2/links": []})
+        html = client.get("/travel/1").text
+        assert "See all 8 links" in html and 'href="/travel/cities/4/links"' in html
+        assert "https://example.com/14" in html and "https://example.com/15" not in html
+
+    def test_no_groups_when_nothing_is_linked(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/places": [], "/travel/trips/1": self._trip_with_cities(),
+                          "/travel/cities/7/links": [], "/travel/cities/4/links": [], "/travel/cities/5/links": [],
+                          "/travel/countries/2/links": [], "/travel/countries/3/links": []})
+        assert "Links · " not in client.get("/travel/1").text
+
+    def test_place_page_shows_its_citys_links_but_not_the_countrys(self, client, mock_api):
+        place = {**_place(), "visits": [], "stays": []}
+        _route(mock_api, {"/travel/places/3": place, "/travel/places/3/costs": None, "/travel/places/3/links": [_lk(1, "https://place.example/")],
+                          "/travel/cities/1/links": [_lk(2, "https://city.example/")]})
+        html = client.get("/travel/places/3").text
+        assert "Links · Beta" in html and "https://city.example/" in html
+        assert "Links · Testland" not in html
+        assert all(c.args[0] != "/travel/countries/1/links" for c in mock_api["get"].await_args_list)

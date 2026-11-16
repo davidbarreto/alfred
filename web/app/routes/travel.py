@@ -462,6 +462,31 @@ async def _fetch_places(filters: dict, offset: int) -> list | None:
     return await safe_get("/travel/places", params=params)
 
 
+async def _link_groups(cities: list[dict], own_urls: set[str], with_countries: bool = True) -> list[dict]:
+    """Read-only link groups for a trip or place page: each city, then each country in order of first appearance.
+
+    A URL already shown higher on the page (the page's own links, an earlier group) is not repeated; empty groups are
+    left out; each group shows at most `_LINKS_PREVIEW` and links to the owner's full links page.
+    """
+    seen = set(own_urls)
+    groups: list[dict] = []
+
+    async def add(title: str, kind: str, owner_id: int) -> None:
+        links = await safe_get(f"/travel/{kind}/{owner_id}/links", default=[]) or []
+        fresh = [link for link in links if link["url"] not in seen]
+        seen.update(link["url"] for link in fresh)
+        if fresh:
+            groups.append({"title": title, "see_all": f"/travel/{kind}/{owner_id}/links", "total": len(links), "links": fresh[:_LINKS_PREVIEW]})
+
+    countries: dict[int, dict] = {}
+    for city in cities:
+        await add(city["name"], "cities", city["id"])
+        countries.setdefault(city["country"]["id"], city["country"])
+    for country in countries.values() if with_countries else []:
+        await add(country["name"], "countries", country["id"])
+    return groups
+
+
 # "/places..." is registered before "/{trip_id}" so it is never read as a trip id.
 
 @router.get("/places", response_class=HTMLResponse)
@@ -562,6 +587,7 @@ async def place_page(place_id: int, request: Request):
     costs = await safe_get(f"/travel/places/{place_id}/costs")
     links = await safe_get(f"/travel/places/{place_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_place.html", {
+        "link_groups": await _link_groups([place["city"]], {l["url"] for l in links}, with_countries=False),
         "place": place, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
         "entity_costs": {"visits": {c["id"]: c for c in (costs or {}).get("visits", [])}},
     })
@@ -778,8 +804,13 @@ async def trip_page(trip_id: int, request: Request):
     visit_days: dict[str | None, list] = {}
     for visit in trip["visits"]:
         visit_days.setdefault(visit["visit_date"], []).append(visit)
+    # The trip's home city, then the cities it stayed in (passed-through ones get no group).
+    home = (trip.get("home") or {}).get("city")
+    stayed = [c["city"] for c in trip.get("cities", []) if c["role"] == "stayed"]
+    group_cities = ([home] if home else []) + [c for c in stayed if not home or c["id"] != home["id"]]
+    link_groups = await _link_groups(group_cities, {l["url"] for l in web_links})
     return templates.TemplateResponse(request, "travel_trip.html", {
-        "trip": trip,
+        "trip": trip, "link_groups": link_groups,
         "web_links": web_links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
         "empty_days": _empty_days(trip),
         "days": _group_by_day(preview),

@@ -1,0 +1,10 @@
+{# Links of the cities and countries a page belongs to, read-only. Needs `link_groups`: title, see_all, total, links. #}
+{% for g in link_groups %}
+<div class="card bg-white" id="link-group-{{ loop.index }}">
+  <div class="card-body p-5 space-y-3">
+    <h2 class="text-sm font-semibold text-gray-900">Links · {{ g.title }} <span class="text-xs font-normal text-gray-400">{{ g.total }}</span></h2>
+    {% for l in g.links %}{% set show_preview = false %}{% set read_only = true %}{% include "_travel_web_link_row.html" %}{% endfor %}
+    {% if g.total > g.links | length %}<a href="{{ g.see_all }}" class="text-xs text-[#378ADD] hover:underline">See all {{ g.total }} links</a>{% endif %}
+  </div>
+</div>
+{% endfor %}

@@ -1,4 +1,4 @@
-{# One saved link. Needs `l`; set `show_preview` for the thumbnail and description (the full links page only). #}
+{# One saved link. Needs `l`; set `show_preview` for the thumbnail and description (the full links page only), `read_only` to hide edit and delete (links shown from another owner). #}
 <div class="flex items-start gap-3 text-sm" id="web-link-{{ l.id }}">
   {% if show_preview and l.image_url %}<img src="{{ l.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-20 h-20 object-cover rounded-md bg-gray-100 shrink-0">{% endif %}
   <i class="ti {{ l.kind | link_icon }} text-gray-400 mt-0.5" title="{{ l.kind }}"></i>
@@ -8,8 +8,10 @@
     {% if show_preview and l.description %}<p class="text-xs text-gray-500 line-clamp-3">{{ l.description }}</p>{% endif %}
     {% if l.notes %}<p class="text-xs text-gray-600 {{ 'whitespace-pre-line' if show_preview else 'truncate' }}">{{ l.notes }}</p>{% endif %}
   </div>
+  {% if not read_only %}
   <div class="flex items-center shrink-0">
     <button type="button" class="btn btn-xs btn-ghost edit-web-link" data-item="{{ {'id': l.id, 'url': l.url, 'kind': l.kind, 'title': l.title, 'notes': l.notes} | tojson | forceescape }}" aria-label="Edit link"><i class="ti ti-pencil"></i></button>
     <button type="button" class="btn btn-xs btn-ghost text-red-600 delete-web-link" data-id="{{ l.id }}" aria-label="Delete link"><i class="ti ti-trash"></i></button>
   </div>
+  {% endif %}
 </div>

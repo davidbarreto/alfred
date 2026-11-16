@@ -71,6 +71,7 @@
 
   {% set owner_kind = 'place' %}{% set owner_id = place.id %}{% set links_url = '/travel/places/' ~ place.id ~ '/links' %}
   {% include "_travel_web_links_card.html" %}
+  {% include "_travel_link_groups.html" %}
 
   {% if place.stays %}
   <div class="card bg-white" id="stay-history">

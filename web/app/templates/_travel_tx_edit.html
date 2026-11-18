@@ -33,7 +33,7 @@
     <input name="tags" type="text" value="{{ (t.tags or []) | join(', ') }}" placeholder="e.g. Travel, Work" data-tag-input data-known='{{ tags | map(attribute="name") | list | tojson }}' class="input input-sm input-bordered w-full text-sm text-gray-900">
   </div>
   <label class="text-xs text-gray-500">Description
-    <input name="description" type="text" value="{{ t.description or '' }}" class="input input-sm input-bordered w-full text-sm text-gray-900">
+    <input name="description" type="text" value="{{ t.description or '' }}" placeholder="{{ t.bank_description or '' }}" class="input input-sm input-bordered w-full text-sm text-gray-900">
   </label>
   <label class="text-xs text-gray-500">Note
     <input name="note" type="text" value="{{ t.note or '' }}" class="input input-sm input-bordered w-full text-sm text-gray-900">

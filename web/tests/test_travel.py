@@ -1080,6 +1080,11 @@ class TestTransactionEdit:
         assert '<option value="2" selected>' in html and '<option value="4" selected>' in html
         assert "Other" in html and "work" in html
 
+    def test_edit_form_hints_the_bank_description_in_the_description_box(self, client, mock_api):
+        _route(mock_api, {"/finance/transactions/9": self._tx, "/finance/accounts": [], "/finance/categories": [], "/finance/tags": []})
+        html = client.get("/travel/transactions/9/edit").text
+        assert 'placeholder="SOME SHOP 123"' in html
+
     def test_edit_form_fails_softly_when_the_transaction_is_missing(self, client, mock_api):
         _route(mock_api, {"/finance/transactions/9": None})
         response = client.get("/travel/transactions/9/edit")

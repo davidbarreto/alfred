@@ -1,0 +1,89 @@
+{# Step 2 of the bulk edit dialog: what would change, before anything does. #}
+{% set p = preview %}
+{% set n_word = "transaction" if p.match_count == 1 else "transactions" %}
+<script type="application/json" id="bulk-edit-ids">{{ p.transaction_ids | tojson }}</script>
+<div class="flex flex-col gap-3">
+  <p class="text-sm text-gray-700">
+    <span class="font-semibold">{{ p.match_count }}</span> {{ n_word }} match
+    <span class="text-gray-400">· total {% if p.total | float < 0 %}-{% endif %}{{ currency_symbols.get(p.currency, p.currency + " ") }}{{ p.total | float | abs | money }}</span>
+  </p>
+
+  {% if p.change_count %}
+  <ul class="text-sm text-gray-700 flex flex-col gap-1">
+    {% for tag in p.add_tags %}
+    <li><i class="ti ti-tag text-xs text-gray-400"></i>
+      Add <span class="rounded-full bg-[#E6F1FB] text-[#0C447C] px-1.5 py-0.5 text-xs">{{ tag.name }}</span>
+      to {{ tag.count }}{% if tag.new %} <span class="text-[11px] text-amber-600">(new tag)</span>{% endif %}
+    </li>
+    {% endfor %}
+    {% for tag in p.remove_tags %}
+    <li><i class="ti ti-tag-off text-xs text-gray-400"></i>
+      Remove <span class="rounded-full bg-[#E6F1FB] text-[#0C447C] px-1.5 py-0.5 text-xs">{{ tag.name }}</span> from {{ tag.count }}
+    </li>
+    {% endfor %}
+    {% if changes.clear_category %}
+    <li><i class="ti ti-category text-xs text-gray-400"></i> Clear the category on {{ p.category_count }}</li>
+    {% elif changes.category_id %}
+    <li><i class="ti ti-category text-xs text-gray-400"></i>
+      Set category <span class="font-medium">{{ categories_by_id.get(changes.category_id | int, "?") }}</span> on {{ p.category_count }}
+    </li>
+    {% endif %}
+    {% if changes.merchant %}
+    <li><i class="ti ti-building-store text-xs text-gray-400"></i>
+      Rename the merchant to <span class="font-medium">{{ changes.merchant }}</span> on {{ p.merchant_count }}
+    </li>
+    {% endif %}
+    {% if changes.account_id %}
+    <li><i class="ti ti-transfer text-xs text-gray-400"></i>
+      Move {{ p.account_count }} to <span class="font-medium">{{ accounts_by_id.get(changes.account_id | int, "?") }}</span>
+    </li>
+    {% endif %}
+  </ul>
+  {% if p.change_count < p.match_count %}
+  <p class="text-xs text-gray-400">{{ p.match_count - p.change_count }} already match and stay as they are.</p>
+  {% endif %}
+  {% else %}
+  <p class="text-sm text-gray-500">Nothing would change: every matching transaction already looks like this.</p>
+  {% endif %}
+
+  {% if p.unlink_count %}
+  <p class="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+    Moving breaks {{ p.unlink_count }} confirmed transfer link{{ "s" if p.unlink_count != 1 else "" }}, as editing one leg's account does. Undo does not restore them.
+  </p>
+  {% elif p.linked_transfer_count %}
+  <p class="text-xs text-gray-400">
+    {{ p.linked_transfer_count }} {{ "is" if p.linked_transfer_count == 1 else "are" }} one leg of a linked transfer; the other leg is not changed.
+  </p>
+  {% endif %}
+
+  {% if p.sample %}
+  <div class="border border-gray-100 rounded-lg divide-y divide-gray-100">
+    {% for txn in p.sample %}
+    <button type="button" class="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-gray-50"
+            onclick='openTransactionDetailModal({{ txn | tojson }}, {{ accounts_by_id.get(txn.account_id, "?") | tojson }})'>
+      <span class="min-w-0">
+        <span class="block text-sm text-gray-800 truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
+        <span class="block text-xs text-gray-400 truncate">{{ txn.date[:10] }} · {{ accounts_by_id.get(txn.account_id, "?") }}</span>
+      </span>
+      <span class="text-sm flex-shrink-0 {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' %}text-gray-500{% else %}text-[#E24B4A]{% endif %}">
+        {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+  {% if p.match_count > p.sample | length %}
+  <a href="{{ see_all_url }}" target="_blank" rel="noopener" class="text-xs text-[#378ADD] hover:underline self-start">
+    See all {{ p.match_count }} <i class="ti ti-external-link text-[11px]"></i>
+  </a>
+  {% endif %}
+  {% endif %}
+
+  <p id="bulk-edit-apply-error" class="text-xs text-[#E24B4A] hidden"></p>
+  <div class="flex justify-end gap-2 mt-1">
+    <button type="button" onclick="backToBulkEditForm()" class="btn btn-sm btn-ghost text-gray-500">Back</button>
+    <button type="button" id="bulk-edit-apply-btn" onclick="applyBulkEdit()" class="btn btn-sm btn-primary"
+            {% if not p.change_count %}disabled{% endif %}>
+      Apply to {{ p.change_count }}
+    </button>
+  </div>
+</div>

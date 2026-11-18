@@ -25,6 +25,7 @@ from app.features.finance.categories.service import CategoryService
 from app.features.finance.tags.service import TagService
 from app.features.finance.currencies.service import CurrencyService
 from app.features.finance.exchange_rates.service import ExchangeRateService
+from app.features.finance.transactions.bulk_edit_service import TransactionBulkEditService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
@@ -249,6 +250,9 @@ def get_exchange_rate_service(session: AsyncSession = Depends(get_session)) -> E
 
 def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
     return TransactionService(session, get_exchange_rate_service(session))
+
+def get_transaction_bulk_edit_service(session: AsyncSession = Depends(get_session)) -> TransactionBulkEditService:
+    return TransactionBulkEditService(session)
 
 def get_budget_target_service(session: AsyncSession = Depends(get_session)) -> BudgetTargetService:
     return BudgetTargetService(session)
@@ -754,6 +758,7 @@ CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 TagServiceDep = Annotated[TagService, Depends(get_tag_service)]
 CurrencyServiceDep = Annotated[CurrencyService, Depends(get_currency_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
+TransactionBulkEditServiceDep = Annotated[TransactionBulkEditService, Depends(get_transaction_bulk_edit_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 InstallmentPlanServiceDep = Annotated[InstallmentPlanService, Depends(get_installment_plan_service)]
 BudgetTargetServiceDep = Annotated[BudgetTargetService, Depends(get_budget_target_service)]

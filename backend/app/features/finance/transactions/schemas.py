@@ -2,9 +2,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any, Literal, Optional, TypeAlias
 from fastapi import Query
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.finance import cycle
+from app.shared.tags import normalize_tag_name
 from app.shared.timezone import local_today
 
 TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
@@ -241,26 +242,182 @@ class TransactionSumResponse(BaseModel):
     by_currency: list[TransactionCurrencySum] = []
 
 
-class TransactionBulkMoveRequest(BaseModel):
-    """Reassign every transaction from account_id to target_account_id, optionally
-    narrowed by the same filters as the transaction list (type/category/merchant/date
-    range/currency). account_id is required -- bulk moves are always scoped to "every
-    transaction currently on this one account [matching these filters]", never an
-    unscoped cross-account bulk edit.
-    """
-    account_id: int
-    target_account_id: int
+BULK_EDIT_MAX = 2000
+"""Most transactions one bulk edit (preview or apply) handles."""
+
+BulkRestoreField: TypeAlias = Literal["category", "merchant", "account"]
+
+
+class TransactionQuery(BaseModel):
+    """The transaction list's filters as a request body: the fields of TransactionFilters
+    minus paging and sort, so a bulk edit hits exactly what the list shows (a test keeps
+    the two in step). Read by the same _filter_conditions as the list."""
+
     type: TransactionType | None = None
     category_id: int | None = None
+    uncategorized: bool = False
+    account_id: int | None = None
     merchant: str | None = None
+    search: str | None = None
     from_date: date | None = None
     to_date: date | None = None
     period: str | None = None
     currency: str | None = None
+    min_amount: Decimal | None = Field(default=None, ge=0)
+    max_amount: Decimal | None = Field(default=None, ge=0)
+    installment_plan_id: int | None = None
+    unconfirmed_transfer: bool = False
+    tags: list[str] | None = None
+    tags_mode: Literal["all", "any"] = "all"
+
+    @field_validator("merchant", "search", "period", "currency", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, v: Any) -> Any:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("currency")
+    @classmethod
+    def _upper_currency(cls, v: str | None) -> str | None:
+        return v.upper() if v is not None else None
+
+    def is_empty(self) -> bool:
+        """True when no filter is set, i.e. the query would match every transaction."""
+        return not any(
+            getattr(self, name) for name in type(self).model_fields if name != "tags_mode"
+        )
 
 
-class TransactionBulkMoveResponse(BaseModel):
-    moved_count: int
+class TransactionBulkChanges(BaseModel):
+    """What a bulk edit changes; fields left unset are not touched. Tag names are
+    normalized like everywhere else (trimmed, lowercase)."""
+
+    add_tags: list[str] = []
+    remove_tags: list[str] = []
+    category_id: int | None = None
+    clear_category: bool = False
+    account_id: int | None = None
+    """Move to this account. Only allowed when every transaction is on one account."""
+    merchant: str | None = None
+    """Rename the merchant to this; blank means no change."""
+
+    @field_validator("add_tags", "remove_tags")
+    @classmethod
+    def _normalize_tags(cls, v: list[str]) -> list[str]:
+        names: list[str] = []
+        for name in (normalize_tag_name(n) for n in v):
+            if name and name not in names:
+                names.append(name)
+        return names
+
+    @field_validator("merchant")
+    @classmethod
+    def _strip_merchant(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return v.strip() or None
+
+    @model_validator(mode="after")
+    def _check(self) -> "TransactionBulkChanges":
+        if self.clear_category and self.category_id is not None:
+            raise ValueError("Choose a category or clear it, not both")
+        overlap = set(self.add_tags) & set(self.remove_tags)
+        if overlap:
+            raise ValueError(f"Tags both added and removed: {', '.join(sorted(overlap))}")
+        if not self.kinds():
+            raise ValueError("Choose at least one change")
+        return self
+
+    def kinds(self) -> list[str]:
+        """Names of the changes requested, for logging and summaries."""
+        kinds = []
+        if self.add_tags:
+            kinds.append("add_tags")
+        if self.remove_tags:
+            kinds.append("remove_tags")
+        if self.category_id is not None or self.clear_category:
+            kinds.append("category")
+        if self.merchant is not None:
+            kinds.append("merchant")
+        if self.account_id is not None:
+            kinds.append("account")
+        return kinds
+
+
+class TransactionBulkEditPreviewRequest(BaseModel):
+    filters: TransactionQuery
+    changes: TransactionBulkChanges
+
+
+class TransactionBulkTagCount(BaseModel):
+    name: str
+    count: int
+    """How many of the matched transactions this tag would be added to (or removed from)."""
+    new: bool = False
+    """The tag does not exist yet and would be created."""
+
+
+class TransactionBulkEditPreview(BaseModel):
+    """What a bulk edit would do to the transactions matching the filters, without
+    changing anything. transaction_ids is what the apply call then sends, so a
+    transaction imported in between is never edited unseen."""
+
+    match_count: int
+    change_count: int
+    """Matched transactions at least one change applies to (the rest already match)."""
+    transaction_ids: list[int]
+    sample: list[TransactionRead]
+    add_tags: list[TransactionBulkTagCount] = []
+    remove_tags: list[TransactionBulkTagCount] = []
+    category_count: int = 0
+    merchant_count: int = 0
+    account_count: int = 0
+    linked_transfer_count: int = 0
+    """Matched transactions that are one leg of a linked transfer: the other leg is never changed."""
+    unlink_count: int = 0
+    """Confirmed transfer links an account move breaks, as editing one leg's account does."""
+    total: Decimal
+    currency: str
+    """Currency of total: the filtered currency, or EUR when the filters span every currency."""
+
+
+class TransactionBulkEditRequest(BaseModel):
+    transaction_ids: list[int] = Field(min_length=1, max_length=BULK_EDIT_MAX)
+    changes: TransactionBulkChanges
+
+
+class TransactionBulkEditRevertItem(BaseModel):
+    """One transaction's state before a bulk edit, as much as Undo needs: the fields
+    named in `restore` go back to the values here, added tags come off and removed
+    ones go back on. A transfer link the edit broke is not restored."""
+
+    id: int
+    restore: list[BulkRestoreField] = []
+    category_id: int | None = None
+    merchant: str | None = None
+    account_id: int | None = None
+    added_tags: list[str] = []
+    removed_tags: list[str] = []
+
+    @model_validator(mode="after")
+    def _account_needs_a_value(self) -> "TransactionBulkEditRevertItem":
+        if "account" in self.restore and self.account_id is None:
+            raise ValueError("account_id is required to restore the account")
+        return self
+
+
+class TransactionBulkEditResult(BaseModel):
+    changed_count: int
+    unlink_count: int = 0
+    revert: list[TransactionBulkEditRevertItem]
+    """Pass back to POST /finance/transactions/bulk-edit/revert to undo this edit."""
+
+
+class TransactionBulkRevertRequest(BaseModel):
+    items: list[TransactionBulkEditRevertItem] = Field(min_length=1, max_length=BULK_EDIT_MAX)
+
+
+class TransactionBulkRevertResult(BaseModel):
+    reverted_count: int
 
 
 class TransferLinkRequest(BaseModel):

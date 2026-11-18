@@ -159,15 +159,16 @@
         Unconfirmed transfers
       </label>
     </div>
+    {% set has_filters = query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.search or query_filters.from_date or query_filters.to_date or query_filters.min_amount or query_filters.max_amount or query_filters.currency or query_filters.unconfirmed_transfer %}
     <button id="txn-clear-filters" onclick="clearTxnFilters()"
-      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.search or query_filters.from_date or query_filters.to_date or query_filters.min_amount or query_filters.max_amount or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
+      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not has_filters %} hidden{% endif %}">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
-    {% if query_filters.account_id %}
-    <button onclick="openBulkMoveModal()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
-      <i class="ti ti-transfer text-xs"></i>Move to account…
+    <button id="txn-bulk-edit-btn" onclick="openBulkEditModal()"
+      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not has_filters %} hidden{% endif %}"
+      title="Change tags, category, merchant or account on every transaction matching the filters">
+      <i class="ti ti-edit text-xs"></i>Bulk edit…
     </button>
-    {% endif %}
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -272,34 +273,68 @@
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
-<dialog id="bulk-move-modal" class="modal">
-  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
-    <h3 class="text-sm font-semibold text-gray-900 mb-2">Move transactions to another account</h3>
-    <p class="text-xs text-gray-500 mb-4">
-      Moves every transaction currently matching your filters on
-      <span id="bulk-move-source-name" class="font-medium text-gray-700"></span> to the account below.
-      This can't be undone from here — you'd need to move them back manually.
-    </p>
-    <form id="bulk-move-form" onsubmit="submitBulkMove(event)" class="flex flex-col gap-3">
+<dialog id="bulk-edit-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">Bulk edit</h3>
+    <p class="text-xs text-gray-500 mb-4">Applies to every transaction matching your filters. You'll see what changes before anything does.</p>
+    <form id="bulk-edit-form" onsubmit="previewBulkEdit(event)" class="flex flex-col gap-3">
       <div>
-        <label class="text-xs text-gray-500 mb-1 block">Target account <span class="text-[#E24B4A]">*</span></label>
-        <select id="bulk-move-target" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
-          <option value="">— select —</option>
+        <label class="text-xs text-gray-500 mb-1 block">Add tags</label>
+        <input name="add_tags" type="text" placeholder="e.g. Travel" data-tag-input
+               data-known='{{ tags | map(attribute="name") | list | tojson }}' class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Remove tags</label>
+        <input name="remove_tags" type="text" placeholder="e.g. Work" data-tag-input data-no-budget-warning
+               data-known='{{ tags | map(attribute="name") | list | tojson }}' class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Category</label>
+          <select name="category" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">No change</option>
+            <option value="clear">Clear the category</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Rename merchant to</label>
+          <input name="merchant" type="text" placeholder="No change" autocomplete="off"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+      </div>
+      <div id="bulk-edit-move-field">
+        <label class="text-xs text-gray-500 mb-1 block">Move to account</label>
+        <select name="account" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">No change</option>
           {% for acc in accounts %}
           <option value="{{ acc.id }}">{{ acc.name }}</option>
           {% endfor %}
         </select>
       </div>
-      <p id="bulk-move-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <p id="bulk-edit-move-hint" class="text-xs text-gray-400 hidden">To move transactions to another account, first filter by the account they are on.</p>
+      <p id="bulk-edit-error" class="text-xs text-[#E24B4A] hidden"></p>
       <div class="flex justify-end gap-2 mt-1">
-        <button type="button" onclick="document.getElementById('bulk-move-modal').close()"
+        <button type="button" onclick="document.getElementById('bulk-edit-modal').close()"
                 class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
-        <button type="submit" id="bulk-move-submit-btn" class="btn btn-sm btn-primary">Move</button>
+        <button type="submit" id="bulk-edit-preview-btn" class="btn btn-sm btn-primary">Preview</button>
       </div>
     </form>
+    <div id="bulk-edit-preview" class="hidden"></div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
+
+<div id="bulk-edit-toast" role="status"
+     class="hidden fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 flex items-center justify-between gap-3 text-sm">
+  <span id="bulk-edit-toast-text" class="text-gray-700 min-w-0"></span>
+  <span class="flex items-center gap-1 flex-shrink-0">
+    <button type="button" id="bulk-edit-undo-btn" onclick="undoBulkEdit()" class="btn btn-xs btn-ghost text-[#378ADD]">Undo</button>
+    <button type="button" onclick="hideBulkEditToast()" class="btn btn-xs btn-ghost text-gray-400" aria-label="Dismiss"><i class="ti ti-x"></i></button>
+  </span>
+</div>
 
 <dialog id="transfer-match-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
@@ -441,6 +476,7 @@ function clearTxnTagFilters() {
 function applyTxnFilters() {
   _txnOffset = 0;
   document.getElementById("txn-clear-filters").classList.toggle("hidden", !_hasTxnFilters());
+  document.getElementById("txn-bulk-edit-btn").classList.toggle("hidden", !_hasTxnFilters());
   const tagsClear = document.getElementById("txn-filter-tags-clear");
   if (tagsClear) tagsClear.classList.toggle("hidden", !document.querySelector(".txn-filter-tag-checkbox:checked"));
   const checked = document.querySelectorAll(".txn-filter-tag-checkbox:checked");
@@ -548,64 +584,146 @@ async function submitEditTransaction(e) {
   }
 }
 
-function openBulkMoveModal() {
-  const sourceSelect = document.getElementById("txn-filter-account");
-  if (!sourceSelect.value) return;
-  document.getElementById("bulk-move-source-name").textContent = sourceSelect.selectedOptions[0].textContent;
-  const targetSelect = document.getElementById("bulk-move-target");
-  targetSelect.value = "";
-  for (const opt of targetSelect.options) {
-    opt.disabled = (opt.value === sourceSelect.value);
+let _bulkEditChanges = null;
+let _bulkEditRevert = null;
+let _bulkEditToastTimer = null;
+
+function openBulkEditModal() {
+  const form = document.getElementById("bulk-edit-form");
+  const sourceAccount = document.getElementById("txn-filter-account").value;
+  form.reset();
+  // Resetting the hidden inputs clears their chips too (tag-input.js watches value).
+  form.querySelector('[name="add_tags"]').value = "";
+  form.querySelector('[name="remove_tags"]').value = "";
+  // Moving is only offered when the results are all on one account (the filtered one).
+  document.getElementById("bulk-edit-move-field").classList.toggle("hidden", !sourceAccount);
+  document.getElementById("bulk-edit-move-hint").classList.toggle("hidden", Boolean(sourceAccount));
+  for (const opt of form.querySelector('[name="account"]').options) {
+    opt.disabled = opt.value !== "" && opt.value === sourceAccount;
   }
-  document.getElementById("bulk-move-error").classList.add("hidden");
-  document.getElementById("bulk-move-modal").showModal();
+  document.getElementById("bulk-edit-error").classList.add("hidden");
+  backToBulkEditForm();
+  document.getElementById("bulk-edit-modal").showModal();
 }
 
-async function submitBulkMove(e) {
+function backToBulkEditForm() {
+  document.getElementById("bulk-edit-form").classList.remove("hidden");
+  document.getElementById("bulk-edit-preview").classList.add("hidden");
+}
+
+function _readBulkEditChanges() {
+  const form = document.getElementById("bulk-edit-form");
+  const names = field => form.querySelector(`[name="${field}"]`).value.split(",").map(s => s.trim()).filter(Boolean);
+  const changes = {};
+  const addTags = names("add_tags");
+  const removeTags = names("remove_tags");
+  if (addTags.length) changes.add_tags = addTags;
+  if (removeTags.length) changes.remove_tags = removeTags;
+  const category = form.querySelector('[name="category"]').value;
+  if (category === "clear") changes.clear_category = true;
+  else if (category) changes.category_id = Number(category);
+  const merchant = form.querySelector('[name="merchant"]').value.trim();
+  if (merchant) changes.merchant = merchant;
+  const account = form.querySelector('[name="account"]').value;
+  if (account && document.getElementById("txn-filter-account").value) changes.account_id = Number(account);
+  return changes;
+}
+
+async function previewBulkEdit(e) {
   e.preventDefault();
-  const btn = document.getElementById("bulk-move-submit-btn");
-  const errEl = document.getElementById("bulk-move-error");
-  const sourceId = document.getElementById("txn-filter-account").value;
-  const targetId = document.getElementById("bulk-move-target").value;
-  btn.disabled = true;
-  btn.textContent = "Moving…";
+  const errEl = document.getElementById("bulk-edit-error");
+  const btn = document.getElementById("bulk-edit-preview-btn");
   errEl.classList.add("hidden");
-
-  const body = { account_id: sourceId, target_account_id: targetId };
-  const type = document.getElementById("txn-filter-type").value;
-  const category = document.getElementById("txn-filter-category").value;
-  const merchant = document.getElementById("txn-filter-merchant").value;
-  const fromDate = document.getElementById("txn-filter-from").value;
-  const toDate = document.getElementById("txn-filter-to").value;
-  if (type) body.type = type;
-  if (category) body.category_id = category;
-  if (merchant) body.merchant = merchant;
-  if (fromDate) body.from_date = fromDate;
-  if (toDate) body.to_date = toDate;
-
+  const changes = _readBulkEditChanges();
+  if (!Object.keys(changes).length) {
+    errEl.textContent = "Choose at least one change.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Checking…";
   try {
-    const res = await fetch("/finance/transactions/bulk-move", {
+    const res = await fetch("/finance/transactions/bulk-edit/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ filters_qs: _txnQuery(), changes }),
     });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `Error ${res.status}`);
-    }
-    const params = new URLSearchParams({ account_id: targetId });
-    if (type) params.set("type", type);
-    if (category) params.set("category_id", category);
-    if (merchant) params.set("merchant", merchant);
-    if (fromDate) params.set("from_date", fromDate);
-    if (toDate) params.set("to_date", toDate);
-    window.location.href = "/finance/transactions?" + params.toString();
+    const html = await res.text();
+    if (!res.ok) throw new Error(html || `Error ${res.status}`);
+    _bulkEditChanges = changes;
+    const pane = document.getElementById("bulk-edit-preview");
+    pane.innerHTML = html;
+    document.getElementById("bulk-edit-form").classList.add("hidden");
+    pane.classList.remove("hidden");
   } catch (err) {
-    errEl.textContent = err.message || "Failed to move transactions.";
+    errEl.textContent = err.message || "Could not preview the bulk edit.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Preview";
+  }
+}
+
+async function applyBulkEdit() {
+  const btn = document.getElementById("bulk-edit-apply-btn");
+  const errEl = document.getElementById("bulk-edit-apply-error");
+  const ids = JSON.parse(document.getElementById("bulk-edit-ids").textContent);
+  btn.disabled = true;
+  errEl.classList.add("hidden");
+  try {
+    const res = await fetch("/finance/transactions/bulk-edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction_ids: ids, changes: _bulkEditChanges }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    document.getElementById("bulk-edit-modal").close();
+    _bulkEditRevert = data.revert;
+    const n = data.changed_count;
+    showBulkEditToast(`Updated ${n} transaction${n === 1 ? "" : "s"}.`, n > 0);
+    refreshTxnList();
+    refreshKnownTags();
+  } catch (err) {
+    errEl.textContent = err.message || "Could not apply the bulk edit.";
     errEl.classList.remove("hidden");
     btn.disabled = false;
-    btn.textContent = "Move";
   }
+}
+
+async function undoBulkEdit() {
+  if (!_bulkEditRevert || !_bulkEditRevert.length) return;
+  const btn = document.getElementById("bulk-edit-undo-btn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/finance/transactions/bulk-edit/revert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: _bulkEditRevert }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+    _bulkEditRevert = null;
+    const n = data.reverted_count;
+    showBulkEditToast(`Undone: ${n} transaction${n === 1 ? "" : "s"} restored.`, false);
+    refreshTxnList();
+  } catch (err) {
+    showBulkEditToast(err.message || "Could not undo the bulk edit.", true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showBulkEditToast(text, canUndo) {
+  document.getElementById("bulk-edit-toast-text").textContent = text;
+  document.getElementById("bulk-edit-undo-btn").classList.toggle("hidden", !canUndo);
+  document.getElementById("bulk-edit-toast").classList.remove("hidden");
+  clearTimeout(_bulkEditToastTimer);
+  _bulkEditToastTimer = setTimeout(hideBulkEditToast, 60000);
+}
+
+function hideBulkEditToast() {
+  document.getElementById("bulk-edit-toast").classList.add("hidden");
 }
 
 let _transferMatchTxnId = null;

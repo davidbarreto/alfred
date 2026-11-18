@@ -2,22 +2,26 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any
-from sqlalchemy import and_, case, false, func, or_, select, update
+from typing import TYPE_CHECKING, Any
+from sqlalchemy import and_, case, delete, false, func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.installment_plans.tables import InstallmentPlan
 from app.features.finance.tags.repository import TagRepository
-from app.features.finance.tags.tables import FinanceTag
+from app.features.finance.tags.tables import FinanceTag, transactions_tags
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
-    TransactionBulkMoveRequest,
     TransactionCreate,
+    TransactionQuery,
     TransactionUpdate,
     TransactionFilters,
 )
+
+if TYPE_CHECKING:
+    from app.features.finance.transactions.bulk_edit import BulkWrite
 
 _PLACEHOLDER_NOTE_PREFIX = "Placeholder"
 _TXN_EXCLUDE = {"tags"}
@@ -148,8 +152,8 @@ def _tag_conditions(tags: list[str] | None, tags_mode: str = "all") -> list:
 
 def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
     """Shared WHERE-clause building for anything shaped like TransactionFilters
-    (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
-    optional type/category/merchant/date/currency fields plus a required account_id).
+    (duck-typed: also used by TransactionQuery, the same filters as a request body
+    for bulk edits).
     """
     conditions = []
     if filters.type is not None:
@@ -424,18 +428,83 @@ class TransactionRepository:
         result = await self._session.execute(query)
         return [(currency, Decimal(str(total)), count) for currency, total, count in result.all()]
 
-    async def bulk_reassign_account(self, request: TransactionBulkMoveRequest, cycle_start_day: int = 1) -> int:
-        """Move every transaction matching request's account_id + optional filters to
-        target_account_id. Clears deduplication_hash on moved rows: the stored hash was
-        computed against the old account_id (and the source statement's balance, which
-        isn't persisted), so it can no longer be trusted to detect a future re-import.
-        """
-        stmt = update(Transaction).values(account_id=request.target_account_id, deduplication_hash=None)
-        for condition in _filter_conditions(request, cycle_start_day):
-            stmt = stmt.where(condition)
-        result = await self._session.execute(stmt)
+    async def get_many(self, transaction_ids: list[int]) -> list[Transaction]:
+        """The given transactions with their tags; ids that do not exist are left out."""
+        result = await self._session.execute(
+            select(Transaction).options(selectinload(Transaction.tags)).where(Transaction.id.in_(transaction_ids))
+        )
+        return list(result.scalars().all())
+
+    async def list_matching(
+        self, filters: TransactionQuery, cycle_start_day: int = 1, limit: int | None = None
+    ) -> list[Transaction]:
+        """Every transaction matching filters (no paging), newest first, with tags."""
+        query = select(Transaction).options(selectinload(Transaction.tags)).order_by(_build_order_by("date_desc"))
+        for condition in _filter_conditions(filters, cycle_start_day):
+            query = query.where(condition)
+        if limit is not None:
+            query = query.limit(limit)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_auto_transfer_ids(self, transaction_ids: list[int]) -> set[int]:
+        """Which of the given transactions are auto-generated transfer mirrors."""
+        if not transaction_ids:
+            return set()
+        result = await self._session.execute(
+            select(Transaction.id).where(Transaction.id.in_(transaction_ids), Transaction.source == "auto_transfer")
+        )
+        return set(result.scalars().all())
+
+    async def apply_bulk_write(self, write: BulkWrite) -> None:
+        """Make every write of a bulk edit in one commit. Moved rows lose their
+        deduplication_hash: it was computed against the old account (and the source
+        statement's balance, which isn't stored), so it can no longer detect a re-import.
+        Account balances are adjusted by the caller (AccountRepository.adjust_balance)."""
+        if write.add_tags:
+            tags = await self._tag_repo.resolve_tags(list(write.add_tags))
+            await self._session.flush()
+            tag_ids = {tag.name.lower(): tag.id for tag in tags}
+            links = [
+                {"transaction_id": transaction_id, "tag_id": tag_ids[name]}
+                for name, transaction_ids in write.add_tags.items()
+                for transaction_id in transaction_ids
+            ]
+            await self._session.execute(pg_insert(transactions_tags).values(links).on_conflict_do_nothing())
+        if write.remove_tags:
+            result = await self._session.execute(
+                select(FinanceTag.id, func.lower(FinanceTag.name)).where(
+                    func.lower(FinanceTag.name).in_(list(write.remove_tags))
+                )
+            )
+            for tag_id, name in result.all():
+                await self._session.execute(
+                    delete(transactions_tags).where(
+                        transactions_tags.c.tag_id == tag_id,
+                        transactions_tags.c.transaction_id.in_(write.remove_tags[name]),
+                    )
+                )
+        for category_id, transaction_ids in write.categories.items():
+            await self._session.execute(
+                update(Transaction).where(Transaction.id.in_(transaction_ids)).values(category_id=category_id)
+            )
+        for merchant, transaction_ids in write.merchants.items():
+            await self._session.execute(
+                update(Transaction).where(Transaction.id.in_(transaction_ids)).values(merchant=merchant)
+            )
+        for account_id, transaction_ids in write.accounts.items():
+            await self._session.execute(
+                update(Transaction)
+                .where(Transaction.id.in_(transaction_ids))
+                .values(account_id=account_id, deduplication_hash=None)
+            )
+        if write.unlink_ids:
+            await self._session.execute(
+                update(Transaction)
+                .where(Transaction.id.in_(list(write.unlink_ids)))
+                .values(counterpart_transaction_id=None)
+            )
         await self._session.commit()
-        return result.rowcount
 
     async def create(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
         transaction = Transaction(

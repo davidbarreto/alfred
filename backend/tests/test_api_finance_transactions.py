@@ -25,7 +25,7 @@ from app.features.finance.transactions.schemas import (
     TransactionRead,
     TransactionSumResponse,
 )
-from app.features.finance.transactions.service import InvalidBulkMoveError, TransferMatchError
+from app.features.finance.transactions.service import TransferMatchError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -77,7 +77,6 @@ def mock_txn_service():
         from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5,
     )
     svc.balance_forecast.return_value = (Decimal("0"), Decimal("0"), date(2026, 6, 30))
-    svc.bulk_move_account.return_value = 12
     svc.get_transfer_match_candidates.return_value = [_txn_read(id=2, type="transfer", amount=Decimal("-45.50"))]
     svc.link_transfer.return_value = _txn_read(type="transfer")
     svc.auto_create_transfer_mirror.return_value = _txn_read(
@@ -299,43 +298,6 @@ class TestTransactionsSum:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/sum").status_code == 403
-
-
-class TestBulkMoveTransactions:
-    def test_returns_moved_count(self, client):
-        response = client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": 1, "target_account_id": 2},
-            headers=AUTH,
-        )
-        assert response.status_code == 200
-        assert response.json()["moved_count"] == 12
-
-    def test_passes_optional_filters_to_service(self, client, mock_txn_service):
-        client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": 1, "target_account_id": 2, "type": "expense", "category_id": 3},
-            headers=AUTH,
-        )
-        request = mock_txn_service.bulk_move_account.call_args[0][0]
-        assert request.type == "expense"
-        assert request.category_id == 3
-
-    def test_invalid_move_returns_400(self, client, mock_txn_service):
-        mock_txn_service.bulk_move_account.side_effect = InvalidBulkMoveError("Target account not found")
-        response = client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": 1, "target_account_id": 999},
-            headers=AUTH,
-        )
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Target account not found"
-
-    def test_requires_auth(self, client):
-        response = client.post(
-            "/finance/transactions/bulk-move", json={"account_id": 1, "target_account_id": 2}
-        )
-        assert response.status_code == 403
 
 
 class TestGetRelatedTransaction:
@@ -680,3 +642,90 @@ class TestBalanceForecast:
     def test_global_currency_returns_400(self, client):
         response = client.get("/finance/transactions/forecast?currency=GLOBAL", headers=AUTH)
         assert response.status_code == 400
+
+
+@pytest.fixture
+def mock_bulk_service():
+    from app.features.finance.transactions.schemas import (
+        TransactionBulkEditPreview,
+        TransactionBulkEditResult,
+        TransactionBulkEditRevertItem,
+        TransactionBulkRevertResult,
+    )
+    svc = AsyncMock()
+    svc.preview.return_value = TransactionBulkEditPreview(
+        match_count=1, change_count=1, transaction_ids=[1], sample=[_txn_read()],
+        total=Decimal("-45.50"), currency="EUR",
+    )
+    svc.apply.return_value = TransactionBulkEditResult(
+        changed_count=1, revert=[TransactionBulkEditRevertItem(id=1, added_tags=["travel"])],
+    )
+    svc.revert.return_value = TransactionBulkRevertResult(reverted_count=1)
+    return svc
+
+
+@pytest.fixture
+def bulk_client(client, mock_bulk_service):
+    from app.main import app
+    from app.dependencies import get_transaction_bulk_edit_service
+    app.dependency_overrides[get_transaction_bulk_edit_service] = lambda: mock_bulk_service
+    return client
+
+
+class TestBulkEditRoutes:
+    _changes = {"add_tags": ["Travel"]}
+
+    def test_preview_passes_filters_and_changes(self, bulk_client, mock_bulk_service):
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit/preview",
+            json={"filters": {"search": "uber", "tags": ["work"], "max_amount": "20"}, "changes": self._changes},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["transaction_ids"] == [1]
+        request = mock_bulk_service.preview.call_args.args[0]
+        assert request.filters.search == "uber" and request.filters.tags == ["work"]
+        assert request.changes.add_tags == ["travel"]
+
+    def test_preview_error_is_400(self, bulk_client, mock_bulk_service):
+        from app.features.finance.transactions.bulk_edit_service import InvalidBulkEditError
+        mock_bulk_service.preview.side_effect = InvalidBulkEditError("Set at least one filter first")
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit/preview", json={"filters": {}, "changes": self._changes}, headers=AUTH,
+        )
+        assert response.status_code == 400 and response.json()["detail"] == "Set at least one filter first"
+
+    def test_no_change_is_422(self, bulk_client):
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit", json={"transaction_ids": [1], "changes": {}}, headers=AUTH,
+        )
+        assert response.status_code == 422
+
+    def test_apply_returns_changed_count_and_revert(self, bulk_client, mock_bulk_service):
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit",
+            json={"transaction_ids": [1, 2], "changes": {"category_id": 3}},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["changed_count"] == 1
+        assert response.json()["revert"][0]["added_tags"] == ["travel"]
+        assert mock_bulk_service.apply.call_args.args[0].transaction_ids == [1, 2]
+
+    def test_apply_needs_ids(self, bulk_client):
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit", json={"transaction_ids": [], "changes": self._changes}, headers=AUTH,
+        )
+        assert response.status_code == 422
+
+    def test_revert(self, bulk_client, mock_bulk_service):
+        response = bulk_client.post(
+            "/finance/transactions/bulk-edit/revert",
+            json={"items": [{"id": 1, "added_tags": ["travel"]}]},
+            headers=AUTH,
+        )
+        assert response.status_code == 200 and response.json()["reverted_count"] == 1
+
+    @pytest.mark.parametrize("path", ["/bulk-edit/preview", "/bulk-edit", "/bulk-edit/revert"])
+    def test_requires_auth(self, bulk_client, path):
+        assert bulk_client.post(f"/finance/transactions{path}", json={}).status_code == 403

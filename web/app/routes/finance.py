@@ -8,9 +8,11 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from starlette.datastructures import QueryParams
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.forward import error_detail, forward, safe_get
 from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/finance")
@@ -20,7 +22,10 @@ _IMPORT_COMMIT_TIMEOUT = 60.0
 
 
 def _parse_txn_query(request: Request) -> tuple[dict, int]:
-    qp = request.query_params
+    return _parse_txn_params(request.query_params)
+
+
+def _parse_txn_params(qp: QueryParams) -> tuple[dict, int]:
     filters = {
         "type": qp.get("type") or None,
         "category_id": qp.get("category_id") or None,
@@ -667,31 +672,58 @@ async def transactions_list_fragment(request: Request):
     return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
 
 
-@router.post("/transactions/bulk-move", response_class=Response)
-async def bulk_move_transactions(request: Request):
+def _bulk_edit_filters(filters_qs: str) -> tuple[dict, str]:
+    """The transactions page's filter string as a bulk-edit filter body, plus the same
+    string without paging or sort for the "See all" link."""
+    filters, _ = _parse_txn_params(QueryParams(filters_qs))
+    filters.pop("sort", None)
+    body = {k: v for k, v in filters.items() if v}
+    link_params = [(k, v) for k, v in QueryParams(filters_qs).multi_items() if k not in ("offset", "sort")]
+    return body, urlencode(link_params)
+
+
+@router.post("/transactions/bulk-edit/preview", response_class=HTMLResponse)
+async def bulk_edit_preview(request: Request):
     body = await request.json()
-    payload: dict = {
-        "account_id": int(body["account_id"]),
-        "target_account_id": int(body["target_account_id"]),
-    }
-    for key in ("type", "merchant", "from_date", "to_date"):
-        if body.get(key):
-            payload[key] = body[key]
-    if body.get("category_id"):
-        payload["category_id"] = int(body["category_id"])
-
+    filters, link_qs = _bulk_edit_filters(body.get("filters_qs", ""))
     try:
-        await api.post("/finance/transactions/bulk-move", json=payload)
+        preview = await api.post(
+            "/finance/transactions/bulk-edit/preview", json={"filters": filters, "changes": body.get("changes", {})}
+        )
     except httpx.HTTPStatusError as exc:
-        try:
-            detail = exc.response.json().get("detail") or "Failed to move transactions."
-        except ValueError:
-            detail = "Failed to move transactions."
-        return HTMLResponse(detail, status_code=422)
+        return HTMLResponse(html.escape(error_detail(exc, "Could not preview the bulk edit.")), status_code=422)
     except httpx.HTTPError:
-        return HTMLResponse("Failed to move transactions.", status_code=422)
+        return HTMLResponse("Could not preview the bulk edit.", status_code=422)
+    categories = await safe_get("/finance/categories", default=[]) or []
+    accounts = await safe_get("/finance/accounts", default=[]) or []
+    return templates.TemplateResponse(request, "_finance_bulk_edit_preview.html", {
+        "preview": preview,
+        "changes": body.get("changes", {}),
+        "see_all_url": "/finance/transactions" + (f"?{link_qs}" if link_qs else ""),
+        "currency_symbols": await _currency_symbols(),
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
+        "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+    })
 
-    return Response(status_code=200)
+
+@router.post("/transactions/bulk-edit")
+async def bulk_edit_apply(request: Request):
+    body = await request.json()
+    return await forward(
+        api.post("/finance/transactions/bulk-edit", json={
+            "transaction_ids": body.get("transaction_ids", []), "changes": body.get("changes", {}),
+        }),
+        "Could not apply the bulk edit.",
+    )
+
+
+@router.post("/transactions/bulk-edit/revert")
+async def bulk_edit_revert(request: Request):
+    body = await request.json()
+    return await forward(
+        api.post("/finance/transactions/bulk-edit/revert", json={"items": body.get("items", [])}),
+        "Could not undo the bulk edit.",
+    )
 
 
 # --- Data coverage ---

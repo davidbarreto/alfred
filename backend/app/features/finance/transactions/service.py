@@ -34,7 +34,6 @@ from app.features.finance.transactions.schemas import (
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
-    TransactionBulkMoveRequest,
     TransactionCountItem,
     TransactionCoverageResponse,
     TransactionCreate,
@@ -128,15 +127,6 @@ class _TransactionSnapshot:
             counterpart_account_id=txn.counterpart_account_id,
             counterpart_transaction_id=txn.counterpart_transaction_id,
         )
-
-
-class InvalidBulkMoveError(Exception):
-    """Raised when a bulk account-move request is malformed (same source/target
-    account, or a target account that doesn't exist)."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(message)
 
 
 class TransferMatchError(Exception):
@@ -621,21 +611,6 @@ class TransactionService:
         assert updated is not None
         logger.info("Transfer linked: id=%d counterpart_id=%d", transaction.id, counterpart.id)
         return updated
-
-    async def bulk_move_account(self, request: TransactionBulkMoveRequest) -> int:
-        if request.account_id == request.target_account_id:
-            raise InvalidBulkMoveError("Source and target account must be different")
-        target = await self._account_repo.get(request.target_account_id)
-        if target is None:
-            raise InvalidBulkMoveError("Target account not found")
-
-        cycle_start_day = await self._settings.get_cycle_start_day()
-        moved = await self._repo.bulk_reassign_account(request, cycle_start_day)
-        logger.info(
-            "Transactions bulk-moved: source_account_id=%d target_account_id=%d count=%d",
-            request.account_id, request.target_account_id, moved,
-        )
-        return moved
 
     async def spending_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
         from_date, to_date = await self._resolve_period(filters)

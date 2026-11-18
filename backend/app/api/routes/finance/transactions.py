@@ -7,6 +7,7 @@ from app.api.auth import require_auth
 from app.dependencies import (
     AccountServiceDep,
     RecurringTransactionServiceDep,
+    TransactionBulkEditServiceDep,
     TransactionServiceDep,
 )
 from app.features.finance.transactions.schemas import (
@@ -23,8 +24,12 @@ from app.features.finance.transactions.schemas import (
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
-    TransactionBulkMoveRequest,
-    TransactionBulkMoveResponse,
+    TransactionBulkEditPreview,
+    TransactionBulkEditPreviewRequest,
+    TransactionBulkEditRequest,
+    TransactionBulkEditResult,
+    TransactionBulkRevertRequest,
+    TransactionBulkRevertResult,
     TransactionCoverageResponse,
     TransactionCreate,
     TransactionFilters,
@@ -34,7 +39,8 @@ from app.features.finance.transactions.schemas import (
     TransferLinkRequest,
     TransferMatchCandidate,
 )
-from app.features.finance.transactions.service import InvalidBulkMoveError, TransferMatchError
+from app.features.finance.transactions.bulk_edit_service import InvalidBulkEditError
+from app.features.finance.transactions.service import TransferMatchError
 
 router = APIRouter(prefix="/finance/transactions", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -58,13 +64,28 @@ async def transactions_sum(
     return await service.filtered_sum(filters)
 
 
-@router.post("/bulk-move", response_model=TransactionBulkMoveResponse)
-async def bulk_move_transactions(request: TransactionBulkMoveRequest, service: TransactionServiceDep):
+@router.post("/bulk-edit/preview", response_model=TransactionBulkEditPreview)
+async def preview_bulk_edit(request: TransactionBulkEditPreviewRequest, service: TransactionBulkEditServiceDep):
     try:
-        moved = await service.bulk_move_account(request)
-    except InvalidBulkMoveError as exc:
+        return await service.preview(request)
+    except InvalidBulkEditError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
-    return TransactionBulkMoveResponse(moved_count=moved)
+
+
+@router.post("/bulk-edit", response_model=TransactionBulkEditResult)
+async def bulk_edit_transactions(request: TransactionBulkEditRequest, service: TransactionBulkEditServiceDep):
+    try:
+        return await service.apply(request)
+    except InvalidBulkEditError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+
+
+@router.post("/bulk-edit/revert", response_model=TransactionBulkRevertResult)
+async def revert_bulk_edit(request: TransactionBulkRevertRequest, service: TransactionBulkEditServiceDep):
+    try:
+        return await service.revert(request)
+    except InvalidBulkEditError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
 
 
 @router.post("/backfill-eur", response_model=TransactionBackfillEurResponse)

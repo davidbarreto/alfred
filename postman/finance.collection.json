@@ -3092,6 +3092,853 @@
       ]
     },
     {
+      "name": "Bulk Edit",
+      "item": [
+        {
+          "name": "01 - Create Bulk Source Account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Unique per run: the search filter and the new tag must only ever match this run's rows.",
+                  "const run = Date.now();",
+                  "pm.environment.set('finance_bulk_name', 'Postman bulk ' + run);",
+                  "pm.environment.set('finance_bulk_tag', 'postman bulk ' + run);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('finance_bulk_src_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Bulk Source\",\n  \"type\": \"checking\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "02 - Create Bulk Target Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('finance_bulk_dst_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Bulk Target\",\n  \"type\": \"checking\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "03 - Create Bulk Expense A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('finance_bulk_a_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_bulk_src_id}},\n  \"date\": \"2026-06-15T10:00:00\",\n  \"amount\": \"20.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"description\": \"{{finance_bulk_name}}\",\n  \"merchant\": \"POSTMAN SHOP *1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "04 - Create Bulk Expense B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('finance_bulk_b_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_bulk_src_id}},\n  \"date\": \"2026-06-15T10:00:00\",\n  \"amount\": \"30.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"description\": \"{{finance_bulk_name}}\",\n  \"merchant\": \"POSTMAN SHOP *2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "05 - Preview Without Filters Returns 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Asks for a filter', () => pm.expect(pm.response.json().detail).to.include('at least one filter'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": {},\n  \"changes\": {\"add_tags\": [\"anything\"]}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "06 - Preview Without Changes Returns 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": {\"search\": \"x\"},\n  \"changes\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "07 - Preview Tag, Rename And Move",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Matches both expenses and would change both', () => {",
+                  "    pm.expect(json.match_count).to.eql(2);",
+                  "    pm.expect(json.change_count).to.eql(2);",
+                  "    pm.expect(json.transaction_ids).to.have.members([pm.environment.get('finance_bulk_a_id'), pm.environment.get('finance_bulk_b_id')]);",
+                  "});",
+                  "pm.test('Counts each change', () => {",
+                  "    pm.expect(json.add_tags[0]).to.include({name: pm.environment.get('finance_bulk_tag'), count: 2, new: true});",
+                  "    pm.expect(json.merchant_count).to.eql(2);",
+                  "    pm.expect(json.account_count).to.eql(2);",
+                  "    pm.expect(json.sample).to.have.lengthOf(2);",
+                  "    pm.expect(Number(json.total)).to.eql(-50);",
+                  "});",
+                  "pm.environment.set('finance_bulk_ids', JSON.stringify(json.transaction_ids));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": {\n    \"account_id\": {{finance_bulk_src_id}},\n    \"search\": \"{{finance_bulk_name}}\"\n  },\n  \"changes\": {\n    \"add_tags\": [\"{{finance_bulk_tag}}\"],\n    \"merchant\": \"Postman Bulk Shop\",\n    \"account_id\": {{finance_bulk_dst_id}}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08 - Apply Bulk Edit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Changed both and returns what Undo needs', () => {",
+                  "    pm.expect(json.changed_count).to.eql(2);",
+                  "    pm.expect(json.revert).to.have.lengthOf(2);",
+                  "    json.revert.forEach(item => {",
+                  "        pm.expect(item.restore).to.have.members(['merchant', 'account']);",
+                  "        pm.expect(item.account_id).to.eql(pm.environment.get('finance_bulk_src_id'));",
+                  "        pm.expect(item.added_tags).to.eql([pm.environment.get('finance_bulk_tag')]);",
+                  "    });",
+                  "});",
+                  "pm.environment.set('finance_bulk_revert', JSON.stringify(json.revert));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_ids\": {{finance_bulk_ids}},\n  \"changes\": {\n    \"add_tags\": [\"{{finance_bulk_tag}}\"],\n    \"merchant\": \"Postman Bulk Shop\",\n    \"account_id\": {{finance_bulk_dst_id}}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09 - Tagged Transactions Are On The Target Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test('Both carry the tag, the new merchant and the target account', () => {",
+                  "    pm.expect(rows).to.have.lengthOf(2);",
+                  "    rows.forEach(t => {",
+                  "        pm.expect(t.account_id).to.eql(pm.environment.get('finance_bulk_dst_id'));",
+                  "        pm.expect(t.merchant).to.eql('Postman Bulk Shop');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&tags={{finance_bulk_tag}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "tags",
+                  "value": "{{finance_bulk_tag}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "10 - Source Balance Released",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Source account is back to 0', () => pm.expect(Number(pm.response.json().balance)).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_bulk_src_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_bulk_src_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Target Balance Carries The Moved Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Target account is at -50', () => pm.expect(Number(pm.response.json().balance)).to.eql(-50));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_bulk_dst_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_bulk_dst_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Applying Again Changes Nothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Nothing left to change', () => pm.expect(pm.response.json().changed_count).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_ids\": {{finance_bulk_ids}},\n  \"changes\": {\n    \"add_tags\": [\"{{finance_bulk_tag}}\"],\n    \"merchant\": \"Postman Bulk Shop\",\n    \"account_id\": {{finance_bulk_dst_id}}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13 - Undo Bulk Edit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Reverted both', () => pm.expect(pm.response.json().reverted_count).to.eql(2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/bulk-edit/revert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "bulk-edit",
+                "revert"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": {{finance_bulk_revert}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "14 - After Undo Both Are Back As They Were",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test('Original account and merchant, no tag', () => {",
+                  "    pm.expect(rows).to.have.lengthOf(2);",
+                  "    rows.forEach(t => {",
+                  "        pm.expect(t.account_id).to.eql(pm.environment.get('finance_bulk_src_id'));",
+                  "        pm.expect(t.merchant).to.match(/^POSTMAN SHOP/);",
+                  "        pm.expect(t.tags).to.not.include(pm.environment.get('finance_bulk_tag'));",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&search={{finance_bulk_name}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "search",
+                  "value": "{{finance_bulk_name}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "15 - After Undo Source Balance Restored",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Source account is at -50 again', () => pm.expect(Number(pm.response.json().balance)).to.eql(-50));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_bulk_src_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_bulk_src_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16 - Find The Created Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const tag = pm.response.json().find(t => t.name === pm.environment.get('finance_bulk_tag'));",
+                  "pm.test('Bulk edit created the tag', () => pm.expect(tag).to.exist);",
+                  "pm.environment.set('finance_bulk_tag_id', tag ? tag.id : 0);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/tags/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "tags",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "17 - Cleanup - Delete Bulk Expense A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_bulk_a_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_bulk_a_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_bulk_a_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18 - Cleanup - Delete Bulk Expense B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_bulk_b_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_bulk_b_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_bulk_b_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "19 - Cleanup - Delete Bulk Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "['finance_bulk_tag_id', 'finance_bulk_tag', 'finance_bulk_name', 'finance_bulk_ids', 'finance_bulk_revert'].forEach(v => pm.environment.unset(v));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/tags/{{finance_bulk_tag_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "tags",
+                "{{finance_bulk_tag_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20 - Cleanup - Delete Bulk Source Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_bulk_src_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_bulk_src_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_bulk_src_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "21 - Cleanup - Delete Bulk Target Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_bulk_dst_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_bulk_dst_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_bulk_dst_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Budgets",
       "item": [
         {

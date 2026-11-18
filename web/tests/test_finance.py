@@ -1291,89 +1291,126 @@ class TestDeleteAccount:
         mock_api["delete"].assert_awaited_once_with("/finance/accounts/1")
 
 
-class TestBulkMoveTransactions:
-    def _http_status_error(self, detail: str) -> httpx.HTTPStatusError:
-        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-move")
-        response = httpx.Response(400, json={"detail": detail}, request=request)
-        return httpx.HTTPStatusError("Bad Request", request=request, response=response)
+def _bulk_preview(**overrides):
+    preview = {
+        "match_count": 12, "change_count": 10, "transaction_ids": list(range(1, 13)),
+        "sample": [_txn(id=1, merchant="Uber")], "add_tags": [{"name": "travel", "count": 10, "new": True}],
+        "remove_tags": [], "category_count": 0, "merchant_count": 0, "account_count": 0,
+        "linked_transfer_count": 0, "unlink_count": 0, "total": "-120.00", "currency": "EUR",
+    }
+    preview.update(overrides)
+    return preview
 
-    def test_forwards_required_fields(self, client, mock_api):
-        mock_api["post"].return_value = {"moved_count": 5}
 
-        resp = client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": "1", "target_account_id": "2"},
-        )
+class TestBulkEditPreview:
+    def _fake_get(self):
+        async def fake(path, params=None):
+            return {
+                "/finance/categories": [_category(id=3, name="Transport")],
+                "/finance/accounts": [_account(id=1, name="Checking"), _account(id=2, name="Savings")],
+                "/finance/currencies": [{"code": "EUR", "symbol": "€"}],
+            }.get(path, [])
+        return fake
 
-        assert resp.status_code == 200
-        payload = mock_api["post"].call_args.kwargs["json"]
-        assert payload == {"account_id": 1, "target_account_id": 2}
+    def _post(self, client, filters_qs="search=uber", changes=None):
+        return client.post("/finance/transactions/bulk-edit/preview", json={
+            "filters_qs": filters_qs, "changes": changes or {"add_tags": ["travel"]},
+        })
 
-    def test_forwards_optional_filters_when_present(self, client, mock_api):
-        mock_api["post"].return_value = {"moved_count": 5}
+    def test_forwards_every_filter_the_list_shows(self, client, mock_api):
+        # The old bulk move only forwarded type/category/merchant/dates and dropped the rest.
+        mock_api["get"].side_effect = self._fake_get()
+        mock_api["post"].return_value = _bulk_preview()
 
-        client.post(
-            "/finance/transactions/bulk-move",
-            json={
-                "account_id": "1", "target_account_id": "2",
-                "type": "expense", "category_id": "3", "merchant": "Uber",
-                "from_date": "2026-06-01", "to_date": "2026-06-30",
-            },
-        )
-
-        payload = mock_api["post"].call_args.kwargs["json"]
-        assert payload["type"] == "expense"
-        assert payload["category_id"] == 3
-        assert payload["merchant"] == "Uber"
-        assert payload["from_date"] == "2026-06-01"
-        assert payload["to_date"] == "2026-06-30"
-
-    def test_omits_empty_optional_filters(self, client, mock_api):
-        mock_api["post"].return_value = {"moved_count": 5}
-
-        client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": "1", "target_account_id": "2", "type": "", "merchant": ""},
-        )
+        self._post(client, "search=uber&tags=work&tags=car&tags_mode=any&min_amount=5&max_amount=50"
+                           "&uncategorized=true&unconfirmed_transfer=true&account_id=1&sort=amount_desc&offset=40")
 
         payload = mock_api["post"].call_args.kwargs["json"]
-        assert "type" not in payload
-        assert "merchant" not in payload
+        assert mock_api["post"].call_args.args[0] == "/finance/transactions/bulk-edit/preview"
+        assert payload["filters"] == {
+            "search": "uber", "tags": ["work", "car"], "tags_mode": "any", "min_amount": "5", "max_amount": "50",
+            "uncategorized": "true", "unconfirmed_transfer": "true", "account_id": "1",
+        }
+        assert payload["changes"] == {"add_tags": ["travel"]}
 
-    def test_surfaces_api_error_detail(self, client, mock_api):
-        mock_api["post"].side_effect = self._http_status_error("Target account not found")
+    def test_renders_counts_sample_and_see_all_link(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+        mock_api["post"].return_value = _bulk_preview()
 
-        resp = client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": "1", "target_account_id": "999"},
-        )
+        html = self._post(client, "search=uber&offset=20&sort=amount_desc").text
 
-        assert resp.status_code == 422
-        assert "Target account not found" in resp.text
+        assert "<span class=\"font-semibold\">12</span> transactions match" in html
+        assert "to 10" in html and "(new tag)" in html
+        assert "2 already match" in html
+        assert "Uber" in html and "openTransactionDetailModal" in html
+        assert 'href="/finance/transactions?search=uber"' in html and "See all 12" in html
+        assert '<script type="application/json" id="bulk-edit-ids">[1, 2, 3' in html
+        assert "Apply to 10" in html
+        assert "total -€120.00" in html
 
-    def test_generic_error_when_response_not_json(self, client, mock_api):
-        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-move")
-        response = httpx.Response(400, content=b"not json", request=request)
-        mock_api["post"].side_effect = httpx.HTTPStatusError(
-            "Bad Request", request=request, response=response
-        )
+    def test_names_the_category_and_account_and_warns_about_links(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+        mock_api["post"].return_value = _bulk_preview(add_tags=[], category_count=4, account_count=12, unlink_count=2)
 
-        resp = client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": "1", "target_account_id": "2"},
-        )
+        html = self._post(client, "account_id=1", {"category_id": 3, "account_id": 2}).text
 
-        assert resp.status_code == 422
-        assert "Failed to move transactions" in resp.text
+        assert "Set category <span class=\"font-medium\">Transport</span> on 4" in html
+        assert "Move 12 to <span class=\"font-medium\">Savings</span>" in html
+        assert "breaks 2 confirmed transfer links" in html
+
+    def test_nothing_to_change_disables_apply(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+        mock_api["post"].return_value = _bulk_preview(change_count=0, add_tags=[{"name": "travel", "count": 0, "new": False}])
+
+        html = self._post(client).text
+
+        assert "Nothing would change" in html
+        assert "disabled" in html.split('id="bulk-edit-apply-btn"')[1].split(">")[0]
+
+    def test_relays_the_backend_error(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-edit/preview")
+        response = httpx.Response(400, json={"detail": "Set at least one filter first"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+        resp = self._post(client, "")
+
+        assert resp.status_code == 422 and "Set at least one filter first" in resp.text
 
     def test_requires_authentication(self, anon_client):
-        resp = anon_client.post(
-            "/finance/transactions/bulk-move",
-            json={"account_id": "1", "target_account_id": "2"},
-            follow_redirects=False,
+        resp = anon_client.post("/finance/transactions/bulk-edit/preview", json={}, follow_redirects=False)
+        assert resp.status_code == 302 and resp.headers["location"].startswith("/login")
+
+
+class TestBulkEditApplyAndRevert:
+    def test_apply_forwards_ids_and_changes(self, client, mock_api):
+        mock_api["post"].return_value = {"changed_count": 2, "unlink_count": 0, "revert": []}
+
+        resp = client.post("/finance/transactions/bulk-edit", json={
+            "transaction_ids": [1, 2], "changes": {"merchant": "Uber"}, "extra": "dropped",
+        })
+
+        assert resp.status_code == 200 and resp.json()["changed_count"] == 2
+        mock_api["post"].assert_awaited_once_with(
+            "/finance/transactions/bulk-edit", json={"transaction_ids": [1, 2], "changes": {"merchant": "Uber"}},
         )
-        assert resp.status_code == 302
-        assert resp.headers["location"].startswith("/login")
+
+    def test_apply_relays_errors_as_json(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-edit")
+        response = httpx.Response(400, json={"detail": "Account 9 not found"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+        resp = client.post("/finance/transactions/bulk-edit", json={"transaction_ids": [1], "changes": {"account_id": 9}})
+
+        assert resp.status_code == 400 and resp.json()["error"] == "Account 9 not found"
+
+    def test_revert_forwards_the_items(self, client, mock_api):
+        mock_api["post"].return_value = {"reverted_count": 1}
+        items = [{"id": 1, "restore": ["category"], "category_id": None}]
+
+        resp = client.post("/finance/transactions/bulk-edit/revert", json={"items": items})
+
+        assert resp.json() == {"reverted_count": 1}
+        mock_api["post"].assert_awaited_once_with("/finance/transactions/bulk-edit/revert", json={"items": items})
 
 
 class TestTransferCandidates:
@@ -1591,20 +1628,31 @@ class TestAutoMirrorTransfer:
         assert resp.headers["location"].startswith("/login")
 
 
-class TestTransactionsPageBulkMoveButton:
-    def test_shown_when_account_filter_set(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [_account()], [], [], [], []]
-
-        resp = client.get("/finance/transactions?account_id=1")
-
-        assert "Move to account" in resp.text
-
-    def test_hidden_without_account_filter(self, client, mock_api):
+class TestTransactionsPageBulkEditButton:
+    def test_present_but_hidden_without_filters_so_a_filter_change_can_show_it(self, client, mock_api):
+        # The old "Move to account" button was only rendered when the page loaded with an
+        # account filter, so picking one without a reload never showed it.
         mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
-        resp = client.get("/finance/transactions")
+        html = client.get("/finance/transactions").text
 
-        assert "Move to account" not in resp.text
+        assert 'id="txn-bulk-edit-btn"' in html
+        assert "hidden" in html.split('id="txn-bulk-edit-btn"')[1].split(">")[0]
+        assert 'getElementById("txn-bulk-edit-btn").classList.toggle("hidden", !_hasTxnFilters())' in html
+
+    def test_visible_when_the_page_loads_with_a_filter(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
+
+        html = client.get("/finance/transactions?search=uber").text
+
+        assert "hidden" not in html.split('id="txn-bulk-edit-btn"')[1].split(">")[0]
+
+    def test_old_move_button_is_gone(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [_account()], [], [], [], []]
+
+        html = client.get("/finance/transactions?account_id=1").text
+
+        assert "Move to account…" not in html and "bulk-move" not in html
 
 
 def _budget_target(category_id=1, amount="300.00"):

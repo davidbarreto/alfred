@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
-    TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionUpdate,
     TransactionFilters,
@@ -1370,52 +1369,6 @@ class TestMissingAmountEur:
         assert count == 7
 
 
-class TestBulkReassignAccount:
-    async def test_returns_moved_count(self):
-        session = _make_session()
-        result_proxy = MagicMock()
-        result_proxy.rowcount = 12
-        session.execute.return_value = result_proxy
-
-        moved = await TransactionRepository(session).bulk_reassign_account(
-            TransactionBulkMoveRequest(account_id=1, target_account_id=2)
-        )
-
-        assert moved == 12
-        session.commit.assert_called_once()
-
-    async def test_applies_account_and_extra_filters(self):
-        session = _make_session()
-        result_proxy = MagicMock()
-        result_proxy.rowcount = 0
-        session.execute.return_value = result_proxy
-
-        await TransactionRepository(session).bulk_reassign_account(
-            TransactionBulkMoveRequest(
-                account_id=1, target_account_id=2, type="expense", category_id=3,
-            )
-        )
-
-        session.execute.assert_called_once()
-
-    async def test_statement_sets_target_account_and_clears_dedup_hash(self):
-        session = _make_session()
-        result_proxy = MagicMock()
-        result_proxy.rowcount = 0
-        session.execute.return_value = result_proxy
-
-        await TransactionRepository(session).bulk_reassign_account(
-            TransactionBulkMoveRequest(account_id=1, target_account_id=2)
-        )
-
-        stmt = session.execute.call_args[0][0]
-        compiled_values = stmt._values
-        # SQLAlchemy Update._values maps Column -> bound value; match by column name
-        values_by_name = {col.name: val for col, val in compiled_values.items()}
-        assert values_by_name["account_id"].value == 2
-        assert values_by_name["deduplication_hash"].value is None
-
-
 class TestSpendSumsUseMagnitude:
     """Unmatched outgoing transfers count as spend but are stored with a negative
     amount, while expenses are stored as positive magnitudes. Summing the raw column
@@ -1598,3 +1551,80 @@ class TestBudgetedTagExclusion:
             date(2026, 6, 1), date(2026, 6, 30), tag_id=5, older_tag_ids=[]
         )
         assert "IN (" not in self._sql(session)
+
+
+def _pg_sql(stmt) -> str:
+    from sqlalchemy.dialects import postgresql
+    return str(stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+
+
+class TestBulkEditQueries:
+    async def test_list_matching_applies_every_filter_without_paging(self):
+        from app.features.finance.transactions.schemas import TransactionQuery
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        await TransactionRepository(session).list_matching(
+            TransactionQuery(search="uber", tags=["travel"], min_amount=Decimal("5")), limit=2000,
+        )
+
+        sql = _pg_sql(session.execute.call_args.args[0])
+        assert "ILIKE '%%uber%%'" in sql and "lower(finance.tags.name) = 'travel'" in sql
+        assert "abs(finance.transactions.amount_eur) >= 5" in sql
+        assert "LIMIT 2000" in sql and "OFFSET" not in sql
+
+    async def test_get_auto_transfer_ids_skips_the_query_for_no_ids(self):
+        session = _make_session()
+        assert await TransactionRepository(session).get_auto_transfer_ids([]) == set()
+        session.execute.assert_not_awaited()
+
+
+class TestApplyBulkWrite:
+    def _repo(self, session):
+        repo = TransactionRepository(session)
+        repo._tag_repo = AsyncMock()
+        return repo
+
+    async def test_writes_everything_in_one_commit(self):
+        from app.features.finance.transactions.bulk_edit import BulkWrite
+        session = _make_session()
+        removable = MagicMock()
+        removable.all.return_value = [(7, "work")]
+        session.execute.side_effect = [MagicMock(), removable, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        repo = self._repo(session)
+        tag = MagicMock()
+        tag.name, tag.id = "travel", 3
+        repo._tag_repo.resolve_tags.return_value = [tag]
+        write = BulkWrite()
+        write.add_tags["travel"] += [1, 2]
+        write.remove_tags["work"] += [1]
+        write.categories[None] += [1]
+        write.merchants["Uber"] += [2]
+        write.accounts[5] += [1, 2]
+        write.unlink_ids.update({1, 9})
+
+        await repo.apply_bulk_write(write)
+
+        sqls = [_pg_sql(c.args[0]) for c in session.execute.call_args_list]
+        assert "INSERT INTO finance.transactions_tags" in sqls[0] and "ON CONFLICT DO NOTHING" in sqls[0]
+        assert "(1, 3)" in sqls[0] and "(2, 3)" in sqls[0]
+        assert "DELETE FROM finance.transactions_tags" in sqls[2] and "tag_id = 7" in sqls[2]
+        assert "SET category_id=NULL" in sqls[3]
+        assert "SET merchant='Uber'" in sqls[4]
+        assert "account_id=5" in sqls[5] and "deduplication_hash=NULL" in sqls[5]
+        assert "counterpart_transaction_id=NULL" in sqls[6] and "IN (1, 9)" in sqls[6]
+        session.commit.assert_awaited_once()
+
+    async def test_removing_an_unknown_tag_deletes_nothing(self):
+        from app.features.finance.transactions.bulk_edit import BulkWrite
+        session = _make_session()
+        none_found = MagicMock()
+        none_found.all.return_value = []
+        session.execute.return_value = none_found
+        write = BulkWrite()
+        write.remove_tags["nope"] += [1]
+
+        await self._repo(session).apply_bulk_write(write)
+
+        assert session.execute.await_count == 1
+        session.commit.assert_awaited_once()

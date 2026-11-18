@@ -171,6 +171,10 @@ TransactionSort: TypeAlias = Literal[
     "date_desc", "date_asc", "amount_desc", "amount_asc", "name_asc", "name_desc"
 ]
 
+TransactionTagsMode: TypeAlias = Literal["all", "any", "none"]
+"""How the transaction list combines its tag filter. The analytics filters
+(AnalyticsFilters) take only "all" / "any"."""
+
 
 class TransactionFilters:
     def __init__(
@@ -192,7 +196,7 @@ class TransactionFilters:
         installment_plan_id: Annotated[int | None, Query()] = None,
         unconfirmed_transfer: Annotated[bool, Query()] = False,
         tags: Annotated[list[str] | None, Query()] = None,
-        tags_mode: Annotated[Literal["all", "any"], Query()] = "all",
+        tags_mode: Annotated[TransactionTagsMode, Query()] = "all",
         sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
@@ -208,7 +212,7 @@ class TransactionFilters:
         self.tags_mode = tags_mode
         """"all" (default): a transaction must carry every tag in `tags` (AND) --
         e.g. ["Travel", "Barcelona"] means both. "any": carrying at least one is
-        enough (OR)."""
+        enough (OR). "none": it must carry none of them (untagged ones match)."""
         self.search = search
         """Free-text match against any of description / merchant / bank_description
         (the name given by the user and the raw name from the import file), unlike
@@ -268,7 +272,7 @@ class TransactionQuery(BaseModel):
     installment_plan_id: int | None = None
     unconfirmed_transfer: bool = False
     tags: list[str] | None = None
-    tags_mode: Literal["all", "any"] = "all"
+    tags_mode: TransactionTagsMode = "all"
 
     @field_validator("merchant", "search", "period", "currency", mode="before")
     @classmethod

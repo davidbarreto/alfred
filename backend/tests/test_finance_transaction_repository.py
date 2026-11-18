@@ -389,6 +389,19 @@ class TestList:
         assert sql.count("EXISTS") == 1
         assert " IN " in sql
 
+    async def test_multiple_tags_filter_none_mode_negates_the_or(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(
+            TransactionFilters(tags=["Travel", "Barcelona"], tags_mode="none")
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        # One NOT EXISTS: untagged transactions match too.
+        assert sql.count("NOT (EXISTS") == 1
+        assert sql.count("EXISTS") == 1
+        assert "lower(finance.tags.name) IN ('travel', 'barcelona')" in sql
+
     async def test_uncategorized_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

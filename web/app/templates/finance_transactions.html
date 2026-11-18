@@ -37,7 +37,7 @@
       <details id="txn-filter-tags-details" class="relative">
         <summary class="list-none cursor-pointer border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white flex items-center gap-1.5 min-w-[130px]">
           <span id="txn-filter-tags-summary">
-            {% if query_filters.tags %}{{ query_filters.tags | length }} tag{{ "s" if query_filters.tags | length != 1 else "" }}{% else %}All tags{% endif %}
+            {% if query_filters.tags %}{{ "Not " if query_filters.tags_mode == "none" else "" }}{{ query_filters.tags | length }} tag{{ "s" if query_filters.tags | length != 1 else "" }}{{ " (any)" if query_filters.tags_mode == "any" and query_filters.tags | length > 1 else "" }}{% else %}All tags{% endif %}
           </span>
           <i class="ti ti-chevron-down text-xs ml-auto text-gray-400"></i>
         </summary>
@@ -56,6 +56,12 @@
                 {% if query_filters.tags_mode == 'any' %}checked{% endif %}
                 onchange="applyTxnFilters()" />
               Any
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer ml-2" title="Transactions carrying none of the selected tags">
+              <input type="radio" name="txn-filter-tags-mode" value="none"
+                {% if query_filters.tags_mode == 'none' %}checked{% endif %}
+                onchange="applyTxnFilters()" />
+              None
             </label>
             <button type="button" id="txn-filter-tags-clear" onclick="clearTxnTagFilters()"
               class="ml-auto text-[11px] text-gray-400 hover:text-[#378ADD] {% if not query_filters.tags %}hidden{% endif %}">Clear</button>
@@ -481,9 +487,11 @@ function applyTxnFilters() {
   if (tagsClear) tagsClear.classList.toggle("hidden", !document.querySelector(".txn-filter-tag-checkbox:checked"));
   const checked = document.querySelectorAll(".txn-filter-tag-checkbox:checked");
   const tagsModeEl = document.querySelector('input[name="txn-filter-tags-mode"]:checked');
-  const modeSuffix = checked.length > 1 && tagsModeEl && tagsModeEl.value === "any" ? " (any)" : "";
+  const tagsMode = tagsModeEl ? tagsModeEl.value : "all";
+  const modePrefix = tagsMode === "none" ? "Not " : "";
+  const modeSuffix = checked.length > 1 && tagsMode === "any" ? " (any)" : "";
   document.getElementById("txn-filter-tags-summary").textContent =
-    checked.length ? `${checked.length} tag${checked.length !== 1 ? "s" : ""}${modeSuffix}` : "All tags";
+    checked.length ? `${modePrefix}${checked.length} tag${checked.length !== 1 ? "s" : ""}${modeSuffix}` : "All tags";
   refreshTxnList();
 }
 

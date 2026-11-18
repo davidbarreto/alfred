@@ -211,6 +211,13 @@ class TestListTransactions:
         filters = mock_txn_service.list.call_args[0][0]
         assert filters.offset == 40
 
+    def test_tags_mode_none_passed_to_service(self, client, mock_txn_service):
+        response = client.get("/finance/transactions/?tags=Travel&tags_mode=none", headers=AUTH)
+        assert response.status_code == 200
+        filters = mock_txn_service.list.call_args[0][0]
+        assert filters.tags == ["Travel"]
+        assert filters.tags_mode == "none"
+
     def test_offset_defaults_to_zero(self, client, mock_txn_service):
         client.get("/finance/transactions/", headers=AUTH)
         filters = mock_txn_service.list.call_args[0][0]
@@ -500,6 +507,12 @@ class TestSpendingByCategory:
         filters = mock_txn_service.spending_by_category.call_args[0][0]
         assert filters.tags == ["Travel", "Rome"]
         assert filters.tags_mode == "any"
+
+
+    def test_tags_mode_none_is_rejected(self, client, mock_txn_service):
+        # "none" is a list filter only; analytics keep AND / OR.
+        response = client.get("/finance/transactions/by-category?tags=Travel&tags_mode=none", headers=AUTH)
+        assert response.status_code == 422
 
     def test_tags_default_to_unfiltered_all_mode(self, client, mock_txn_service):
         client.get("/finance/transactions/by-category", headers=AUTH)

@@ -3531,6 +3531,62 @@
           }
         },
         {
+          "name": "09b - Tag Filter None Mode Leaves Them Out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "const bulkIds = JSON.parse(pm.environment.get('finance_bulk_ids'));",
+                  "const tag = pm.environment.get('finance_bulk_tag').toLowerCase();",
+                  "pm.test('None of the tagged transactions are listed', () => {",
+                  "    rows.forEach(t => {",
+                  "        pm.expect(bulkIds).to.not.include(t.id);",
+                  "        pm.expect(t.tags.map(n => n.toLowerCase())).to.not.include(tag);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=200&account_id={{finance_bulk_dst_id}}&tags={{finance_bulk_tag}}&tags_mode=none",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "200"
+                },
+                {
+                  "key": "account_id",
+                  "value": "{{finance_bulk_dst_id}}"
+                },
+                {
+                  "key": "tags",
+                  "value": "{{finance_bulk_tag}}"
+                },
+                {
+                  "key": "tags_mode",
+                  "value": "none"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "10 - Source Balance Released",
           "event": [
             {

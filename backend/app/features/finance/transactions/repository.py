@@ -137,16 +137,18 @@ def _build_order_by(sort: str):
 
 
 def _tag_conditions(tags: list[str] | None, tags_mode: str = "all") -> list:
-    """WHERE conditions restricting transactions to those carrying the given tags.
+    """WHERE conditions restricting transactions by the given tags.
 
-    "any" is OR (at least one of the tags); anything else is AND -- a separate .any()
-    per tag name, so a transaction must carry every tag (e.g. Travel AND Barcelona).
+    "any" is OR (at least one of the tags); "none" is its negation (none of the tags,
+    untagged transactions included); anything else is AND -- a separate .any() per
+    tag name, so a transaction must carry every tag (e.g. Travel AND Barcelona).
     Names compare case-insensitively.
     """
     if not tags:
         return []
-    if tags_mode == "any":
-        return [Transaction.tags.any(func.lower(FinanceTag.name).in_([t.lower() for t in tags]))]
+    if tags_mode in ("any", "none"):
+        carries_any = Transaction.tags.any(func.lower(FinanceTag.name).in_([t.lower() for t in tags]))
+        return [~carries_any if tags_mode == "none" else carries_any]
     return [Transaction.tags.any(func.lower(FinanceTag.name) == name.lower()) for name in tags]
 
 

@@ -21,6 +21,7 @@ class TestTransactionQuery:
     def test_is_empty_without_filters(self):
         assert TransactionQuery().is_empty()
         assert TransactionQuery(tags_mode="any").is_empty()
+        assert TransactionQuery(tags_mode="none").is_empty()
 
     @pytest.mark.parametrize("field,value", [
         ("search", "uber"), ("tags", ["travel"]), ("min_amount", "10"), ("uncategorized", True),

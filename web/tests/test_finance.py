@@ -85,6 +85,19 @@ class TestTransactionsPage:
         assert "checked" in resp.text[resp.text.index('value="Travel"'):][:120]
         assert "history.replaceState" in resp.text
 
+    def test_tags_mode_none_is_passed_restored_and_summarised(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], [],
+        ]
+
+        resp = client.get("/finance/transactions?tags=Travel&tags_mode=none")
+
+        params = mock_api["get"].call_args_list[0].kwargs.get("params", {})
+        assert params.get("tags_mode") == "none"
+        assert 'value="none"\n                checked' in resp.text
+        summary = resp.text[resp.text.index('id="txn-filter-tags-summary"'):][:120]
+        assert "Not 1 tag" in summary
+
     def test_amount_range_filter_is_restored_and_shows_the_clear_button(self, client, mock_api):
         mock_api["get"].side_effect = [[], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], []]
 

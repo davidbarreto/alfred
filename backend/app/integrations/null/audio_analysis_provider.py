@@ -1,4 +1,4 @@
-from app.shared.audio import PronunciationAnalysis, PronunciationAnalysisResult
+from app.shared.protocols.audio import PronunciationAnalysis, PronunciationAnalysisResult
 
 _CANNED_TEXT = "[stubbed pronunciation analysis — integrations disabled]"
 

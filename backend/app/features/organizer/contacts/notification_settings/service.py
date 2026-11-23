@@ -9,7 +9,7 @@ from app.features.organizer.contacts.notification_settings.schemas import (
     ContactBirthdayCascadeUpdate,
     ContactBirthdayCascadesRead,
 )
-from app.shared.notification_offsets import parse_offset
+from app.shared.utils.time_text import parse_offset
 
 logger = logging.getLogger(__name__)
 

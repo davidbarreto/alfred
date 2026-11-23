@@ -16,7 +16,7 @@ from app.features.finance.recurring_transactions.schemas import (
 )
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

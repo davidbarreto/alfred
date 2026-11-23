@@ -10,7 +10,7 @@ from app.nlp.patterns import (
     _AMOUNT_RE, _MERCHANT_RE, _EXPENSE_INTENT_RE, _INCOME_INTENT_RE,
     _TIME_RANGE_RE, _TIME_SINGLE_RE,
 )
-from app.shared.timezone import local_naive_now
+from app.shared.utils.timezone import local_naive_now
 
 _CURRENCY_SYMBOL_MAP = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
 _CURRENCY_WORD_MAP = {

@@ -6,7 +6,7 @@ from app.features.organizer.interviews.tags.tables import (
     interview_question_tag_links,
     interview_story_tag_links,
 )
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 
 class InterviewTagRepository:

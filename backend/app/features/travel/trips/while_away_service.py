@@ -8,7 +8,7 @@ from app.features.finance.recurring_transactions.service import next_occurrence
 from app.features.organizer.contacts.repository import ContactRepository
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.while_away import (
     AwayBirthday, AwayCharge, AwayTask, WhileAway, birthdays_between, occurrences_between,

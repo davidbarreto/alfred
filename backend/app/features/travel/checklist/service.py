@@ -11,7 +11,7 @@ from app.features.travel.checklist import template
 from app.features.travel.checklist.schemas import ChecklistGenerated, ChecklistItemRead
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.trips.repository import TripRepository
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

@@ -17,8 +17,8 @@ from app.features.organizer.locations.schemas import (
 )
 from app.features.organizer.locations.tables import HOME_KIND, Location
 from app.features.organizer.shopping_categories.tables import ShoppingCategory
-from app.shared.holiday import HolidayProvider
-from app.shared.timezone import local_now
+from app.shared.protocols.holiday import HolidayProvider
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

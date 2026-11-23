@@ -1,4 +1,4 @@
-from app.shared.conversation import ConversationTurnResult
+from app.shared.protocols.conversation import ConversationTurnResult
 
 _CANNED_REPLY = "[stubbed conversation reply — integrations disabled]"
 

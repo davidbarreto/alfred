@@ -9,7 +9,7 @@ from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.settings_schemas import TravelSettingsRead, TravelSettingsUpdate
 from app.features.travel.trips.home import HOME_FIELDS
 from app.features.travel.trips.repository import TripRepository
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

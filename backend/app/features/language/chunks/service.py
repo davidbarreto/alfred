@@ -29,7 +29,7 @@ from app.features.language.srs import (
     is_leech,
 )
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

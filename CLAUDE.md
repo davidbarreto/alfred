@@ -48,7 +48,7 @@ alfred/
 │   ├── assistant/         # commands/ (registry, resolver, executor, handlers), intents/
 │   ├── features/          # <domain>/<feature>/: tables, schemas, repository, service
 │   ├── integrations/      # Notion, Google, OpenAI, sentence-transformers, llm_calls, ...
-│   ├── shared/            # Protocols, timezone helpers
+│   ├── shared/            # protocols/ (provider contracts), utils/ (timezone, time_text, tags, links, ...)
 │   ├── dependencies.py    # All FastAPI Depends() factories and type aliases
 │   └── db/                # Base, session, custom types
 ├── backend/alembic/versions/
@@ -85,7 +85,7 @@ Full tree: `docs/architecture.md`.
 - New boolean columns: plain names (`active`, `enabled`), no `is_` prefix. Timestamps `<verb>_at`. Tags are stored trimmed and lowercase via `normalize_tag_name`. More: `docs/conventions.md`
 
 ### Dates & timezones (summary)
-Storage is UTC and containers run in UTC. Never call `date.today()`, naive `datetime.now()` or `datetime.utcnow()` for anything the user sees; use `local_today()` / `local_now()` / `local_naive_now()` from `app/shared/timezone.py` (portal: `web/app/shared/timezone.py`). Day boundaries are local midnights. Read `docs/dates-and-timezones.md` before touching date logic.
+Storage is UTC and containers run in UTC. Never call `date.today()`, naive `datetime.now()` or `datetime.utcnow()` for anything the user sees; use `local_today()` / `local_now()` / `local_naive_now()` from `app/shared/utils/timezone.py` (portal: `web/app/shared/timezone.py`). Day boundaries are local midnights. Read `docs/dates-and-timezones.md` before touching date logic.
 
 ### n8n Workflows
 - Telegram bot is the primary user interface; Telegram is input only via n8n, never call its API from FastAPI

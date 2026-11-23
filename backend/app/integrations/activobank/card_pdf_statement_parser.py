@@ -82,7 +82,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from app.shared.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
+from app.shared.protocols.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
 
 logger = logging.getLogger(__name__)
 

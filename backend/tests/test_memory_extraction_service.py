@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.memories.schemas import MemoryRead
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_llm_provider(response_text: str) -> MagicMock:

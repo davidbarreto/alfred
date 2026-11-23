@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, time
 
-from app.shared.clock import (
+from app.shared.utils.time_text import (
     MINUTES_PER_DAY,
     WEEKDAYS,
     format_clock,

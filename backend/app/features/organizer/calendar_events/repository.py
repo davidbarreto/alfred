@@ -16,7 +16,7 @@ from app.features.organizer.calendar_events.tables import (
     CalendarEvent, CalendarEventInvitee, CalendarEventOverride, CalendarEventSkip,
 )
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 _EVENT_EXCLUDE = {"tags", "invitees"}
 

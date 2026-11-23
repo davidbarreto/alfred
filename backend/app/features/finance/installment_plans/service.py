@@ -21,7 +21,7 @@ from app.features.finance.installment_plans.schemas import (
 from app.features.finance.installment_plans.tables import InstallmentPlan
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.tables import Transaction
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

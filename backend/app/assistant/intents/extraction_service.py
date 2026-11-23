@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_EXTRACTION_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
-from app.shared.timezone import local_now
+from app.shared.protocols.llm import LlmProvider
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

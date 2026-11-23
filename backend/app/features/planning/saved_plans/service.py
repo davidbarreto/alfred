@@ -17,7 +17,7 @@ from app.features.planning.saved_plans.schemas import (
     SavedPlanSummary,
 )
 from app.features.planning.timeline import iso_local
-from app.shared.timezone import local_now, local_timezone
+from app.shared.utils.timezone import local_now, local_timezone
 
 logger = logging.getLogger(__name__)
 

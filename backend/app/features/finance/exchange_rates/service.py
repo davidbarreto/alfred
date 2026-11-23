@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.exchange_rates.repository import ExchangeRateRepository
-from app.shared.exchange_rate import ExchangeRateProvider
+from app.shared.protocols.exchange_rate import ExchangeRateProvider
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from app.features.language.chunks.pronunciation_service import PronunciationService
-from app.shared.pronunciation import TtsAudioResult
+from app.shared.protocols.pronunciation import TtsAudioResult
 
 
 def _make_service(**kwargs):

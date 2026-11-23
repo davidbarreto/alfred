@@ -10,7 +10,7 @@ from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
 from app.features.core.prompts import SESSION_SUMMARY_PROMPT
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

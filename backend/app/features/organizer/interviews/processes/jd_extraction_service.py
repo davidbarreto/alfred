@@ -12,7 +12,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.features.organizer.interviews.processes.prompts import JD_EXTRACTION_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

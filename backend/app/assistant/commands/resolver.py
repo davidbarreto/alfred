@@ -13,9 +13,9 @@ from app.assistant.intents.shortlist_service import resolve_via_shortlist
 from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
-from app.shared.llm import LlmProvider
-from app.shared.timezone import local_naive_now
-from app.shared.timezone import local_today
+from app.shared.protocols.llm import LlmProvider
+from app.shared.utils.timezone import local_naive_now
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

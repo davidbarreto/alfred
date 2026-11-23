@@ -8,7 +8,7 @@ from app.features.core.transcription.schemas import TranscriptionRead
 from app.features.organizer.contacts.repository import ContactRepository
 from app.features.organizer.contacts.schemas import ContactFilters
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import TranscriptionProvider
+from app.shared.protocols.audio import TranscriptionProvider
 
 logger = logging.getLogger(__name__)
 

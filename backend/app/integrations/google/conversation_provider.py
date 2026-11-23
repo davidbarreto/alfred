@@ -6,7 +6,7 @@ import logging
 from google import genai
 from google.genai import types
 
-from app.shared.conversation import ConversationTurnResult
+from app.shared.protocols.conversation import ConversationTurnResult
 
 logger = logging.getLogger(__name__)
 

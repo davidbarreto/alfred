@@ -22,8 +22,8 @@ from app.features.finance.transactions.schemas import (
     TransactionUpdate,
 )
 from app.features.finance.transactions.service import TransactionService
-from app.shared.timezone import local_today
-from app.shared.timezone import local_naive_now
+from app.shared.utils.timezone import local_today
+from app.shared.utils.timezone import local_naive_now
 
 
 def _parse_decimal(value: str | None) -> Decimal | None:

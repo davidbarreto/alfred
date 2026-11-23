@@ -5,7 +5,7 @@ import pytest
 
 from app.features.briefing.evening_formatter_service import EveningDigestFormatterService, _build_context
 from app.features.briefing.schemas import EveningDigest, EveningEventItem, EveningNoteItem, EveningTaskItem, FormattedBriefing, WinItem
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_digest(**kwargs) -> EveningDigest:

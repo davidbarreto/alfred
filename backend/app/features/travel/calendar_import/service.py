@@ -10,7 +10,7 @@ from app.features.travel.calendar_import.schemas import CalendarCandidate
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository
-from app.shared.timezone import local_timezone, local_timezone_name
+from app.shared.utils.timezone import local_timezone, local_timezone_name
 
 logger = logging.getLogger(__name__)
 

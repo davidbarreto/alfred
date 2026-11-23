@@ -6,8 +6,8 @@ from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.storage import StorageProvider
-from app.shared.timezone import local_now, local_timezone
+from app.shared.protocols.storage import StorageProvider
+from app.shared.utils.timezone import local_now, local_timezone
 from app.features.organizer.calendar_events.tables import CalendarEvent  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
 from app.features.organizer.calendar_events.schemas import (
     CalendarSyncResult,

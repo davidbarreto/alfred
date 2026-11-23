@@ -14,7 +14,7 @@ from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripDetail
 from app.features.travel.trips.service import TripService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

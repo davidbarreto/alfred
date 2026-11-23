@@ -48,6 +48,17 @@ When a feature needs multiple services (e.g. briefing), use descriptive prefixes
 - Place static path routes (e.g. `/history`) **before** parameterised routes (e.g. `/{id}`) to avoid routing conflicts
 - All `Depends()` factories are declared in `app/dependencies.py` as `Annotated` type aliases (e.g. `TaskServiceDep`)
 
+## Shared code (`app/shared/`)
+
+Two folders, nothing else at the top level:
+
+| Folder | Holds |
+|---|---|
+| `protocols/` | One file per provider contract (`llm.py`, `storage.py`, `holiday.py`, ...): the `Protocol` class and the result types it returns. No functions. |
+| `utils/` | Pure helpers used by more than one feature: `timezone.py` ("now" and "today" in the user's zone), `time_text.py` (weekdays, HH:MM, offsets like `7d`), `tags.py`, `links.py`, `tts.py`, `statement_text.py`. |
+
+A helper used by one feature stays in that feature (e.g. `locations/hours.py`); move it here when a second feature needs it.
+
 ## Integration module layout
 
 External provider integrations live under `app/integrations/<provider>/`:
@@ -70,7 +81,7 @@ Route handlers in `web/app/routes/` stay thin: fetch from the backend API throug
 - Migrations must be reversible (`downgrade` implemented)
 - A migration is edited only while it is unpushed: when several unpushed commits change the same migration file, squash them so the file is introduced (or changed) in one commit. Also squash when a later unpushed commit undoes an earlier one (add then delete, or delete then add, the same change), so the history carries only the net result. Once any commit that touches a migration has been pushed, never edit that file again; add a new migration instead
 - After schema changes, verify all affected modules still align
-- Tag names (any tag table) are stored trimmed and lowercase: normalize on write with `normalize_tag_name` (`app/shared/tags.py`) or the schema validators, so "Family" and "family" never coexist
+- Tag names (any tag table) are stored trimmed and lowercase: normalize on write with `normalize_tag_name` (`app/shared/utils/tags.py`) or the schema validators, so "Family" and "family" never coexist
 - Boolean columns use plain adjective/state names (`active`, `enabled`, `all_day`, `case_sensitive`), not an `is_` prefix, and Pydantic fields mirror the column name. Some older columns still use `is_*` (`is_done`, `is_active`, `is_archived`, ...); leave them until they are standardized deliberately, but don't add new ones. State-change timestamps are `<verb>_at` (`archived_at`, `deleted_at`, `completed_at`); prefer a timestamp over a boolean when "when" matters.
 
 ## Logging

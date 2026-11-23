@@ -21,9 +21,9 @@ from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_tod
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.features.travel.briefing import TripBriefService
-from app.shared.holiday import HolidayProvider
-from app.shared.timezone import local_now
-from app.shared.weather import WeatherProvider
+from app.shared.protocols.holiday import HolidayProvider
+from app.shared.utils.timezone import local_now
+from app.shared.protocols.weather import WeatherProvider
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 
-from app.shared.llm import LlmResponse, StreamMeta
+from app.shared.protocols.llm import LlmResponse, StreamMeta
 
 _CANNED_TEXT = "[stubbed LLM response — integrations disabled]"
 

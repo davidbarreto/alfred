@@ -1,4 +1,4 @@
-from app.shared.audio import styled_for_tts
+from app.shared.utils.tts import styled_for_tts
 
 
 class TestStyledForTts:

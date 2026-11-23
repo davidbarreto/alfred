@@ -9,7 +9,7 @@ from app.features.organizer.calendar_events.notification_settings.schemas import
     CalendarNotificationCascadeUpdate,
     CalendarNotificationCascadesRead,
 )
-from app.shared.notification_offsets import parse_offset
+from app.shared.utils.time_text import parse_offset
 
 logger = logging.getLogger(__name__)
 

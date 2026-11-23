@@ -1,4 +1,4 @@
-"""Time-of-day and weekday helpers: HH:MM <-> minutes since midnight, weekday keys and their short text forms.
+"""Time values written as text: weekday keys and names, HH:MM <-> minutes since midnight, and offsets like "7d".
 
 Pure functions with no timezone logic (see `timezone.py` for "now" and "today"). Bad input raises ValueError
 with a message fit to show the user.
@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, timedelta
+
+from dateutil.relativedelta import relativedelta
 
 WEEKDAYS: tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 MINUTES_PER_DAY = 24 * 60
@@ -18,6 +20,7 @@ _WEEKDAY_NAMES = {
     "thurs": "thu", "friday": "fri", "saturday": "sat", "sunday": "sun",
 }
 _CLOCK = re.compile(r"^(\d{1,2})(?::(\d{2}))?$")
+_OFFSET_PATTERN = re.compile(r"^(\d+)(mo|[dhm])$")
 
 
 def weekday_key(day: date) -> str:
@@ -65,3 +68,26 @@ def parse_clock(value: str) -> int:
 def format_clock(minutes: int) -> str:
     """"HH:MM" for minutes since midnight (1440 -> "24:00")."""
     return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def parse_offset(offset: str) -> timedelta | relativedelta:
+    """Parse a cascade offset string like "7d", "4h", "30m", "1mo", or "0".
+
+    "mo" is calendar-exact month subtraction (relativedelta), so "1mo before
+    Aug 23" lands on Jul 23 regardless of month length. Every other unit is a
+    fixed-length timedelta.
+    """
+    if offset == "0":
+        return timedelta()
+    match = _OFFSET_PATTERN.match(offset)
+    if match is None:
+        raise ValueError(f"Invalid notification offset: {offset!r}")
+    amount, unit = match.groups()
+    amount = int(amount)
+    if unit == "mo":
+        return relativedelta(months=amount)
+    if unit == "d":
+        return timedelta(days=amount)
+    if unit == "h":
+        return timedelta(hours=amount)
+    return timedelta(minutes=amount)

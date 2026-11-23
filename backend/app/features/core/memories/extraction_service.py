@@ -13,8 +13,8 @@ from app.features.core.memories.schemas import MemoryCategory, MemoryCreate, Mem
 from app.features.core.memories.service import MemoryService
 from app.features.core.prompts import MEMORY_EXTRACTION_PROMPT
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.embedding import EmbeddingProvider
-from app.shared.llm import LlmProvider
+from app.shared.protocols.embedding import EmbeddingProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

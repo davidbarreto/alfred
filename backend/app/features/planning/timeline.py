@@ -18,7 +18,7 @@ from app.features.organizer.routines.expansion import (
 )
 from app.features.organizer.tasks.recurrence import is_due_today, parse_byday
 from app.features.planning.schemas import AllDayItem, RoutineBlock, TimelineItem
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 _UTC = timezone.utc
 

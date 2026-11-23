@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.language.chunks.tables import Chunk, LanguageTag
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 from app.features.language.chunks.schemas import ChunkCreate, ChunkUpdate, ChunkFilters
 
 _CHUNK_CREATE_EXCLUDE = {"tags"}

@@ -10,7 +10,7 @@ from app.features.organizer.notes.service import NoteService
 from app.features.organizer.tasks.ranking import task_priority_sort_key
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.features.organizer.tasks.service import TaskService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

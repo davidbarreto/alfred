@@ -13,8 +13,8 @@ from app.assistant.intents.extraction_service import get_schema_for_intent
 from app.assistant.intents.intent_service import IntentResult
 from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_SHORTLIST_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
-from app.shared.timezone import local_now
+from app.shared.protocols.llm import LlmProvider
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

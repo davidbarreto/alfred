@@ -23,7 +23,7 @@ from app.features.organizer.tasks.schemas import TaskFilters, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
 from app.features.study.plans.service import StudyPlanService
 from app.features.travel.reminders import TravelReminderService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

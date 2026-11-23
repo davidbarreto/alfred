@@ -24,8 +24,8 @@ from app.features.finance.imports.service import (
     _rule_matches,
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
-from app.shared.llm import LlmResponse
-from app.shared.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
+from app.shared.protocols.llm import LlmResponse
+from app.shared.protocols.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
 
 
 def _row(**kwargs) -> ParsedRow:

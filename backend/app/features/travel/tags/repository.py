@@ -2,7 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.travel.tags.tables import TravelTag, places_tags, trips_tags
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 
 class TravelTagRepository:

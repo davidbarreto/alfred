@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.language.chunks.tables import Chunk
 from app.features.language.sessions.tables import LearningSession
 from app.features.language.sessions.schemas import SessionFilters
-from app.shared.timezone import local_today
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_today
+from app.shared.utils.timezone import local_timezone
 
 
 class SessionRepository:

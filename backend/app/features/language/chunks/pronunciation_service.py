@@ -2,8 +2,8 @@ import hashlib
 import logging
 from typing import Literal
 
-from app.shared.audio import AudioConverter, FileStorage
-from app.shared.pronunciation import PronunciationProvider, TtsAudioResult
+from app.shared.protocols.audio import AudioConverter, FileStorage
+from app.shared.protocols.pronunciation import PronunciationProvider, TtsAudioResult
 
 logger = logging.getLogger(__name__)
 

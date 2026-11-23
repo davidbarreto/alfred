@@ -38,9 +38,9 @@ from app.features.planning.schemas import (
 from app.features.planning.saved_plans.schemas import SavedDayPlanRead
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.study.plans.service import StudyPlanService
-from app.shared.clock import weekday_key
-from app.shared.holiday import HolidayProvider
-from app.shared.timezone import local_now, local_timezone, local_timezone_name, local_today
+from app.shared.utils.time_text import weekday_key
+from app.shared.protocols.holiday import HolidayProvider
+from app.shared.utils.timezone import local_now, local_timezone, local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 

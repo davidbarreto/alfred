@@ -10,7 +10,7 @@ from app.features.study.generator.service import (
     StudyPlanGeneratorService,
     StudyTrackNotFoundError,
 )
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 _NOW = datetime(2026, 9, 27, tzinfo=timezone.utc)
 _PATCH_LLM_LOG = "app.features.study.generator.service.create_llm_call"

@@ -13,7 +13,7 @@ from app.features.organizer.tasks.schemas import (
 from app.features.organizer.tasks.service import CompletionConflictError
 from app.api.auth import require_auth
 from app.dependencies import TaskServiceDep, WorkingMemoryServiceDep
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
 

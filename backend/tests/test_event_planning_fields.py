@@ -18,7 +18,7 @@ from app.features.organizer.calendar_events.schemas import EventCreate, EventRea
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.calendar_events.tables import CalendarEvent
 from app.integrations.google_calendar.provider import GoogleCalendarProvider
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 _START = datetime(2026, 10, 21, 20, 0)
 _END = datetime(2026, 10, 21, 21, 0)

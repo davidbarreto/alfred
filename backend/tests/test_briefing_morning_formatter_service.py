@@ -25,7 +25,7 @@ from app.features.briefing.schemas import (
     TaskBriefItem,
     WeatherForecast,
 )
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_briefing(**kwargs) -> MorningBriefing:

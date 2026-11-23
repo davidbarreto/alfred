@@ -48,8 +48,8 @@ from app.features.language.srs import score_to_quality
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioConverter, FileStorage
-from app.shared.llm import LlmProvider
+from app.shared.protocols.audio import AudioConverter, FileStorage
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

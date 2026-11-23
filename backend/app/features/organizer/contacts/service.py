@@ -14,7 +14,7 @@ from app.features.organizer.contacts.schemas import (
     ContactUpdate,
 )
 from app.integrations.google_contacts.client import GoogleContactsClient
-from app.shared.storage import StorageProvider
+from app.shared.protocols.storage import StorageProvider
 
 logger = logging.getLogger(__name__)
 

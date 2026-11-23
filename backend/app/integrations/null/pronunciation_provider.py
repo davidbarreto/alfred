@@ -1,4 +1,4 @@
-from app.shared.pronunciation import TtsAudioResult
+from app.shared.protocols.pronunciation import TtsAudioResult
 
 
 class NullPronunciationProvider:

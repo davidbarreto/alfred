@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.features.language.conversation.service import ConversationService
 from app.integrations.google.tts_provider import TtsSynthesisError
-from app.shared.conversation import ConversationTurnResult
-from app.shared.llm import LlmResponse
-from app.shared.pronunciation import TtsAudioResult
+from app.shared.protocols.conversation import ConversationTurnResult
+from app.shared.protocols.llm import LlmResponse
+from app.shared.protocols.pronunciation import TtsAudioResult
 
 _THREAD_STARTED_AT = datetime(2020, 1, 1, tzinfo=timezone.utc)
 

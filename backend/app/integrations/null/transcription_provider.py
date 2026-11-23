@@ -1,4 +1,4 @@
-from app.shared.audio import TranscriptionResult
+from app.shared.protocols.audio import TranscriptionResult
 
 _CANNED_TEXT = "[stubbed transcription — integrations disabled]"
 

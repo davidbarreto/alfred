@@ -4,7 +4,7 @@ from app.features.finance.tags.schemas import TagCreate, TagUpdate
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.study.tags.repository import StudyTagRepository
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 
 def _session_without_tags() -> MagicMock:

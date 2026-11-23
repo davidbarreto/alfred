@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.tags.tables import Tag
 from app.features.organizer.notes.tables import Note
 from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFilters
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 _NOTE_EXCLUDE = {"tags"}
 

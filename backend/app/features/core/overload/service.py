@@ -17,7 +17,7 @@ from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.organizer.tasks.recurrence import is_pending_today
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.features.organizer.tasks.service import TaskService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

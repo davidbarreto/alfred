@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from freezegun import freeze_time
 
-from app.shared.timezone import local_naive_now, local_today
+from app.shared.utils.timezone import local_naive_now, local_today
 
 
 class TestLocalToday:

@@ -30,7 +30,7 @@ from sqlalchemy import select, update as sa_update
 
 from app.db.session import async_session
 from app.features.language.chunks.tables import Chunk, LanguageTag
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 from app.features.language.grammar_scope.tables import GrammarScope
 from app.features.language.tracks.tables import Track
 

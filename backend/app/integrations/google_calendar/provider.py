@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.provider_calls.repository import create_sync_log
-from app.shared.timezone import local_timezone, local_timezone_name
+from app.shared.utils.timezone import local_timezone, local_timezone_name
 
 from .client import GoogleCalendarClient
 

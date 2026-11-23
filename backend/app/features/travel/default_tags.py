@@ -9,7 +9,7 @@ from app.features.finance.tags.repository import TagRepository
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.trips.repository import TripRepository
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 logger = logging.getLogger(__name__)
 

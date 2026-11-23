@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.storage import StorageProvider
+from app.shared.protocols.storage import StorageProvider
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
@@ -17,7 +17,7 @@ from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_c
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.core.embeddings.schemas import EmbeddingCreate
 from app.features.core.embeddings.service import EmbeddingService
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

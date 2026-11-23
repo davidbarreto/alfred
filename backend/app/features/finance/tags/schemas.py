@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 
 class TagBase(BaseModel):

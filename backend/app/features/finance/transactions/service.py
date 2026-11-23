@@ -47,7 +47,7 @@ from app.features.finance.transactions.schemas import (
     resolve_period,
 )
 from app.features.travel.default_tags import TripDefaultTagService
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 
 def _account_delta(type_: str, amount: Decimal) -> Decimal:

@@ -26,7 +26,8 @@ import io
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from app.shared.statement import ParsedRow, ParsedStatement, decode
+from app.shared.protocols.statement import ParsedRow, ParsedStatement
+from app.shared.utils.statement_text import decode
 
 _PROVIDER = "coverflex_card"
 _HEADER = (

@@ -16,7 +16,7 @@ Code: `backend/app/features/organizer/locations/`. Portal: `/locations`. Command
 
 Stored per weekday plus `hol` for public holidays: `{"mon": [["08:00", "20:00"]], "sat": [["09:00", "13:00"], ["15:00", "19:00"]], "sun": [], "hol": []}`. A missing key is unknown, an empty list is closed, several ranges allow a lunch break. Overnight ranges are not supported; `24:00` is a valid end.
 
-Everyone writes them as text, parsed by one pure module (`locations/hours.py`, on top of the weekday and HH:MM helpers in `app/shared/clock.py`):
+Everyone writes them as text, parsed by one pure module (`locations/hours.py`, on top of the weekday and HH:MM helpers in `app/shared/utils/time_text.py`):
 
 ```
 mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed

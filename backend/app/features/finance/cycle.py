@@ -6,7 +6,7 @@ next, and is labeled by the calendar month it starts in (e.g. cycle_start_day=25
 """
 import calendar
 from datetime import date, timedelta
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 
 def _clamp_day(year: int, month: int, day: int) -> int:

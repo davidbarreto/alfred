@@ -36,9 +36,10 @@ from app.features.language.sessions.schemas import SessionCreate
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.repository import TrackRepository
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioConverter, FileStorage, styled_for_tts
-from app.shared.conversation import ConversationProvider, ConversationTurnResult
-from app.shared.llm import LlmProvider
+from app.shared.protocols.audio import AudioConverter, FileStorage
+from app.shared.utils.tts import styled_for_tts
+from app.shared.protocols.conversation import ConversationProvider, ConversationTurnResult
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

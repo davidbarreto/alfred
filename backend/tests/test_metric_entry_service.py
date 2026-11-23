@@ -25,7 +25,7 @@ from app.features.metrics.entries.service import (
 from app.features.metrics.entries.tables import MetricEntry
 from app.features.metrics.series.tables import MetricSeries
 from app.features.metrics.tags.tables import MetricTag
-from app.shared.weather import WeatherSnapshot
+from app.shared.protocols.weather import WeatherSnapshot
 
 NOW = datetime(2026, 10, 21, 9, 0, tzinfo=timezone.utc)
 

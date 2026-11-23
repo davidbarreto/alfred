@@ -15,7 +15,7 @@ from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_tod
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.features.travel.briefing import TripBriefService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

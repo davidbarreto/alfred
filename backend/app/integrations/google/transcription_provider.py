@@ -5,7 +5,7 @@ import logging
 from google import genai
 from google.genai import types
 
-from app.shared.audio import TranscriptionResult
+from app.shared.protocols.audio import TranscriptionResult
 
 logger = logging.getLogger(__name__)
 

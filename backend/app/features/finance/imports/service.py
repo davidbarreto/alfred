@@ -50,9 +50,9 @@ from app.features.finance.transactions.service import build_mirror_transaction_c
 from app.features.finance.transactions.tables import Transaction
 from app.features.travel.default_tags import TripDefaultTagService, TripTagWindows
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import FileStorage
-from app.shared.llm import LlmProvider
-from app.shared.statement import ParsedRow, StatementParser
+from app.shared.protocols.audio import FileStorage
+from app.shared.protocols.llm import LlmProvider
+from app.shared.protocols.statement import ParsedRow, StatementParser
 
 logger = logging.getLogger(__name__)
 

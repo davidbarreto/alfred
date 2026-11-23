@@ -6,11 +6,11 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.features.travel.legs.schemas import LegRead
-from app.shared.links import maps_directions_url, maps_search_url, place_maps_url
+from app.shared.utils.links import maps_directions_url, maps_search_url, place_maps_url
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.zones import to_local
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 # Arriving this long before the room is ready is worth a heads-up (luggage storage, a cafe).
 LONG_WAIT_BEFORE_CHECK_IN = timedelta(hours=4)

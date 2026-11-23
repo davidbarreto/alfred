@@ -18,7 +18,7 @@ from app.features.organizer.interviews.processes.schemas import (
     InterviewProcessUpdate,
 )
 from app.features.organizer.interviews.processes.service import InterviewProcessService
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_process_orm(**kwargs):

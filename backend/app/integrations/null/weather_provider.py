@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.schemas import WeatherForecast
-from app.shared.weather import WeatherSnapshot
+from app.shared.protocols.weather import WeatherSnapshot
 
 
 class NullWeatherProvider:

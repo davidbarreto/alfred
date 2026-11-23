@@ -15,7 +15,7 @@ from app.features.core.embeddings.schemas import (
     EmbeddingSearchResult,
 )
 from app.integrations.embedding_calls.repository import create_embedding_call
-from app.shared.embedding import EmbeddingProvider
+from app.shared.protocols.embedding import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ from app.features.cs.stats.schemas import (
     StatsSummary,
     TagBreakdown,
 )
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

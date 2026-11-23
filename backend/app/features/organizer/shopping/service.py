@@ -38,7 +38,7 @@ from app.features.organizer.shopping.schemas import (
     WishlistItemUpdate,
 )
 from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
-from app.shared.timezone import local_timezone, local_today
+from app.shared.utils.timezone import local_timezone, local_today
 from app.features.organizer.shopping_products.repository import ShoppingProductRepository
 from app.features.organizer.shopping_products.schemas import ShoppingProductCreate, ShoppingProductUpdate
 

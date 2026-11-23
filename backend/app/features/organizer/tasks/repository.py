@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.tags.tables import Tag, tasks_tags
 from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
-from app.shared.timezone import local_naive_now, local_today
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.timezone import local_naive_now, local_today
+from app.shared.utils.tags import normalize_tag_name
 
 _TASK_EXCLUDE = {"tags"}
 

@@ -21,7 +21,7 @@ from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.sessions.schemas import LoopAdvanceRead, NextPracticePrompt
 from app.features.language.sessions.tables import LearningSession
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_embedding_result(source_type: str, content: str, similarity: float = 0.9) -> EmbeddingSearchResult:

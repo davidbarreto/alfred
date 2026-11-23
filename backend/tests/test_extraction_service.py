@@ -13,7 +13,7 @@ from app.assistant.intents.extraction_service import (
     GetTasksArgs,
     extract_args,
 )
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_provider(response_text: str) -> MagicMock:

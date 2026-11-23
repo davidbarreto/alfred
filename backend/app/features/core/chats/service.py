@@ -42,8 +42,8 @@ from app.features.language.sessions.schemas import SessionFilters as LanguageSes
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider, StreamMeta
-from app.shared.timezone import local_now
+from app.shared.protocols.llm import LlmProvider, StreamMeta
+from app.shared.utils.timezone import local_now
 
 _LANGUAGE_PENDING_KEY = "language:pending"
 _CHUNK_LOOP_MODES = {"practice", "review"}

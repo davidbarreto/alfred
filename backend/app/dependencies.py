@@ -71,7 +71,7 @@ from app.integrations.google_translate_tts.client import GoogleTranslateTtsClien
 from app.integrations.ffmpeg.client import FfmpegClient
 from app.integrations.file_storage.client import LocalFileStorage
 from app.integrations.file_storage.null_client import NullFileStorage
-from app.shared.audio import FileStorage
+from app.shared.protocols.audio import FileStorage
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
 from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
 from app.integrations.google.conversation_provider import GoogleConversationProvider
@@ -110,10 +110,10 @@ from app.integrations.null.pronunciation_provider import NullPronunciationProvid
 from app.integrations.null.conversation_provider import NullConversationProvider
 from app.integrations.null.audio_analysis_provider import NullAudioAnalysisProvider
 from app.integrations.null.transcription_provider import NullTranscriptionProvider
-from app.shared.llm import LlmProvider
-from app.shared.storage import StorageProvider
-from app.shared.exchange_rate import ExchangeRateProvider
-from app.shared.weather import ConditionsProvider, WeatherProvider
+from app.shared.protocols.llm import LlmProvider
+from app.shared.protocols.storage import StorageProvider
+from app.shared.protocols.exchange_rate import ExchangeRateProvider
+from app.shared.protocols.weather import ConditionsProvider, WeatherProvider
 from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
 from app.features.metrics.stats.service import MetricStatsService
@@ -138,10 +138,10 @@ from app.features.travel.trips.service import TripService
 from app.features.travel.visits.service import VisitService
 from app.features.travel.links.service import WebLinkService
 from app.integrations.link_preview.client import LinkPreviewClient
-from app.shared.holiday import HolidayProvider
-from app.shared.pronunciation import PronunciationProvider
-from app.shared.conversation import ConversationProvider
-from app.shared.audio import AudioAnalysisProvider, TranscriptionProvider
+from app.shared.protocols.holiday import HolidayProvider
+from app.shared.protocols.pronunciation import PronunciationProvider
+from app.shared.protocols.conversation import ConversationProvider
+from app.shared.protocols.audio import AudioAnalysisProvider, TranscriptionProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.features.cs.platforms.service import PlatformService

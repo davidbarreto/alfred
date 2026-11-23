@@ -5,7 +5,7 @@ from typing import Protocol, Sequence
 
 from dateutil.rrule import rrulestr
 
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 _MAX_DATES = 400
 _UTC = timezone.utc

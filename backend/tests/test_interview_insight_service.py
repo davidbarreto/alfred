@@ -5,7 +5,7 @@ import pytest
 
 from app.features.organizer.interviews.insights.schemas import InterviewInsightFilters
 from app.features.organizer.interviews.insights.service import InsightsGenerationError, InterviewInsightService
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_process_orm(**kwargs):

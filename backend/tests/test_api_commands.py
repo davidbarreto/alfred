@@ -22,7 +22,7 @@ def client():
     from app.main import app
     from app.db.session import get_session
     from app.dependencies import get_llm_provider, get_extraction_llm_provider
-    from app.shared.llm import LlmResponse
+    from app.shared.protocols.llm import LlmResponse
 
     mock_session = AsyncMock()
     mock_llm = AsyncMock()
@@ -308,7 +308,7 @@ class TestRespondToCommands:
     def _respond(self, client, *, llm_text, executions):
         from app.main import app
         from app.dependencies import get_command_execution_service, get_extraction_llm_provider
-        from app.shared.llm import LlmResponse
+        from app.shared.protocols.llm import LlmResponse
 
         mock_cmd_service = AsyncMock()
         mock_cmd_service.list = AsyncMock(return_value=executions)

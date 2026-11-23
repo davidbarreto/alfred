@@ -9,8 +9,8 @@ from app.features.core.working_memory.schemas import WorkingMemoryCreate, Workin
 from app.features.organizer.contacts.notification_settings.service import ContactBirthdaySettingsService
 from app.features.organizer.contacts.repository import ContactRepository
 from app.features.organizer.contacts.service import _next_birthday
-from app.shared.notification_offsets import parse_offset
-from app.shared.timezone import local_now
+from app.shared.utils.time_text import parse_offset
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

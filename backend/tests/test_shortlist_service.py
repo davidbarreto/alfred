@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.assistant.intents.intent_service import IntentResult
 from app.assistant.intents.shortlist_service import resolve_via_shortlist
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 
 def _make_provider(response_text: str) -> MagicMock:

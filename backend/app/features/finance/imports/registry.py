@@ -10,7 +10,7 @@ from app.integrations.coverflex.card_statement_parser import CoverflexCardStatem
 from app.integrations.nubank.card_statement_parser import NubankCardStatementParser
 from app.integrations.revolut.statement_parser import RevolutStatementParser
 from app.integrations.wise.statement_parser import WiseStatementParser
-from app.shared.statement import StatementParser
+from app.shared.protocols.statement import StatementParser
 
 _PARSERS: dict[str, StatementParser] = {
     parser.provider: parser

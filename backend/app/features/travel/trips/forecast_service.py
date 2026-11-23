@@ -14,7 +14,7 @@ from app.features.travel.trips.tables import TripWeather
 from app.features.travel.trips.weather_repository import TripWeatherRepository
 from app.features.travel.zones import to_local
 from app.integrations.open_meteo.client import OpenMeteoClient
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

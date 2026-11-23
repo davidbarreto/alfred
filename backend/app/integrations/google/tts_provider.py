@@ -7,7 +7,7 @@ import wave
 from google import genai
 from google.genai import types
 
-from app.shared.pronunciation import TtsAudioResult
+from app.shared.protocols.pronunciation import TtsAudioResult
 
 logger = logging.getLogger(__name__)
 

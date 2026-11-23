@@ -17,8 +17,8 @@ import re
 from datetime import date
 
 from app.integrations.activobank.parsing import parse_date
-from app.shared.statement import ParsedRow, ParsedStatement, decode
-from app.shared.statement import parse_european_amount as parse_amount
+from app.shared.protocols.statement import ParsedRow, ParsedStatement
+from app.shared.utils.statement_text import decode, parse_european_amount as parse_amount
 
 _PROVIDER = "activobank_card"
 _HEADER_FIRST_COL = "data lanc"

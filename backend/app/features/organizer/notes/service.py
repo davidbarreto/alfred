@@ -2,7 +2,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.storage import StorageProvider
+from app.shared.protocols.storage import StorageProvider
 from app.features.organizer.notes.tables import Note  # noqa: F401 — ensures Note is registered with SQLAlchemy mapper
 from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFilters, NoteRead
 from app.features.organizer.notes.repository import NoteRepository

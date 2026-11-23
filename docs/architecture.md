@@ -36,7 +36,7 @@ route (thin) -> service (logic, logging) -> repository (queries) -> tables (ORM)
 - Routes validate input, call a service, return a Pydantic schema.
 - Services orchestrate repositories and providers and are the primary logging location.
 - Repositories hold every DB query and no business logic.
-- Providers are protocols in `app/shared/`; implementations live in `app/integrations/<provider>/`.
+- Providers are protocols in `app/shared/protocols/` (one file per contract, with its result types and nothing else); implementations live in `app/integrations/<provider>/`. Pure helpers shared across features live in `app/shared/utils/`.
 - All `Depends()` factories live in `app/dependencies.py` as `Annotated` aliases.
 
 File-level conventions are in `CLAUDE.md` (Module & File Conventions).
@@ -126,7 +126,7 @@ alfred/
 │   │   │   ├── provider_calls/    # Integration sync log (tables, repo, schemas)
 │   │   │   └── sentence_transformers/  # Local embedding provider
 │   │   ├── nlp/                   # Text extraction, normalisation, patterns
-│   │   └── shared/                # Protocols: StorageProvider, LlmProvider, EmbeddingProvider; domain helpers
+│   │   └── shared/                # protocols/: provider contracts (LlmProvider, StorageProvider, ...); utils/: pure helpers (timezone, time_text, tags, links, tts, statement_text)
 │   ├── alembic/
 │   │   └── versions/
 │   └── tests/                     # All unit tests (flat, mirrors source: test_<module>.py)

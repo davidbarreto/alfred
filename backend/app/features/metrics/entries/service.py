@@ -20,7 +20,7 @@ from app.features.metrics.entries.schemas import (
 from app.features.metrics.entries.tables import MetricEntry
 from app.features.metrics.series.repository import MetricSeriesRepository
 from app.features.metrics.series.tables import MetricSeries
-from app.shared.weather import ConditionsProvider
+from app.shared.protocols.weather import ConditionsProvider
 
 logger = logging.getLogger(__name__)
 

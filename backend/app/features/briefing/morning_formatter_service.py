@@ -10,8 +10,8 @@ from app.features.briefing.prompts import MORNING_BRIEFING_SYSTEM_PROMPT
 from app.features.briefing.repository import BriefingRepository
 from app.features.briefing.schemas import FormattedBriefing, MorningBriefing
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
-from app.shared.timezone import local_now
+from app.shared.protocols.llm import LlmProvider
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

@@ -10,12 +10,12 @@ from app.features.core.settings.service import SettingService
 from app.features.organizer.calendar_events.schemas import EventCreate, EventRead, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.travel.default_tags import parse_default_tag_names
-from app.shared.links import place_maps_url
+from app.shared.utils.links import place_maps_url
 from app.features.travel.settings_service import DEFAULT_VISIT_DURATION_MIN as DEFAULT_DURATION_MIN
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.tables import Visit
-from app.shared.timezone import local_timezone, local_timezone_name
+from app.shared.utils.timezone import local_timezone, local_timezone_name
 
 logger = logging.getLogger(__name__)
 

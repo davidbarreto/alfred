@@ -14,7 +14,7 @@ from app.features.language.sessions.service import SessionService
 from app.features.language.srs import score_to_quality
 from app.features.language.tracks.repository import TrackRepository
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioAnalysisProvider, AudioConverter, FileStorage
+from app.shared.protocols.audio import AudioAnalysisProvider, AudioConverter, FileStorage
 
 logger = logging.getLogger(__name__)
 

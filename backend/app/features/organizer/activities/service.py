@@ -16,7 +16,7 @@ from app.features.organizer.activities.schemas import (
 )
 from app.features.organizer.activities.stats import LogRow, compute_stats, monday_of, week_starts
 from app.features.organizer.activities.tables import Activity
-from app.shared.timezone import local_naive_now, local_timezone, local_today
+from app.shared.utils.timezone import local_naive_now, local_timezone, local_today
 
 logger = logging.getLogger(__name__)
 

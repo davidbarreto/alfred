@@ -11,7 +11,7 @@ from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripDetail
 from app.features.travel.trips.service import TripService
 from app.features.travel.trips.today import TripToday, build_today
-from app.shared.timezone import local_timezone_name, local_today
+from app.shared.utils.timezone import local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 

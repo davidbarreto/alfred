@@ -12,7 +12,7 @@ from app.features.travel.tags.schemas import normalize_tags
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.trip_cities import TripCity
 from app.features.travel.trips.timeline import TimelineItem, TripWarning
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 TripStatus = Literal["upcoming", "ongoing", "past"]
 

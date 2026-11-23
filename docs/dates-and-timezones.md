@@ -1,7 +1,7 @@
 # Dates & Timezones
 
 - **Storage is UTC.** `LocalDateTime` (`app/db/types.py`) stores a true UTC instant in `timestamptz` and hands Python a *naive datetime in the configured local zone* (`Settings.timezone`, env `TIMEZONE`, default set in `Settings.timezone`). Other timestamps use `DateTime(timezone=True)`. Changing `TIMEZONE` (a move, DST) needs no data migration. `Date` columns (`do_date`, `occurrence_date`, ...) are local calendar dates and are never converted.
-- **Containers run in UTC** (no `TZ` is set), so the server's clock is not the user's clock. Never call `date.today()`, `datetime.now()` (naive) or `datetime.utcnow()` for anything the user sees or any "today" boundary. Use the helpers in `app/shared/timezone.py` (backend) / `web/app/shared/timezone.py` (portal):
+- **Containers run in UTC** (no `TZ` is set), so the server's clock is not the user's clock. Never call `date.today()`, `datetime.now()` (naive) or `datetime.utcnow()` for anything the user sees or any "today" boundary. Use the helpers in `app/shared/utils/timezone.py` (backend) / `web/app/shared/timezone.py` (portal):
   - `local_today()` for "today's date"
   - `local_now()` for an aware local "now"
   - `local_naive_now()` for a naive local "now" (to compare with `LocalDateTime` columns)

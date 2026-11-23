@@ -11,7 +11,7 @@ from app.features.core.urgency_reset.schemas import UrgencyResetRead
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.organizer.tasks.schemas import TaskFilters, TaskRead, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
-from app.shared.timezone import local_now
+from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 

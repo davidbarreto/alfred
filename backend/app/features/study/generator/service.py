@@ -11,7 +11,7 @@ from app.features.study.plans.schemas import StudyPlanCreate, StudyPlanItemCreat
 from app.features.study.plans.service import StudyPlanService
 from app.features.study.tracks.service import SOFTWARE_ENGINEERING_TRACK, StudyTrackService
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from pydantic_core import PydanticCustomError
 from typing import Literal, TypeAlias
 from fastapi import Query
 
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 TaskStatus: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED"]
 TaskPriority: TypeAlias = Literal["LOW", "MEDIUM", "HIGH"]

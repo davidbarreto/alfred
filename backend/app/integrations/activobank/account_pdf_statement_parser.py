@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from app.shared.statement import ParsedRow, ParsedStatement
+from app.shared.protocols.statement import ParsedRow, ParsedStatement
 
 logger = logging.getLogger(__name__)
 

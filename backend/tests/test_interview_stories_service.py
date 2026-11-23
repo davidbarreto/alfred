@@ -8,7 +8,7 @@ from app.features.organizer.interviews.stories.schemas import InterviewStoryCrea
 from app.features.organizer.interviews.stories.service import InterviewStoryService, StoryAssessmentError
 from app.features.organizer.interviews.stories.tables import InterviewStory
 from app.features.organizer.interviews.tags.tables import InterviewTag
-from app.shared.llm import LlmResponse
+from app.shared.protocols.llm import LlmResponse
 
 _NOW = datetime(2026, 9, 26, tzinfo=timezone.utc)
 

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.features.language.sessions.shadowing_service import ShadowingService
 from app.features.language.srs import score_to_quality
-from app.shared.audio import PronunciationAnalysis, PronunciationAnalysisResult
+from app.shared.protocols.audio import PronunciationAnalysis, PronunciationAnalysisResult
 
 
 def _make_chunk(**kwargs):

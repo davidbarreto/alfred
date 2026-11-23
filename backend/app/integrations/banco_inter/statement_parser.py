@@ -17,8 +17,8 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 
-from app.shared.statement import ParsedRow, ParsedStatement, decode
-from app.shared.statement import parse_european_amount as parse_amount
+from app.shared.protocols.statement import ParsedRow, ParsedStatement
+from app.shared.utils.statement_text import decode, parse_european_amount as parse_amount
 
 _PROVIDER = "banco_inter"
 _PERIOD_RE = re.compile(r"(\d{2}/\d{2}/\d{4})\s+a\s+(\d{2}/\d{2}/\d{4})")

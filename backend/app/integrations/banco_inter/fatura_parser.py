@@ -37,8 +37,8 @@ import logging
 import re
 from datetime import date
 
-from app.shared.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
-from app.shared.statement import parse_european_amount as parse_amount
+from app.shared.protocols.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
+from app.shared.utils.statement_text import parse_european_amount as parse_amount
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dateutil.rrule import rrulestr
 
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 _MAX_OCCURRENCES = 366
 _UNBOUNDED_HORIZON = timedelta(days=365 * 5)

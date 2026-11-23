@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from app.shared.domain import DomainRecord
+from app.shared.protocols.domain import DomainRecord
 
 
 class TestDomainRecord:

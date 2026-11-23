@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 from google import genai
 from google.genai import types
 
-from app.shared.llm import LlmResponse, StreamMeta
+from app.shared.protocols.llm import LlmResponse, StreamMeta
 
 logger = logging.getLogger(__name__)
 

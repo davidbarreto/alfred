@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers._utils import build_model, parse_dt, parse_int, parse_tags
 from app.features.organizer.calendar_events.schemas import EventCreate, EventFilters, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
-from app.shared.timezone import local_naive_now, local_timezone, local_timezone_name
+from app.shared.utils.timezone import local_naive_now, local_timezone, local_timezone_name
 
 logger = logging.getLogger(__name__)
 

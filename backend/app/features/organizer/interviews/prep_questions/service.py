@@ -12,7 +12,7 @@ from app.features.organizer.interviews.prep_questions.schemas import (
     StoryLinkRead,
 )
 from app.features.organizer.interviews.tags.schemas import InterviewTagRead
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 logger = logging.getLogger(__name__)
 

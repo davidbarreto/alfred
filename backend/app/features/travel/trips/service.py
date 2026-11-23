@@ -35,7 +35,7 @@ from app.features.travel.trips.coverage_warnings import (
 from app.features.travel.trips.home import effective_home
 from app.features.travel.trips.trip_cities import build_trip_cities
 from app.features.travel.trips.timeline import TripWarning, build_timeline, find_warnings, leave_home_at
-from app.shared.timezone import local_timezone, local_timezone_name, local_today
+from app.shared.utils.timezone import local_timezone, local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.repository import VisitRepository
-from app.shared.timezone import local_naive_now
+from app.shared.utils.timezone import local_naive_now
 
 logger = logging.getLogger(__name__)
 

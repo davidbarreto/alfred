@@ -47,7 +47,8 @@ import io
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
-from app.shared.statement import ParsedRow, ParsedStatement, decode
+from app.shared.protocols.statement import ParsedRow, ParsedStatement
+from app.shared.utils.statement_text import decode
 
 _PROVIDER = "revolut"
 _HEADER = "Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance"

@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 
 from app.integrations.open_meteo.client import OpenMeteoClient
 from app.integrations.open_meteo.provider import OpenMeteoProvider
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from typing import Optional
 import dateparser
 
 from app.nlp.patterns import _CLEANUP_RE, PRIORITY_MAP
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 def normalize_date(raw: str, base_date: Optional[datetime | date] = None) -> Optional[str]:
     """Parse any date string to ISO 8601 date (YYYY-MM-DD)."""

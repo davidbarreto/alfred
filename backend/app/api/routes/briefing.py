@@ -13,7 +13,7 @@ from app.dependencies import (
     MorningBriefingSummaryServiceDep,
 )
 from app.features.briefing.schemas import BriefingHistoryItem, EveningDigest, FormattedBriefing, MorningBriefing
-from app.shared.timezone import local_today
+from app.shared.utils.timezone import local_today
 
 router = APIRouter(prefix="/briefing", tags=["briefing"], dependencies=[Depends(require_auth)])
 

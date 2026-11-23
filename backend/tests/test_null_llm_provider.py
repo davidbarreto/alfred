@@ -18,7 +18,7 @@ class TestNullLlmProvider:
 
     @pytest.mark.asyncio
     async def test_stream_yields_canned_text_and_sets_finish_reason(self):
-        from app.shared.llm import StreamMeta
+        from app.shared.protocols.llm import StreamMeta
 
         provider = NullLlmProvider()
         meta = StreamMeta()

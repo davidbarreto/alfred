@@ -3,7 +3,7 @@ from typing import Annotated, Any, List, Literal, Optional
 from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 from fastapi import Query
 
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 NotificationProfile = Literal["cant_miss", "important", "normal", "light", "aware"]
 EventAvailability = Literal["blocked", "light", "free"]

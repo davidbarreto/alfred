@@ -46,7 +46,7 @@ from app.features.finance.imports.service import GROUPED_PROVIDERS, _compute_ded
 from app.features.finance.imports.tables import ImportBatch
 from app.features.finance.transactions.tables import Transaction
 from app.integrations.file_storage.client import LocalFileStorage
-from app.shared.statement import ParsedRow
+from app.shared.protocols.statement import ParsedRow
 
 
 def _legacy_hashes(account_id: int, row: ParsedRow) -> tuple[str, str]:

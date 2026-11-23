@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider, _parse_response
-from app.shared.audio import PronunciationAnalysis
+from app.shared.protocols.audio import PronunciationAnalysis
 
 _VALID_JSON = json.dumps({
     "transcription": "bonjour",

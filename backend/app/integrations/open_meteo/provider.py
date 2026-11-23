@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.features.briefing.schemas import WeatherForecast
 from app.integrations.provider_calls.repository import create_sync_log
-from app.shared.weather import WeatherSnapshot
+from app.shared.protocols.weather import WeatherSnapshot
 
 from .client import OpenMeteoClient
 

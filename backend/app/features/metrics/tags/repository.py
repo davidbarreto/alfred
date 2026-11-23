@@ -2,7 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.metrics.tags.tables import MetricTag, metric_entry_tag_links
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 
 class MetricTagRepository:

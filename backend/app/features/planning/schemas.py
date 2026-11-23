@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.organizer.activities.schemas import ActivitySuggestion
-from app.shared.clock import WEEKDAYS
+from app.shared.utils.time_text import WEEKDAYS
 
 _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")

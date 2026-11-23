@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, computed_field, field_validator, model_va
 
 from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import PlaceKind, VisitStatus
-from app.shared.links import place_maps_url
+from app.shared.utils.links import place_maps_url
 
 
 class VisitCreate(BaseModel):

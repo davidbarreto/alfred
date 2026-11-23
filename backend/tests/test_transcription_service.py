@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.features.core.transcription.service import TranscriptionService
-from app.shared.audio import TranscriptionResult
+from app.shared.protocols.audio import TranscriptionResult
 
 
 def _make_service(**kwargs):

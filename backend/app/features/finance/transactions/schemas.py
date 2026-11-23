@@ -5,8 +5,8 @@ from fastapi import Query
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.finance import cycle
-from app.shared.tags import normalize_tag_name
-from app.shared.timezone import local_today
+from app.shared.utils.tags import normalize_tag_name
+from app.shared.utils.timezone import local_today
 
 TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
 

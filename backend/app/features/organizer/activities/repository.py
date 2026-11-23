@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.features.organizer.activities.schemas import ActivityCreate, ActivityFilters, ActivityLogCreate, ActivityUpdate
 from app.features.organizer.activities.tables import Activity, ActivityLog
 from app.features.organizer.tags.tables import Tag
-from app.shared.tags import normalize_tag_name
+from app.shared.utils.tags import normalize_tag_name
 
 # Activities are Alfred-only, so their tags live under one fixed provider id.
 TAG_PROVIDER_ID = "alfred"

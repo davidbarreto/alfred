@@ -12,8 +12,8 @@ from app.features.organizer.calendar_events.notification_settings.service import
 )
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.calendar_events.service import CalendarEventService
-from app.shared.notification_offsets import parse_offset
-from app.shared.timezone import local_now
+from app.shared.utils.time_text import parse_offset
+from app.shared.utils.timezone import local_now
 
 if TYPE_CHECKING:
     from app.features.travel.other_events import TripSnoozeService

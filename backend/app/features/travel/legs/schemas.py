@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, computed_field, field_validator, model_va
 
 from app.features.travel.cities.schemas import CityRef
 from app.features.travel.constants import LegMode
-from app.shared.links import check_flight_url
+from app.shared.utils.links import check_flight_url
 from app.features.travel.zones import to_local, to_utc, validate_zone
 
 

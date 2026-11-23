@@ -20,7 +20,7 @@ from app.features.organizer.interviews.preferences.repository import InterviewPr
 from app.features.organizer.interviews.preferences.tables import InterviewPreferences
 from app.features.organizer.interviews.processes.repository import InterviewProcessRepository
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 

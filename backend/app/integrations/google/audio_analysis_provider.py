@@ -7,7 +7,7 @@ from google import genai
 from google.genai import types
 
 from app.features.language.sessions.prompts import SHADOWING_ANALYSIS_PROMPT
-from app.shared.audio import PronunciationAnalysis, PronunciationAnalysisResult
+from app.shared.protocols.audio import PronunciationAnalysis, PronunciationAnalysisResult
 
 logger = logging.getLogger(__name__)
 

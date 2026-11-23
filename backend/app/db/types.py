@@ -3,7 +3,7 @@ from datetime import datetime, timezone as dt_timezone
 from sqlalchemy import DateTime
 from sqlalchemy.types import TypeDecorator
 
-from app.shared.timezone import local_timezone
+from app.shared.utils.timezone import local_timezone
 
 
 class LocalDateTime(TypeDecorator):

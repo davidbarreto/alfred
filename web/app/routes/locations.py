@@ -81,6 +81,7 @@ async def location_detail(request: Request, location_id: int):
         "maps": maps_link(location),
         "categories": categories,
         "selected_ids": {c["id"] for c in location["categories"]},
+        "home_moved": location["kind"] == "home" and request.query_params.get("moved") == "1",
         "kinds": _KINDS,
         "hours_help": _HOURS_HELP,
     })

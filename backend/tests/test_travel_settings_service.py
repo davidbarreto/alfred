@@ -18,27 +18,32 @@ def service():
     svc._cities = AsyncMock()
     svc._trips = AsyncMock()
     svc._trips.snapshot_home_value.return_value = 2
+    svc._locations = AsyncMock()
+    svc._locations.get_home.return_value = None
     return svc
 
 
 class TestHomeAddress:
     @pytest.mark.asyncio
-    async def test_is_stored_in_the_organizer_namespace(self, service):
-        await service.update(TravelSettingsUpdate(home_address="  Rua Exemplo 1 "))
-        service._settings.set_value.assert_awaited_once_with("organizer.home_address", "Rua Exemplo 1")
+    async def test_is_read_from_the_home_location(self, service):
+        service._locations.get_home.return_value = SimpleNamespace(address="Rua Exemplo 1")
+        assert (await service.get()).home_address == "Rua Exemplo 1"
+
+    @pytest.mark.asyncio
+    async def test_is_none_without_a_home_or_its_address(self, service):
+        assert (await service.get()).home_address is None
+        service._locations.get_home.return_value = SimpleNamespace(address=None)
+        assert (await service.get()).home_address is None
+
+    @pytest.mark.parametrize("value", ["Rua Exemplo 1", "", None])
+    def test_sending_it_is_refused_and_names_the_locations_route(self, value):
+        with pytest.raises(ValueError, match="/organizer/locations"):
+            TravelSettingsUpdate(home_address=value)
 
     @pytest.mark.asyncio
     async def test_other_fields_stay_in_the_travel_namespace(self, service):
         await service.update(TravelSettingsUpdate(home_to_airport_min=30))
         service._settings.set_value.assert_awaited_once_with("travel.home_to_airport_min", "30")
-
-    @pytest.mark.asyncio
-    async def test_read_back_from_the_organizer_key_and_empty_is_none(self, service):
-        values = {"organizer.home_address": "Rua Exemplo 1"}
-        service._settings.get_value.side_effect = lambda key: values.get(key)
-        assert (await service.get()).home_address == "Rua Exemplo 1"
-        values["organizer.home_address"] = ""
-        assert (await service.get()).home_address is None
 
 
 class TestMaxVisitsPerDay:
@@ -60,8 +65,7 @@ class TestSnoozeOtherEvents:
 
 
 def _stored(service, **values):
-    keys = {"home_address": "organizer.home_address"}
-    service._settings.get_value.side_effect = lambda key: {keys.get(k, f"travel.{k}"): v for k, v in values.items()}.get(key)
+    service._settings.get_value.side_effect = lambda key: {f"travel.{k}": v for k, v in values.items()}.get(key)
 
 
 @freeze_time("2026-11-16 12:00:00")
@@ -85,17 +89,16 @@ class TestHomeSnapshot:
 
     @pytest.mark.asyncio
     async def test_a_setting_that_was_never_set_is_not_copied(self, service):
-        await service.update(TravelSettingsUpdate(home_address="Rua Exemplo 1"))
-        service._cities.get_city.assert_not_awaited()
+        await service.update(TravelSettingsUpdate(home_city_id=None))
         service._trips.snapshot_home_value.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_the_old_address_and_city_are_copied_when_they_change(self, service):
-        _stored(service, home_address="Rua Antiga 2", home_city_id="7")
+    async def test_the_old_city_is_copied_when_it_changes(self, service):
+        _stored(service, home_city_id="7")
         service._cities.get_city.return_value = SimpleNamespace(id=7, name="Alpha", country_id=1, country=SimpleNamespace(id=1, name="Examplia", code=None))
-        await service.update(TravelSettingsUpdate(home_address="Rua Nova 3", home_city_id=None))
+        await service.update(TravelSettingsUpdate(home_city_id=None))
         calls = {c.args[0]: c.args[1] for c in service._trips.snapshot_home_value.await_args_list}
-        assert calls == {"home_address": "Rua Antiga 2", "home_city_id": 7}
+        assert calls == {"home_city_id": 7}
 
     @pytest.mark.asyncio
     async def test_the_snapshot_is_made_before_the_new_value_is_saved(self, service):

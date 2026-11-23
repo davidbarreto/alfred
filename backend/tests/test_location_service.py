@@ -47,6 +47,7 @@ def _holiday(name="Feriado"):
 @pytest.fixture(autouse=True)
 def _monday_morning(monkeypatch):
     monkeypatch.setattr("app.features.organizer.locations.service.local_now", lambda: _LOCAL_NOW)
+    monkeypatch.setattr("app.features.organizer.locations.service.local_today", lambda: _LOCAL_NOW.date())
 
 
 @pytest.fixture
@@ -57,8 +58,13 @@ def holidays():
 
 
 @pytest.fixture
-def service(holidays):
-    svc = LocationService(session=AsyncMock(), holiday_provider=holidays)
+def home_snapshot():
+    return AsyncMock(return_value=2)
+
+
+@pytest.fixture
+def service(holidays, home_snapshot):
+    svc = LocationService(session=AsyncMock(), holiday_provider=holidays, home_snapshot=home_snapshot)
     svc._repo = AsyncMock()
     svc._repo.get_by_name.return_value = None
     svc._repo.get_home.return_value = None
@@ -273,3 +279,82 @@ class TestDelete:
         service._repo.get.return_value = None
 
         assert await service.delete(1) is False
+
+
+_TODAY = date(2026, 11, 23)
+
+
+class TestHomeAddressSnapshot:
+    """Before the home address changes, trips that have started keep the one they were planned with."""
+
+    @pytest.fixture
+    def home(self, service):
+        home = _location(id=2, name="Home", kind="home", address="Rua Antiga 2")
+        service._repo.get.return_value = home
+        service._repo.get_by_name.return_value = home
+        service._repo.get_home.return_value = home
+        service._repo.update.return_value = home
+        return home
+
+    async def test_address_change_snapshots_the_old_address_before_saving(self, service, home, home_snapshot):
+        order = []
+        home_snapshot.side_effect = lambda *a: order.append("snapshot") or 1
+        service._repo.update.side_effect = lambda *a: order.append("save") or home
+
+        await service.update(2, LocationUpdate(address="Rua Nova 3"))
+
+        home_snapshot.assert_awaited_once_with("Rua Antiga 2", _TODAY)
+        assert order == ["snapshot", "save"]
+
+    async def test_clearing_the_address_snapshots_it(self, service, home, home_snapshot):
+        await service.update(2, LocationUpdate(address=""))
+
+        home_snapshot.assert_awaited_once_with("Rua Antiga 2", _TODAY)
+
+    async def test_other_edits_and_the_same_address_do_not(self, service, home, home_snapshot):
+        await service.update(2, LocationUpdate(notes="Blue door", address="Rua Antiga 2"))
+
+        home_snapshot.assert_not_awaited()
+
+    async def test_home_that_stops_being_home_snapshots_its_address(self, service, home, home_snapshot):
+        await service.update(2, LocationUpdate(kind="other"))
+
+        home_snapshot.assert_awaited_once_with("Rua Antiga 2", _TODAY)
+
+    async def test_a_home_without_an_address_has_nothing_to_keep(self, service, home, home_snapshot):
+        home.address = None
+
+        await service.update(2, LocationUpdate(address="Rua Nova 3"))
+
+        home_snapshot.assert_not_awaited()
+
+    async def test_other_locations_never_snapshot(self, service, home_snapshot):
+        shop = _location(id=5, address="Rua Loja 1")
+        service._repo.get.return_value = shop
+        service._repo.update.return_value = shop
+
+        await service.update(5, LocationUpdate(address="Rua Loja 9"))
+        await service.update(5, LocationUpdate(kind="home"))
+
+        home_snapshot.assert_not_awaited()
+
+    async def test_creating_home_has_nothing_to_keep(self, service, home_snapshot):
+        service._repo.create.return_value = _location(kind="home", address="Rua Nova 3")
+
+        await service.create(LocationCreate(name="Home", kind="home", address="Rua Nova 3"))
+
+        home_snapshot.assert_not_awaited()
+
+    async def test_deleting_home_snapshots_and_reloads_before_deleting(self, service, home, home_snapshot):
+        reloaded = _location(id=2, kind="home", address="Rua Antiga 2")
+        service._repo.get.side_effect = [home, reloaded]
+
+        assert await service.delete(2) is True
+
+        home_snapshot.assert_awaited_once_with("Rua Antiga 2", _TODAY)
+        service._repo.delete.assert_awaited_once_with(reloaded)
+
+    async def test_without_a_snapshot_hook_nothing_breaks(self, service, home):
+        service._home_snapshot = None
+
+        await service.update(2, LocationUpdate(address="Rua Nova 3"))

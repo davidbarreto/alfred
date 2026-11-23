@@ -9,6 +9,7 @@ Code: `backend/app/features/organizer/locations/`. Portal: `/locations`. Command
 `organizer.locations` (migration 094): `name` (unique case-insensitively, archived rows included), `kind` (free text, trimmed and lowercase), `address`, `maps_url`, `opening_hours` (JSONB, null = unknown), `notes`, `active` (false = archived), `created_at`, `updated_at`.
 
 - **Kind** is free text. The portal suggests home, work, school, gym, supermarket, pharmacy, bakery, market and other; the default is `other`. Only `home` has a meaning in code: at most one location is home (partial unique index `uq_locations_home`, checked first in the service, 409).
+- **Home** holds the home address that trips start from (migration 095 created it from the old `organizer.home_address` travel setting, which is gone). Travel reads it; `PUT /travel/settings` refuses `home_address`. Before Home's address changes (edited, cleared, Home turned into another kind or deleted), the old address is copied into trips that have already started and have no home address of their own, so past trips keep the home they were planned with ([travel.md](travel.md#home)). After the address changes, the portal shows a "Home moved" note: travel times from Home are not updated automatically.
 - **What a shop sells** is its shopping categories (`organizer.locations_shopping_categories`, both FKs CASCADE): deleting a category removes it from the locations that sold it. A location that sells nothing is a place you go to (home, office, school), not a shop.
 - Deleting a location is a hard delete for now. Archive (`active = false`) hides it from the active list and keeps it.
 
@@ -44,4 +45,4 @@ The command details tell Claude it may search the web for a shop's opening hours
 
 ## Planned
 
-Phases 2-5 of the locations plan: the home address moves from the travel settings to the Home location, `planning.travel_times` becomes rows between locations, events get a location (derived travel blocks), and the day plan proposes concrete shopping stops.
+Phases 3-5 of the locations plan: `planning.travel_times` becomes rows between locations, events get a location (derived travel blocks), and the day plan proposes concrete shopping stops.

@@ -33,6 +33,16 @@
     </div>
   </div>
 
+  {% if home_moved %}
+  <div class="card bg-white border border-amber-300" id="home-moved">
+    <div class="card-body p-4 space-y-1">
+      <p class="text-sm font-semibold text-gray-900"><i class="ti ti-truck"></i> Home moved</p>
+      <p class="text-xs text-gray-600">Trips that have already started keep the address they were planned with; upcoming trips start from the new one.
+        Travel times from Home are not changed automatically: check them on <a href="/plan" class="text-[#378ADD] hover:underline">Plan</a>.</p>
+    </div>
+  </div>
+  {% endif %}
+
   <div id="edit-location" class="card bg-white hidden">
     <div class="card-body p-5">
       {% with form_id="edit-location-form", form_url="/locations/" ~ location.id, form_method="PATCH", loc=location %}

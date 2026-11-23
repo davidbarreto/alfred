@@ -76,7 +76,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/links": [], "/travel/places/3/links": [], "/travel/cities/1/links": [], "/travel/countries/1/links": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/links": [], "/travel/places/3/links": [], "/travel/cities/1/links": [], "/travel/countries/1/links": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], "/organizer/locations": [], **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -372,6 +372,18 @@ class TestSettings:
         _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40}})
         html = client.get("/travel").text
         assert 'name="airport_buffer_min"' in html and 'value="150"' in html and 'value="40"' in html
+
+    def test_home_address_is_read_only_and_links_to_the_home_location(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/organizer/locations": [{"id": 7, "kind": "home"}],
+                          "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40, "home_address": "Rua Exemplo 1"}})
+        html = client.get("/travel").text
+        assert 'name="home_address"' not in html
+        assert "Rua Exemplo 1" in html and 'href="/locations/7"' in html and "Edit on Locations" in html
+
+    def test_home_address_links_to_locations_when_there_is_no_home(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40}})
+        html = client.get("/travel").text
+        assert "Not set" in html and 'href="/locations" class="ml-1' in html
 
     def test_page_works_when_settings_are_unavailable(self, client, mock_api):
         _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": httpx.ConnectError("down")})

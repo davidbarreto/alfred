@@ -98,10 +98,12 @@ async def trips_page(request: Request):
     settings = await safe_get("/travel/settings")
     checklist = await safe_get("/travel/checklist-template", default=[])
     locations = await safe_get("/travel/trips/locations", default={"cities": [], "countries": []})
+    # The home address is edited on the Home location; the settings card links there.
+    homes = await safe_get("/organizer/locations", params={"kind": "home"}, default=[])
     context = _list_context(request, trips, 0, filters)
     return templates.TemplateResponse(request, "travel.html", {
         **context, "filters": filters, "statuses": _STATUSES, "all_tags": [t["name"] for t in tags or []],
-        "settings": settings, "checklist": checklist or [], "locations": locations,
+        "settings": settings, "checklist": checklist or [], "locations": locations, "home": (homes or [None])[0],
     })
 
 

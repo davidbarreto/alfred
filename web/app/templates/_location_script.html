@@ -23,7 +23,8 @@ function locationBody(form) {
   return body;
 }
 
-// A form submits to its data-url with its data-method; on success the page opens the saved location.
+// A form submits to its data-url with its data-method; on success the page opens the saved location
+// (with ?moved=1 when Home's address changed, so the page can say what that does and does not update).
 document.querySelectorAll('[data-location-form]').forEach((form) => {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -31,7 +32,9 @@ document.querySelectorAll('[data-location-form]').forEach((form) => {
     error.textContent = '';
     try {
       const saved = await locationSend(form.dataset.url, form.dataset.method, locationBody(form));
-      window.location.href = `/locations/${saved.id}`;
+      const homeMoved = form.dataset.homeAddress !== undefined && saved.kind === 'home'
+        && (saved.address || '') !== form.dataset.homeAddress;
+      window.location.href = `/locations/${saved.id}${homeMoved ? '?moved=1' : ''}`;
     } catch (e) { error.textContent = e.message; }
   });
 });

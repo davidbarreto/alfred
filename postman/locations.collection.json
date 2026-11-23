@@ -2,7 +2,7 @@
  "info": {
   "name": "Alfred - Locations API",
   "_postman_id": "alfred-locations-v1",
-  "description": "Run in order: create a shop with text hours and a seeded category → name clash, bad hours and unknown category → get, list filters → update hours as an object → archive → categories → command lookup by name → home uniqueness → cleanup. Names carry a per-run suffix, so reruns against the same database pass; the run leaves nothing behind.",
+  "description": "Run in order: create a shop with text hours and a seeded category → name clash, bad hours and unknown category → get, list filters → update hours as an object → archive → categories → command lookup by name → home uniqueness → cleanup. Names carry a per-run suffix, so reruns against the same database pass. Steps 17a-17e change Home's address and restore it, and the restore copies the test address into trips that have already started (the home snapshot): run against a scratch database only, as CI does.",
   "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
  },
  "auth": {
@@ -701,6 +701,207 @@
     "body": {
      "mode": "raw",
      "raw": "{\n  \"type\": \"location\",\n  \"command\": \"show\",\n  \"args\": {\n    \"location\": \"postman market {{location_run}}\"\n  },\n  \"source\": \"postman\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17a - Find Home (created by migration 095)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('There is exactly one home', () => {",
+       "    const homes = pm.response.json();",
+       "    pm.expect(homes).to.have.lengthOf(1);",
+       "    pm.environment.set('location_real_home_id', homes[0].id);",
+       "    // Restored by 17e.",
+       "    pm.environment.set('location_home_address_json', JSON.stringify(homes[0].address));",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations?kind=home",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ],
+     "query": [
+      {
+       "key": "kind",
+       "value": "home"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "17b - Change Home's Address",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Saved', () => pm.expect(pm.response.json().address).to.eql('Postman Street ' + pm.environment.get('location_run')));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_real_home_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"address\": \"Postman Street {{location_run}}\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17c - Travel Settings Read The Address From Home",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('home_address comes from the Home location', () => pm.expect(pm.response.json().home_address).to.eql('Postman Street ' + pm.environment.get('location_run')));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/travel/settings",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "travel",
+      "settings"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17d - Travel Settings Refuse home_address (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Says where it moved', () => pm.expect(JSON.stringify(pm.response.json().detail)).to.include('/organizer/locations'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/travel/settings",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "travel",
+      "settings"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"home_address\": \"Somewhere 1\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17e - Restore Home's Address",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Back to the remembered address', () => pm.expect(pm.response.json().address).to.eql(JSON.parse(pm.environment.get('location_home_address_json'))));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_real_home_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"address\": {{location_home_address_json}}\n}",
      "options": {
       "raw": {
        "language": "json"

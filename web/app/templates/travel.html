@@ -58,8 +58,9 @@
           Snooze reminders of other calendar events during a trip</label>
         <div class="space-y-1"><span class="block text-xs text-gray-500">Home city (trips already started keep the one they had)</span>
           <div class="flex items-center gap-1"><input name="home_city_text" placeholder="Pick a city" class="input input-sm input-bordered w-56"><input type="hidden" name="home_city_id"><button type="button" class="btn btn-xs btn-ghost" id="clear-home-city" title="No home city">clear</button></div></div>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
-          <input name="home_address" maxlength="300" value="{{ settings.home_address or '' }}" class="input input-sm input-bordered w-72"></label>
+        <div class="space-y-1" id="travel-home-address"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
+          <p class="text-sm text-gray-700">{{ settings.home_address or 'Not set' }}
+            <a href="{{ '/locations/' ~ home.id if home else '/locations' }}" class="ml-1 text-xs text-[#378ADD] hover:underline">Edit on Locations</a></p></div>
         <button type="submit" class="btn btn-sm btn-outline">Save</button>
         <span id="travel-settings-msg" class="text-xs text-gray-500"></span>
       </form>
@@ -176,7 +177,7 @@ document.getElementById('travel-settings-form')?.addEventListener('submit', asyn
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
-      max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), unpaid_leg_days: Number(form.get('unpaid_leg_days')), snooze_other_events: form.get('snooze_other_events') === 'on', home_address: String(form.get('home_address') || ''),
+      max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), unpaid_leg_days: Number(form.get('unpaid_leg_days')), snooze_other_events: form.get('snooze_other_events') === 'on',
       // Only a picked or cleared city is sent; the trips that have started keep the old one.
       ...(homePicker.touched() ? { home_city_id: homePicker.value() } : {}),
     }),

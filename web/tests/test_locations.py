@@ -150,6 +150,22 @@ class TestDetailPage:
         assert "Today is a public holiday (Feriado): holiday, hours unknown." in text
         assert "Open now" not in text and "Closed now" not in text
 
+    def test_home_form_remembers_the_address_to_detect_a_move(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(kind="home", name="Home", address="Rua A 1"))
+
+        text = client.get("/locations/1").text
+
+        assert 'data-home-address="Rua A 1"' in text
+        assert 'id="home-moved"' not in text
+
+    def test_moved_banner_only_for_home(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(kind="home", name="Home"))
+        assert 'id="home-moved"' in client.get("/locations/1?moved=1").text
+
+        mock_api["get"].side_effect = _routes(location=_location())
+        text = client.get("/locations/1?moved=1").text
+        assert 'id="home-moved"' not in text and "data-home-address" not in text
+
     def test_unknown_hours(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location())
 

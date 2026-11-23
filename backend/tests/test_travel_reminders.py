@@ -180,6 +180,7 @@ class TestSettingsService:
     def service(self):
         svc = TravelSettingsService(AsyncMock())
         svc._settings = SimpleNamespace(get_value=AsyncMock(return_value=None), set_value=AsyncMock())
+        svc._locations = SimpleNamespace(get_home=AsyncMock(return_value=None))
         return svc
 
     async def test_defaults_when_nothing_is_stored(self, service):

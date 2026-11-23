@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
@@ -135,6 +136,7 @@ from app.features.travel.recap.service import TripRecapService
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.service import TravelTagService
+from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.service import TripService
 from app.features.travel.visits.service import VisitService
 from app.features.travel.links.service import WebLinkService
@@ -226,7 +228,12 @@ def get_shopping_product_service(session: AsyncSession = Depends(get_session)) -
     return ShoppingProductService(session)
 
 def get_location_service(session: AsyncSession = Depends(get_session)) -> LocationService:
-    return LocationService(session, get_planning_holiday_provider())
+    trips = TripRepository(session)
+
+    async def keep_old_home_address(old: str, today: date) -> int:
+        return await trips.snapshot_home_value("home_address", old, today)
+
+    return LocationService(session, get_planning_holiday_provider(), keep_old_home_address)
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)

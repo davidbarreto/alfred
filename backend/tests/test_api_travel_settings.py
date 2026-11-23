@@ -45,8 +45,9 @@ def test_requires_a_token(settings):
     assert client.get("/travel/settings").status_code in (401, 403)
 
 
-def test_put_home_address(settings):
+def test_put_home_address_is_refused_with_where_it_moved(settings):
     client, service = settings
-    service.update.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45, home_address="Rua Exemplo 1")
-    assert client.put("/travel/settings", headers=AUTH, json={"home_address": "Rua Exemplo 1"}).status_code == 200
-    assert service.update.await_args.args[0].model_dump(exclude_unset=True) == {"home_address": "Rua Exemplo 1"}
+    response = client.put("/travel/settings", headers=AUTH, json={"home_address": "Rua Exemplo 1"})
+    assert response.status_code == 422
+    assert "/organizer/locations" in response.json()["detail"][0]["msg"]
+    service.update.assert_not_awaited()

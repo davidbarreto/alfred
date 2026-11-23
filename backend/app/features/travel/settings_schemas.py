@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.features.travel.cities.schemas import CityRef
 
@@ -25,7 +25,15 @@ class TravelSettingsUpdate(BaseModel):
     visit_duration_min: int | None = Field(default=None, ge=5, le=720)
     unpaid_leg_days: int | None = Field(default=None, ge=0, le=365)
     snooze_other_events: bool | None = None
-    # Where trips start; used for the home -> airport directions. An empty string clears it.
-    home_address: str | None = Field(default=None, max_length=300)
+    # Moved to the Home location: sending it is refused, so an old client fails loudly instead of being ignored.
+    home_address: str | None = None
     # Send null to clear the home city (an unknown id is a 404).
     home_city_id: int | None = None
+
+    @field_validator("home_address")
+    @classmethod
+    def _home_address_moved(cls, value: str | None) -> str | None:
+        raise ValueError(
+            "home_address moved to the Home location: change it with PATCH /organizer/locations/{id} "
+            "(find Home with GET /organizer/locations?kind=home) or on the portal's Locations page"
+        )

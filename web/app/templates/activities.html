@@ -109,9 +109,11 @@
           {% if a.target_per_week %} · <span data-progress>{{ a.done_this_week or 0 }}/{{ a.target_per_week }} this week</span>{% endif %}
         </p>
 
-        <div class="flex items-center gap-2 pt-1">
+        <div class="flex flex-wrap items-center gap-2 pt-1">
           {% if not a.archived_at %}
           <input type="number" min="1" placeholder="min" aria-label="Minutes spent" class="input input-xs input-bordered w-16" id="minutes-{{ a.id }}">
+          <input type="datetime-local" aria-label="When it was done (leave empty for now)" title="When it was done (leave empty for now)"
+                 class="input input-xs input-bordered w-44" id="done-at-{{ a.id }}" data-done-at>
           <button onclick="logActivity({{ a.id }})" class="btn btn-xs btn-outline">Log done</button>
           <button onclick="activityAction({{ a.id }}, 'archive')" class="btn btn-xs btn-ghost text-gray-500">Archive</button>
           {% else %}
@@ -153,13 +155,20 @@ document.getElementById('new-activity-form')?.addEventListener('submit', async (
 
 async function logActivity(id) {
   const minutes = document.getElementById(`minutes-${id}`).value;
+  const doneAt = document.getElementById(`done-at-${id}`).value;
+  const body = {};
+  if (minutes) body.minutes = Number(minutes);
+  if (doneAt) body.done_at = doneAt;
   const error = document.getElementById(`error-${id}`);
   error.textContent = '';
   try {
-    await send(`/activities/${id}/log`, 'POST', minutes ? { minutes: Number(minutes) } : {});
+    await send(`/activities/${id}/log`, 'POST', body);
     location.reload();
   } catch (e) { error.textContent = e.message; }
 }
+
+const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+document.querySelectorAll('[data-done-at]').forEach(input => { input.max = nowLocal; });
 
 async function activityAction(id, action) {
   const error = document.getElementById(`error-${id}`);

@@ -49,6 +49,8 @@ Alfred stores one master row with an RRULE and expands it in `CalendarEventServi
 
 `organizer.activities`, `activity_logs`, tags through `activities_tags`. Optional gap fillers, not tasks: logging one is what counts as done, `target_per_week` is a soft wish used only for suggestions, archiving keeps the logs (FK `RESTRICT`).
 
+A log's `done_at` defaults to now; pass an earlier (local, naive) datetime to catch up on something done before, never more than 5 minutes in the future. The portal's "Log done" row has an optional datetime field for this (empty means now); Telegram uses `/activitylog <id> --at <iso>`.
+
 Rule of thumb: if skipping it counts as a miss it is a recurring task, otherwise an activity.
 
 ## Day plan (`GET /planning/day`)

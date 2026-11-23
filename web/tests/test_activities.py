@@ -70,6 +70,12 @@ class TestActivitiesPage:
         mock_api["get"].side_effect = _routes([_activity(archived_at="2026-10-01T10:00:00")], _stats())
         text = client.get("/activities?archived=1").text
         assert "Restore" in text and "Log done" not in text
+        assert 'id="done-at-1"' not in text
+
+    def test_active_card_offers_a_when_field_for_past_logs(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([_activity(7)], _stats())
+        text = client.get("/activities").text
+        assert 'type="datetime-local"' in text and 'id="done-at-7"' in text
 
     def test_weekly_chart_scales_bars_to_the_busiest_week(self, client, mock_api):
         weeks = [
@@ -124,6 +130,11 @@ class TestActivityWrites:
         mock_api["post"].return_value = {"id": 1}
         client.post("/activities/7/log", json={"minutes": 45})
         mock_api["post"].assert_awaited_once_with("/organizer/activities/7/logs", json={"minutes": 45})
+
+    def test_log_in_the_past_forwards_done_at(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 1}
+        client.post("/activities/7/log", json={"done_at": "2026-10-19T18:30"})
+        mock_api["post"].assert_awaited_once_with("/organizer/activities/7/logs", json={"done_at": "2026-10-19T18:30"})
 
     def test_log_of_archived_activity_relays_the_conflict(self, client, mock_api):
         request = httpx.Request("POST", "http://api/x")

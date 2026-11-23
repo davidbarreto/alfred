@@ -1,0 +1,5 @@
+<li class="py-1.5 flex items-baseline gap-3 text-sm" data-event="{{ ev.id }}">
+  <span class="text-xs text-gray-500 tabular-nums w-28 flex-shrink-0">{{ ev.start_datetime[:10] }}{% if not ev.all_day %} {{ ev.start_datetime[11:16] }}{% endif %}</span>
+  <a href="/calendar/?year={{ ev.start_datetime[:4] | int }}&month={{ ev.start_datetime[5:7] | int }}" class="min-w-0 truncate text-gray-800 hover:underline">{{ ev.title }}</a>
+  {% if ev.presence and ev.presence != 'in_person' %}<span class="text-[11px] text-gray-400">remote</span>{% endif %}
+</li>

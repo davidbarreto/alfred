@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Calendar Events API",
     "_postman_id": "alfred-calendar-events-v1",
-    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Create with Timezone \u2192 Delete with Timezone \u2192 Delete \u2192 Create Recurring Weekly Event \u2192 List Events (Recurring Series Expands Into Occurrences) \u2192 Delete Recurring Event",
+    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Date Range → Filter by Tags → Get 404 → Create with Timezone → Delete with Timezone → Delete → Create Recurring Weekly Event → List Events (Recurring Series Expands Into Occurrences) → Delete Recurring Event",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1605,6 +1605,731 @@
             "organizer",
             "calendar-events",
             "{{planning_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "25 - Create Location A For Events",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Location names are unique: a per-run suffix keeps reruns green.",
+              "pm.environment.set('event_location_run', String(Date.now()));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('event_location_a_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman event place A {{event_location_run}}\",\n  \"kind\": \"other\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "26 - Create Location B For Events",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('event_location_b_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman event place B {{event_location_run}}\",\n  \"kind\": \"other\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27 - Travel Time A To B (metro and foot)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_a_id}}/travel-times",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_a_id}}",
+            "travel-times"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination_id\": {{event_location_b_id}},\n  \"mode\": \"metro\",\n  \"minutes\": 20\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27a - Travel Time A To B On Foot",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.set('event_travel_time_foot_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_a_id}}/travel-times",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_a_id}}",
+            "travel-times"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination_id\": {{event_location_b_id}},\n  \"mode\": \"foot\",\n  \"minutes\": 25\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "28 - Create Event At Location A",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('location_id saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.location_id).to.eql(Number(pm.environment.get('event_location_a_id')));",
+              "    pm.environment.set('located_event_a_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman located event A\",\n  \"start_datetime\": \"2031-04-07T09:00:00\",\n  \"end_datetime\": \"2031-04-07T10:00:00\",\n  \"location_id\": {{event_location_a_id}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "29 - Create Event, Then Link It To Location B",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('located_event_b_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman located event B\",\n  \"start_datetime\": \"2031-04-07T11:00:00\",\n  \"end_datetime\": \"2031-04-07T12:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "29a - Update Only The Location",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Linked, nothing else changed', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.location_id).to.eql(Number(pm.environment.get('event_location_b_id')));",
+              "    pm.expect(json.title).to.eql('Postman located event B');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{located_event_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{located_event_b_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": {{event_location_b_id}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "29b - Unknown Location (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+              "pm.test('Names the id', () => pm.expect(pm.response.json().detail).to.include('999999999'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{located_event_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{located_event_b_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": 999999999\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "29c - List Events At Location B",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only the event at B', () => {",
+              "    const ids = pm.response.json().map((e) => e.id);",
+              "    pm.expect(ids).to.eql([Number(pm.environment.get('located_event_b_id'))]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events?location_id={{event_location_b_id}}&start_from=2031-04-07T00:00:00&start_to=2031-04-07T23:59:59",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
+          "query": [
+            {
+              "key": "location_id",
+              "value": "{{event_location_b_id}}"
+            },
+            {
+              "key": "start_from",
+              "value": "2031-04-07T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2031-04-07T23:59:59"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "29d - Day Plan Derives Travel Between The Locations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('One travel block from A to B with both modes; walking is within the tolerance', () => {",
+              "    const json = pm.response.json();",
+              "    const run = pm.environment.get('event_location_run');",
+              "    const title = `Postman event place A ${run} → Postman event place B ${run} (foot, 25)`;",
+              "    const block = json.timeline.find((i) => i.kind === 'travel' && i.title === title);",
+              "    pm.expect(block, title).to.exist;",
+              "    pm.expect(block.options).to.eql([{mode: 'metro', minutes: 20}, {mode: 'foot', minutes: 25}]);",
+              "    pm.expect(block.start).to.include('T10:35:00');",
+              "    const event = json.timeline.find((i) => i.kind === 'event' && i.event_id === Number(pm.environment.get('located_event_b_id')));",
+              "    pm.expect(event.location).to.eql(`Postman event place B ${run}`);",
+              "    pm.expect(event.location_id).to.eql(Number(pm.environment.get('event_location_b_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2031-04-07",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-04-07"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "29e - Delete The Foot Travel Time",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/travel-times/{{event_travel_time_foot_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "travel-times",
+            "{{event_travel_time_foot_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29f - Delete Location A With Its Metro Route (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409 while a travel time remains', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_a_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_a_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29g - Find The Remaining Route",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.set('event_travel_time_metro_id', pm.response.json()[0].id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_a_id}}/travel-times",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_a_id}}",
+            "travel-times"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29h - Delete The Metro Travel Time",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/travel-times/{{event_travel_time_metro_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "travel-times",
+            "{{event_travel_time_metro_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29i - Delete Location A (events keep existing)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_a_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_a_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29j - Event At Deleted Location Has No Location",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('location_id set to null', () => pm.expect(pm.response.json().location_id).to.eql(null));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{located_event_a_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{located_event_a_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29k - Delete Located Event A",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{located_event_a_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{located_event_a_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29l - Delete Located Event B",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{located_event_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{located_event_b_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29m - Delete Location B",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{event_location_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{event_location_b_id}}"
           ]
         }
       }

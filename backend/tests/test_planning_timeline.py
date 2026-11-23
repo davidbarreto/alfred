@@ -17,6 +17,12 @@ def _event(id=1, title="Event", start=(2026, 10, 21, 10, 0), end=(2026, 10, 21, 
     )
 
 
+def _build(*args, **kwargs):
+    """(items, warnings) of build_timeline."""
+    day = timeline.build_timeline(*args, **kwargs)
+    return day.items, day.warnings
+
+
 def _step(id, title, anchor=None, offset=None, duration=0, **kw):
     return SimpleNamespace(
         id=id, title=title, anchor=anchor, offset_minutes=offset, duration_minutes=duration,
@@ -47,7 +53,7 @@ class TestBuildTimeline:
             _event(1, "Early", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30), tags=["work"], location="Office"),
         ]
 
-        items, warnings = timeline.build_timeline(events, {}, {}, WED)
+        items, warnings = _build(events, {}, {}, WED)
 
         assert [i.title for i in items] == ["Early", "Late"]
         assert items[0].start == "2026-10-21T10:00:00+01:00"
@@ -58,18 +64,18 @@ class TestBuildTimeline:
 
     def test_only_events_starting_that_day_are_included(self):
         events = [_event(1, "Today"), _event(2, "Tomorrow", (2026, 10, 22, 10, 0), (2026, 10, 22, 11, 0))]
-        items, _ = timeline.build_timeline(events, {}, {}, WED)
+        items, _ = _build(events, {}, {}, WED)
         assert [i.title for i in items] == ["Today"]
 
     def test_all_day_events_are_not_on_the_timeline(self):
         events = [_event(1, "Holiday", (2026, 10, 21, 0, 0), (2026, 10, 21, 23, 59), all_day=True)]
-        items, _ = timeline.build_timeline(events, {}, {}, WED)
+        items, _ = _build(events, {}, {}, WED)
         assert items == []
 
     def test_travel_blocks_surround_the_event(self):
         events = [_event(7, "Class", (2026, 10, 21, 20, 0), (2026, 10, 21, 21, 0), travel_minutes=25)]
 
-        items, warnings = timeline.build_timeline(events, {}, {}, WED)
+        items, warnings = _build(events, {}, {}, WED)
 
         assert [(i.kind, i.title, i.start[11:16], i.end[11:16]) for i in items] == [
             ("travel", "Travel to Class", "19:35", "20:00"),
@@ -79,7 +85,7 @@ class TestBuildTimeline:
         assert warnings == []
 
     def test_no_travel_blocks_without_travel_minutes(self):
-        items, _ = timeline.build_timeline([_event()], {}, {}, WED)
+        items, _ = _build([_event()], {}, {}, WED)
         assert [i.kind for i in items] == ["event"]
 
     def test_routine_steps_are_placed_around_the_event(self):
@@ -89,7 +95,7 @@ class TestBuildTimeline:
         ])
         events = [_event(7, "Class", (2026, 10, 21, 20, 0), (2026, 10, 21, 21, 0), routine_id=3)]
 
-        items, _ = timeline.build_timeline(events, {3: routine}, {26: "Dinner checklist"}, WED)
+        items, _ = _build(events, {3: routine}, {26: "Dinner checklist"}, WED)
 
         steps = [i for i in items if i.kind == "routine_step"]
         assert [(s.title, s.start[11:16], s.end[11:16]) for s in steps] == [
@@ -102,7 +108,7 @@ class TestBuildTimeline:
 
     def test_unknown_routine_id_is_ignored(self):
         events = [_event(7, routine_id=99)]
-        items, _ = timeline.build_timeline(events, {}, {}, WED)
+        items, _ = _build(events, {}, {}, WED)
         assert [i.kind for i in items] == ["event"]
 
     def test_free_availability_is_reported_but_not_blocking(self):
@@ -110,7 +116,7 @@ class TestBuildTimeline:
             _event(1, "Optional", availability="free"),
             _event(2, "Meeting", (2026, 10, 21, 10, 30), (2026, 10, 21, 11, 30)),
         ]
-        items, warnings = timeline.build_timeline(events, {}, {}, WED)
+        items, warnings = _build(events, {}, {}, WED)
         assert [i.availability for i in items] == ["free", "blocked"]
         assert warnings == []
 
@@ -121,7 +127,7 @@ class TestOverlapWarnings:
             _event(1, "A", (2026, 10, 21, 10, 0), (2026, 10, 21, 11, 0)),
             _event(2, "B", (2026, 10, 21, 10, 30), (2026, 10, 21, 11, 30)),
         ]
-        items, warnings = timeline.build_timeline(events, {}, {}, WED)
+        items, warnings = _build(events, {}, {}, WED)
         assert len(items) == 2
         assert warnings == ["Overlap on 2026-10-21: 'A' (10:00-11:00) overlaps 'B' (10:30-11:30)."]
 
@@ -130,13 +136,13 @@ class TestOverlapWarnings:
             _event(1, "A", (2026, 10, 21, 10, 0), (2026, 10, 21, 11, 0)),
             _event(2, "B", (2026, 10, 21, 11, 0), (2026, 10, 21, 12, 0)),
         ]
-        assert timeline.build_timeline(events, {}, {}, WED)[1] == []
+        assert _build(events, {}, {}, WED)[1] == []
 
     def test_travel_overlapping_a_routine_step_is_reported(self):
         routine = SimpleNamespace(steps=[_step(1, "Leave", "start", -40, 30)])
         events = [_event(7, "Class", (2026, 10, 21, 20, 0), (2026, 10, 21, 21, 0), travel_minutes=25, routine_id=3)]
 
-        _, warnings = timeline.build_timeline(events, {3: routine}, {}, WED)
+        _, warnings = _build(events, {3: routine}, {}, WED)
 
         assert len(warnings) == 1
         assert "'Travel to Class'" in warnings[0] and "'Leave'" in warnings[0]
@@ -144,7 +150,7 @@ class TestOverlapWarnings:
     def test_zero_duration_steps_never_overlap(self):
         routine = SimpleNamespace(steps=[_step(1, "Reminder", "start", -10, 0)])
         events = [_event(7, "Class", routine_id=3), _event(8, "Other", (2026, 10, 21, 9, 30), (2026, 10, 21, 10, 5))]
-        _, warnings = timeline.build_timeline(events, {3: routine}, {}, WED)
+        _, warnings = _build(events, {3: routine}, {}, WED)
         assert len(warnings) == 1 and "Reminder" not in warnings[0]
 
     def test_meeting_inside_an_office_event_is_not_an_overlap(self):
@@ -152,25 +158,25 @@ class TestOverlapWarnings:
             _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
             _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30)),
         ]
-        assert timeline.build_timeline(events, {}, {}, WED, "office")[1] == []
+        assert _build(events, {}, {}, WED, "office")[1] == []
 
     def test_meeting_sticking_out_of_an_office_event_is_reported(self):
         events = [
             _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
             _event(2, "Late call", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 30)),
         ]
-        assert len(timeline.build_timeline(events, {}, {}, WED, "office")[1]) == 1
+        assert len(_build(events, {}, {}, WED, "office")[1]) == 1
 
     def test_containment_in_an_untagged_event_is_still_an_overlap(self):
         events = [
             _event(1, "Long", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0)),
             _event(2, "Short", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30)),
         ]
-        assert len(timeline.build_timeline(events, {}, {}, WED, "office")[1]) == 1
+        assert len(_build(events, {}, {}, WED, "office")[1]) == 1
 
     def test_free_events_never_overlap(self):
         events = [_event(1, "A", availability="free"), _event(2, "B", availability="free")]
-        assert timeline.build_timeline(events, {}, {}, WED)[1] == []
+        assert _build(events, {}, {}, WED)[1] == []
 
 
 class TestDstTimeline:
@@ -178,7 +184,7 @@ class TestDstTimeline:
         day = date(2026, 10, 25)
         events = [_event(1, "Early class", (2026, 10, 25, 3, 0), (2026, 10, 25, 4, 0), travel_minutes=120)]
 
-        items, _ = timeline.build_timeline(events, {}, {}, day)
+        items, _ = _build(events, {}, {}, day)
 
         travel_to, event, _travel_home = items
         assert event.start == "2026-10-25T03:00:00+00:00"
@@ -256,3 +262,212 @@ class TestRoutineBlocks:
             ("Shower", "07:30-09:00", None), ("Lunch", "13:00-13:45", True),
         ]
         assert blocks[1].checklist_note_title == "Lunch list" and blocks[0].routine == "Daily"
+
+
+HOME, OFFICE, SCHOOL, DENTIST, LUNCH = 1, 2, 3, 4, 5
+_NAMES = {HOME: "Home", OFFICE: "Office", SCHOOL: "School", DENTIST: "Dentist", LUNCH: "Canteen"}
+
+
+def _graph(routes=None, default=30, tolerance=10, home=HOME):
+    return timeline.TravelGraph(
+        names=_NAMES, home_id=home, routes=routes or {}, default_minutes=default, walk_tolerance=tolerance,
+    )
+
+
+def _travel(items):
+    return [(i.title, i.start[11:16], i.end[11:16]) for i in items if i.kind == "travel"]
+
+
+class TestModeRule:
+    @staticmethod
+    def _choose(tolerance=10, **minutes):
+        options = [timeline.TravelOption(mode=m, minutes=n) for m, n in minutes.items()]
+        return timeline.choose_option(options, tolerance).mode
+
+    def test_fastest_public_transport_wins(self):
+        assert self._choose(metro=50, bus=40, car=20) == "bus"
+
+    def test_walking_within_the_tolerance_wins(self):
+        assert self._choose(metro=30, foot=40) == "foot"
+
+    def test_walking_beyond_the_tolerance_loses(self):
+        assert self._choose(metro=30, foot=41) == "metro"
+
+    def test_car_only_when_it_is_the_only_option(self):
+        assert self._choose(car=10) == "car"
+        assert self._choose(car=10, foot=90) == "foot"
+
+    def test_unknown_mode_names_are_public_transport(self):
+        assert timeline.mode_class("ferry") == "public" and timeline.mode_class("walk") == "walking"
+        assert timeline.mode_class("taxi") == "car"
+        assert self._choose(ferry=25, car=10) == "ferry"
+
+
+class TestDerivedTravel:
+    def test_chain_home_office_school_home(self):
+        graph = _graph({
+            (HOME, OFFICE): {"metro": 50, "car": 20},
+            (OFFICE, SCHOOL): {"metro": 30, "foot": 35},
+            (HOME, SCHOOL): {"foot": 15},
+        })
+        events = [
+            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 16, 30), location_id=OFFICE),
+            _event(2, "Pickup", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 0), location_id=SCHOOL),
+        ]
+
+        day = timeline.build_timeline(events, {}, {}, WED, graph=graph)
+
+        assert _travel(day.items) == [
+            ("Home → Office (metro, 50)", "08:10", "09:00"),
+            ("Office → School (foot, 35)", "16:55", "17:30"),
+            ("School → Home (foot, 15)", "18:00", "18:15"),  # the saved route counts the other way too
+        ]
+        first = next(i for i in day.items if i.kind == "travel")
+        assert [(o.mode, o.minutes) for o in first.options] == [("car", 20), ("metro", 50)]
+        assert first.assumed is None and first.event_id == 1
+        assert day.warnings == [] and day.assumed_events == []
+
+    def test_event_items_carry_the_location_name_and_id(self):
+        events = [_event(1, "Office day", location_id=OFFICE, location="Some street 1")]
+        item = timeline.build_timeline(events, {}, {}, WED, graph=_graph()).items[1]
+        assert (item.kind, item.location, item.location_id) == ("event", "Office", OFFICE)
+
+    def test_a_meeting_at_the_same_place_needs_no_travel(self):
+        graph = _graph({(HOME, OFFICE): {"metro": 50}})
+        events = [
+            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 17, 0), location_id=OFFICE),
+            _event(2, "Review", (2026, 10, 21, 11, 0), (2026, 10, 21, 12, 0), location_id=OFFICE),
+            _event(3, "Late meeting", (2026, 10, 21, 17, 0), (2026, 10, 21, 18, 0), location_id=OFFICE),
+        ]
+        assert _travel(timeline.build_timeline(events, {}, {}, WED, graph=graph).items) == [
+            ("Home → Office (metro, 50)", "08:10", "09:00"),
+            ("Office → Home (metro, 50)", "18:00", "18:50"),
+        ]
+
+    def test_a_trip_out_during_a_located_event_goes_there_and_back(self):
+        graph = _graph({(HOME, OFFICE): {"metro": 50}, (OFFICE, LUNCH): {"foot": 10}})
+        events = [
+            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 17, 0), location_id=OFFICE),
+            _event(2, "Lunch", (2026, 10, 21, 12, 30), (2026, 10, 21, 13, 30), location_id=LUNCH),
+        ]
+        assert _travel(timeline.build_timeline(events, {}, {}, WED, graph=graph).items) == [
+            ("Home → Office (metro, 50)", "08:10", "09:00"),
+            ("Office → Canteen (foot, 10)", "12:20", "12:30"),
+            ("Canteen → Office (foot, 10)", "13:30", "13:40"),
+            ("Office → Home (metro, 50)", "17:00", "17:50"),
+        ]
+
+    def test_online_free_and_home_events_get_no_travel(self):
+        events = [
+            _event(1, "Remote class", location_id=SCHOOL, presence="remote_home"),
+            _event(2, "Someone else's course", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), location_id=SCHOOL,
+                   availability="free"),
+            _event(3, "Plumber", (2026, 10, 21, 16, 0), (2026, 10, 21, 17, 0), location_id=HOME),
+        ]
+        day = timeline.build_timeline(events, {}, {}, WED, graph=_graph())
+        assert _travel(day.items) == [] and day.warnings == []
+
+    def test_minutes_come_from_the_pair_then_the_event_then_the_default(self):
+        graph = _graph({(HOME, OFFICE): {"metro": 50}})
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 12, 0), location_id=OFFICE, travel_minutes=5),
+            _event(2, "Dentist", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), location_id=DENTIST, travel_minutes=20),
+            _event(3, "Pickup", (2026, 10, 21, 17, 0), (2026, 10, 21, 17, 30), location_id=SCHOOL),
+        ]
+
+        day = timeline.build_timeline(events, {}, {}, WED, graph=graph)
+
+        assert _travel(day.items) == [
+            ("Home → Office (metro, 50)", "08:10", "09:00"),
+            ("Office → Dentist (20)", "13:40", "14:00"),
+            ("Dentist → School (assumed 30)", "16:30", "17:00"),
+            ("School → Home (assumed 30)", "17:30", "18:00"),
+        ]
+        assumed = [i for i in day.items if i.assumed]
+        assert len(assumed) == 2 and all(i.options is None for i in assumed)
+        assert day.warnings == [
+            "Assumed 30 min from Dentist to School: no travel time saved",
+            "Assumed 30 min from School to Home: no travel time saved",
+        ]
+
+    def test_one_warning_per_pair_whichever_the_direction(self):
+        events = [
+            _event(1, "Pickup", (2026, 10, 21, 9, 0), (2026, 10, 21, 9, 30), location_id=SCHOOL),
+            _event(2, "Pickup again", (2026, 10, 21, 17, 0), (2026, 10, 21, 17, 30), location_id=SCHOOL),
+            _event(3, "Plumber", (2026, 10, 21, 12, 0), (2026, 10, 21, 13, 0), location_id=HOME),
+        ]
+        day = timeline.build_timeline(events, {}, {}, WED, graph=_graph())
+        assert len(_travel(day.items)) == 4
+        assert day.warnings == ["Assumed 30 min from Home to School: no travel time saved"]
+
+    def test_unlocated_events_do_not_break_the_chain(self):
+        graph = _graph({(HOME, OFFICE): {"metro": 50}, (OFFICE, SCHOOL): {"metro": 30}, (HOME, SCHOOL): {"metro": 20}})
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 12, 0), location_id=OFFICE),
+            _event(2, "Call", (2026, 10, 21, 13, 0), (2026, 10, 21, 14, 0), presence="remote_anywhere"),
+            _event(3, "Pickup", (2026, 10, 21, 15, 0), (2026, 10, 21, 15, 30), location_id=SCHOOL),
+        ]
+        assert _travel(timeline.build_timeline(events, {}, {}, WED, graph=graph).items) == [
+            ("Home → Office (metro, 50)", "08:10", "09:00"),
+            ("Office → School (metro, 30)", "14:30", "15:00"),
+            ("School → Home (metro, 20)", "15:30", "15:50"),
+        ]
+
+    def test_without_a_home_location_trips_start_from_home_by_name(self):
+        events = [_event(1, "Office", location_id=OFFICE)]
+        day = timeline.build_timeline(events, {}, {}, WED, graph=_graph(home=None))
+        assert [t[0] for t in _travel(day.items)] == ["Home → Office (assumed 30)", "Office → Home (assumed 30)"]
+
+    def test_dst_day_uses_elapsed_minutes(self):
+        graph = _graph({(HOME, SCHOOL): {"car": 120}})
+        events = [_event(1, "Early class", (2026, 10, 25, 3, 0), (2026, 10, 25, 4, 0), location_id=SCHOOL)]
+
+        items = timeline.build_timeline(events, {}, {}, date(2026, 10, 25), graph=graph).items
+
+        assert items[0].start == "2026-10-25T01:00:00+00:00"  # 120 elapsed minutes before 03:00 WET
+
+
+class TestAssumedTravelForUnlocatedEvents:
+    def test_in_person_event_without_minutes_gets_the_default(self):
+        day = timeline.build_timeline([_event(7, "Party", (2026, 10, 21, 20, 0), (2026, 10, 21, 23, 0))], {}, {}, WED,
+                                      graph=_graph())
+        assert _travel(day.items) == [("Travel to Party", "19:30", "20:00"), ("Travel home from Party", "23:00", "23:30")]
+        assert all(i.assumed for i in day.items if i.kind == "travel")
+        assert day.assumed_events == [(7, "Party")]
+        assert day.warnings == []  # one line for the whole plan, written by the day plan service
+
+    def test_the_events_own_minutes_are_not_assumed(self):
+        day = timeline.build_timeline([_event(7, "Class", travel_minutes=25)], {}, {}, WED, graph=_graph())
+        assert all(i.assumed is None for i in day.items) and day.assumed_events == []
+
+    def test_exceptions_get_nothing(self):
+        events = [
+            _event(1, "Online", presence="remote_home"),
+            _event(2, "Anywhere", presence="remote_anywhere"),
+            _event(3, "Holiday", (2026, 10, 21, 0, 0), (2026, 10, 21, 23, 59), all_day=True),
+            _event(4, "Their course", availability="free"),
+            _event(5, "Office day", (2026, 10, 21, 13, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="remote_home"),
+        ]
+        day = timeline.build_timeline(events, {}, {}, WED, "office", graph=_graph())
+        # The office event is remote, so it holds nothing; the others are all exceptions themselves.
+        assert _travel(day.items) == [] and day.assumed_events == []
+
+    def test_events_inside_an_office_or_located_event_get_nothing(self):
+        graph = _graph({(HOME, OFFICE): {"metro": 50}, (HOME, DENTIST): {"metro": 10}})
+        events = [
+            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 12, 0), tags=["office"]),
+            _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 15)),
+            _event(3, "Dentist", (2026, 10, 21, 15, 0), (2026, 10, 21, 16, 0), location_id=DENTIST),
+            _event(4, "Quick call", (2026, 10, 21, 15, 10), (2026, 10, 21, 15, 20)),
+        ]
+        day = timeline.build_timeline(events, {}, {}, WED, "office", graph=graph)
+        assert day.assumed_events == [(1, "Office day")]  # the office day itself has no location here
+
+    def test_a_zero_default_switches_the_assumption_off(self):
+        events = [_event(7, "Party"), _event(8, "Office", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), location_id=OFFICE)]
+        day = timeline.build_timeline(events, {}, {}, WED, graph=_graph(default=0))
+        assert _travel(day.items) == [] and day.warnings == [] and day.assumed_events == []
+
+    def test_without_a_graph_only_the_events_own_minutes_count(self):
+        day = timeline.build_timeline([_event(7, "Party"), _event(8, "Class", travel_minutes=10)], {}, {}, WED)
+        assert [t[0] for t in _travel(day.items)] == ["Travel to Class", "Travel home from Class"]

@@ -130,6 +130,10 @@
           <input name="office_days_per_week" type="number" min="1" max="7" value="{{ settings.office_days_per_week or '' }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum minutes for an office day</span>
           <input name="office_min_minutes" type="number" min="0" value="{{ '' if settings.office_min_minutes is none else settings.office_min_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Assumed travel, minutes one way, when nothing is saved (0 = off)</span>
+          <input name="default_travel_minutes" type="number" min="0" max="600" value="{{ settings.default_travel_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Walk instead of public transport if at most this many minutes longer</span>
+          <input name="walk_tolerance_minutes" type="number" min="0" max="120" value="{{ settings.walk_tolerance_minutes }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1 md:col-span-2"><span class="block text-xs text-gray-500">Travel times, one per line: place, mode, minutes from home (office, metro, 50) or origin, place, mode, minutes (office, school, car, 20). Places are <a href="/locations" class="text-[#378ADD] hover:underline">locations</a>: a new name becomes one</span>
           <textarea name="travel_times" rows="3" class="textarea textarea-bordered textarea-sm w-full">{% for t in settings.travel_times or [] %}{% if t.origin != "home" %}{{ t.origin }}, {% endif %}{{ t.place }}, {{ t.mode }}, {{ t.minutes }}
 {% endfor %}</textarea></label>
@@ -193,6 +197,7 @@ document.getElementById('settings-form')?.addEventListener('submit', async (even
     work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows, workdays,
     work_tag: text('work_tag'), office_tag: text('office_tag'),
     office_days_per_week: number('office_days_per_week'), office_min_minutes: number('office_min_minutes'),
+    default_travel_minutes: number('default_travel_minutes'), walk_tolerance_minutes: number('walk_tolerance_minutes'),
     conventions: text('conventions'),
     travel_times: (form.get('travel_times') || '').split('\n').map(l => l.trim()).filter(Boolean).map((line) => {
       const parts = line.split(',').map(part => part.trim());

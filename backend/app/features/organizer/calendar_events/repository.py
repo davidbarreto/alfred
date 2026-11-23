@@ -67,6 +67,8 @@ class CalendarEventRepository:
             query = query.where(CalendarEvent.tags.any(Tag.name.in_(map(normalize_tag_name, event_filter.tags))))
         if event_filter.q:
             query = query.where(CalendarEvent.title.ilike(f"%{event_filter.q}%"))
+        if event_filter.location_id is not None:
+            query = query.where(CalendarEvent.location_id == event_filter.location_id)
         query = query.order_by(CalendarEvent.start_datetime.asc()).limit(event_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())

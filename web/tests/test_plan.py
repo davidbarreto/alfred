@@ -19,7 +19,8 @@ def _plan(plan_date="2026-10-21", version=2, notes="Light day", items=None, id=1
 
 def _settings(**kw):
     base = {"wake_time": "07:30", "sleep_time": None, "work_target_minutes": 480, "preferred_work_windows": ["10:00-14:00"],
-            "workdays": ["mon", "tue", "wed", "thu", "fri"], "work_tag": "work", "office_tag": "office", "office_days_per_week": 4, "office_min_minutes": 0}
+            "workdays": ["mon", "tue", "wed", "thu", "fri"], "work_tag": "work", "office_tag": "office", "office_days_per_week": 4, "office_min_minutes": 0,
+            "default_travel_minutes": 30, "walk_tolerance_minutes": 10}
     base.update(kw)
     return base
 
@@ -212,6 +213,12 @@ class TestMissedBlocks:
         ]))
         text = client.get("/plan?date=2026-10-21").text
         assert 'name="travel_times"' in text and "office, metro, 50\noffice, school, car, 20" in text
+
+    def test_settings_form_has_the_travel_defaults(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([], [], _settings(default_travel_minutes=0, walk_tolerance_minutes=15))
+        text = client.get("/plan?date=2026-10-21").text
+        assert 'name="default_travel_minutes" type="number" min="0" max="600" value="0"' in text
+        assert 'name="walk_tolerance_minutes" type="number" min="0" max="120" value="15"' in text
 
     def test_work_and_transport_get_their_own_icons(self, client, mock_api):
         items = [

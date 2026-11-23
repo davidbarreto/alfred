@@ -58,9 +58,15 @@ def _parse_clock_or_datetime(value: Any, day: date) -> datetime | None:
     return parsed
 
 
-def _planning_fields(arguments: dict[str, Any]) -> dict[str, Any]:
-    """The Alfred-only planning columns present in the arguments (an empty availability/routine_id clears it)."""
+async def _planning_fields(arguments: dict[str, Any], service: CalendarEventService) -> dict[str, Any]:
+    """The Alfred-only planning columns present in the arguments (an empty availability/routine_id/location clears it).
+
+    location_id takes a location id or name.
+    """
     fields: dict[str, Any] = {}
+    if "location_id" in arguments:
+        ref = str(arguments["location_id"] or "").strip()
+        fields["location_id"] = await service.find_location_id(ref) if ref else None
     if "availability" in arguments:
         fields["availability"] = str(arguments["availability"] or "").strip().lower() or None
     if "presence" in arguments:
@@ -92,7 +98,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             location=arguments.get("location"),
             recurrence_rule=arguments.get("recurrence"),
             tags=parse_tags(arguments.get("tags")),
-            **_planning_fields(arguments),
+            **await _planning_fields(arguments, service),
         )
         result = await service.create_event(payload)
         return result.model_dump(mode='json')
@@ -133,7 +139,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             update_fields["recurrence_rule"] = arguments["recurrence"]
         if "tags" in arguments:
             update_fields["tags"] = parse_tags(arguments["tags"])
-        update_fields.update(_planning_fields(arguments))
+        update_fields.update(await _planning_fields(arguments, service))
         result = await service.update_event(event_id, build_model(EventUpdate, **update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")

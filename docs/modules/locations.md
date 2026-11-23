@@ -34,6 +34,17 @@ Segments are separated by `;` or new lines. Days are names (`mon`, `monday`), ra
 - Portal: a Travel times card on each location (5 rows, "See all N" opens `/locations/{id}/travel-times`) with a form to add or update a route from that location, and delete buttons.
 - Command: `location add/update ... --from home:metro=20,foot=35;office:car=10` saves routes from existing locations to this one; `location show` lists its travel times.
 
+## Events at a location
+
+`organizer.calendar_events.location_id` (migration 097, FK `ON DELETE SET NULL`, null) says where an event happens. It is Alfred-only: stripped before every Google call, never written by sync, and an update that only changes it skips Google. On a recurring series it is on the master row, so every occurrence (moved ones too) is there. Deleting a location sets its events' `location_id` to null (no 409). An unknown id is a 422.
+
+- **Frequent places only.** A one-off appointment keeps a number on the event (`travel_minutes`) or nothing; a place the user goes to often becomes a location with its travel times, and its events link to it.
+- **Day plan:** events carry `location` (the location's name) and `location_id`, and travel blocks between locations are derived from the travel times ([planning.md](planning.md#derived-travel)).
+- **API:** `location_id` on `POST/PATCH /organizer/calendar-events`, and `GET /organizer/calendar-events?location_id=` lists the events at a location.
+- **Portal:** the event form has an *At* picker (active locations, then archived ones, then *+ New location…*: name, kind and minutes from Home per mode, `metro=20, foot=35`; it needs a Home location when minutes are given). When an event without a location has a calendar location text equal to an active location's name or address (case and spaces ignored), the day view pre-selects it; nothing is linked automatically, not even on sync. Each location's page lists its events of the next 60 days (5, then "See all N" opens `/locations/{id}/events`).
+- **Command:** `event add/update ... --at <location id or name>` (empty clears it). `--location` stays the calendar's free-text location, which is sent to Google.
+- **Archived locations** keep their travel times in the planning `travel_times` list: the `/plan` form replaces the whole list, so hiding them there would delete them on the next save.
+
 ## Today and holidays
 
 Every location response has `today`: the local date, today's `hours` ("08:00-20:00", "closed" or null when unknown), `holiday` (names), a `note` and `open_now` (null when unknown).
@@ -54,4 +65,4 @@ The command details tell Claude it may search the web for a shop's opening hours
 
 ## Planned
 
-Phases 4-5 of the locations plan: events get a location (derived travel blocks), and the day plan proposes concrete shopping stops.
+Phase 5 of the locations plan: the day plan proposes concrete shopping stops.

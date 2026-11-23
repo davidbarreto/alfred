@@ -670,6 +670,7 @@ def get_day_plan_service(session: AsyncSession = Depends(get_session)) -> DayPla
         activity_service=ActivityService(session),
         trip_service=TripService(session),
         holiday_provider=get_planning_holiday_provider(),
+        travel_time_service=LocationTravelTimeService(session),
     )
 
 def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> MetricEntryService:

@@ -281,6 +281,39 @@
             </select>
           </div>
         </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">At <span class="text-gray-300">(a frequent place: travel comes from its <a href="/locations" class="hover:underline">travel times</a>)</span></label>
+          <select name="location_id" id="event-location-id" onchange="_toggleNewLocation()"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">None (one-off: use the travel minutes)</option>
+            {% for loc in locations if loc.active %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+            {% for loc in locations if not loc.active %}
+            <option value="{{ loc.id }}">{{ loc.name }} (archived)</option>
+            {% endfor %}
+            <option value="new">+ New location…</option>
+          </select>
+          <p id="event-location-suggested" class="hidden text-[11px] text-gray-400 mt-1">Picked because the calendar location matches it.</p>
+        </div>
+        <div id="event-new-location" class="hidden grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Name</label>
+            <input name="new_location_name" maxlength="100"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Kind</label>
+            <select name="new_location_kind" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              {% for kind in location_kinds if kind != 'home' %}<option value="{{ kind }}" {% if kind == 'other' %}selected{% endif %}>{{ kind }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-span-2">
+            <label class="text-xs text-gray-500 mb-1 block">Minutes from Home <span class="text-gray-300">(per mode, optional)</span></label>
+            <input name="new_location_from_home" placeholder="metro=20, foot=35"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+        </div>
         <p class="text-xs text-gray-400">Changes apply to every occurrence of a repeating event.</p>
       </div>
       <div>
@@ -451,6 +484,20 @@ function _setEventRecurrenceChip(value) {
   }
 }
 
+function _toggleNewLocation() {
+  const picked = document.getElementById("event-location-id").value;
+  document.getElementById("event-new-location").classList.toggle("hidden", picked !== "new");
+  document.getElementById("event-location-suggested").classList.add("hidden");
+}
+
+function _setEventLocation(ev) {
+  const select = document.getElementById("event-location-id");
+  const suggested = !ev.location_id && ev.suggested_location_id;
+  select.value = String(ev.location_id || ev.suggested_location_id || "");
+  _toggleNewLocation();
+  document.getElementById("event-location-suggested").classList.toggle("hidden", !suggested);
+}
+
 function openNewEvent(prefillDate) {
   document.getElementById("event-error").classList.add("hidden");
   document.getElementById("event-skips-row").classList.add("hidden");
@@ -465,6 +512,7 @@ function openNewEvent(prefillDate) {
   const viewerTzKnown = KNOWN_TIMEZONES.includes(VIEWER_TZ);
   document.getElementById("event-timezone-custom").value = viewerTzKnown ? "" : VIEWER_TZ;
   _setEventTimezoneChip(viewerTzKnown ? VIEWER_TZ : "__custom__");
+  _toggleNewLocation();
   if (prefillDate) {
     document.querySelector('#new-event-form [name="start_date"]').value = prefillDate;
   }
@@ -490,6 +538,7 @@ function openEditEvent(ev) {
   form.querySelector('[name="presence"]').value = ev.presence || "in_person";
   form.querySelector('[name="travel_minutes"]').value = ev.travel_minutes || 0;
   form.querySelector('[name="routine_id"]').value = ev.routine_id || "";
+  _setEventLocation(ev);
 
   const rr = ev.recurrence_rule || "";
   const knownRecurrences = Array.from(document.querySelectorAll(".event-recurrence-chip"))

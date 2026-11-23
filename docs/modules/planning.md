@@ -6,15 +6,15 @@ The design notes live in `docs/plans/day-planning.md` (gitignored: it names real
 
 ## Alfred-only fields
 
-Tasks gain `estimate_minutes`, `context`, `available_from` (not before); calendar events gain `availability`, `presence`, `travel_minutes`, `routine_id`.
+Tasks gain `estimate_minutes`, `context`, `available_from` (not before); calendar events gain `availability`, `presence`, `travel_minutes`, `routine_id`, `location_id` ([locations.md](locations.md#events-at-a-location)).
 
-`NotionStorageProvider` forwards every non-null record key to Notion, so `TaskService` strips `_ALFRED_ONLY_FIELDS` before every provider call and skips the call entirely when an update touches only those fields. `CalendarEventService` does the same for Google and `sync()` never writes them. Event `tags` are Alfred-only too (the Google provider never reads or returns them), so a tags-only update skips Google and works without OAuth.
+`NotionStorageProvider` forwards every non-null record key to Notion, so `TaskService` strips `_ALFRED_ONLY_FIELDS` before every provider call and skips the call entirely when an update touches only those fields. `CalendarEventService` does the same for Google (`_for_google` strips them from every create and update payload) and `sync()` never writes them. Event `tags` are Alfred-only too (the Google provider never reads or returns them), so a tags-only update skips Google and works without OAuth.
 
 Enum value sets are defined once (`TASK_CONTEXTS`, `EVENT_AVAILABILITIES`, `EVENT_PRESENCES`) and feed the Pydantic types, the CHECK constraints and the MCP descriptions.
 
 ## Routines
 
-`organizer.routines` + `routine_steps` are daily-life rhythm: no done state, no urgency, never notify, never contain travel (that is the event's `travel_minutes`). Two kinds:
+`organizer.routines` + `routine_steps` are daily-life rhythm: no done state, no urgency, never notify, never contain travel (that is derived, see [Derived travel](#derived-travel)). Two kinds:
 
 - *Event-based* — attached to event series through `calendar_events.routine_id`; steps use `anchor` start/end + `offset_minutes`.
 - *Scheduled* — an RRULE + `starts_on`; steps use a `window_start`/`window_end`, and a window exactly as long as the duration is a fixed time.
@@ -61,12 +61,24 @@ Rule of thumb: if skipping it counts as a miss it is a recurring task, otherwise
 - `holidays` (per day, or top level for one day; omitted when none): public holidays from the **first** `HOLIDAY_CALENDARS` calendar only, the planning calendar (`get_planning_holiday_provider`, also used for location holiday hours), one line per name with its code, `"Natal (PT)"`. The other calendars still show on the dashboard and in the briefing. These calls are not logged in `provider_calls` (the request never commits). A provider failure adds one warning and never fails the plan; with integrations disabled the list is empty. Alfred does not decide which holidays are days off (no change to the work target): that is a `conventions` rule.
 - `trips` (per day, or top level for one day; omitted when none): every trip (any status) whose dates include that day, as `{trip_id, name, day, days, agenda, leave_home_at}`. `agenda` is the briefing's `build_agenda` (legs, check-ins/outs and visits that day, times in the zone where they happen); `leave_home_at` (local ISO with offset) only on the local date of the trip's leave-home time. Each trip's detail is loaded once per request.
 - `shopping` (omitted when nothing is pending or due) gives counts only: `pending_items`, `due_recurring`, a `suggested_run` and `by_category` (pending items per category name, largest first, unknown as `other`). Enough to tell a pharmacy stop from a supermarket run; the planner fetches item names with `alfred_shopping` only when it places a stop.
+- Travel blocks are derived on every request, never stored: see [Derived travel](#derived-travel).
 - Overlaps are reported in `warnings`, never resolved. Anything entirely inside an in-person event tagged with the office tag (a standup during an office day) is not an overlap.
 - Tasks missing an estimate/context are named in one warning line each, or only counted when there are more than 5.
 - Days outside the `workdays` preference (default mon-fri) get a work target of 0 unless `work_minutes` is passed.
 - Completing a recurring task that has a deadline advances the deadline to the next cycle (`next_deadline` in `tasks/recurrence.py`), written through `TaskService`.
 - `work.committed_minutes` counts work-tagged events plus the saved plan's blocks of work-tagged tasks, overlaps once (`timeline.merged_minutes`).
 - Planning preferences live in `core.settings` as `planning.<field>` (`PlanningSettingsService`, `GET/PUT /planning/settings`, form on the portal `/plan` page); unset values turn the related section off.
+
+## Derived travel
+
+`planning/timeline.py` (`_travel_blocks`, pure) builds the travel blocks of one local day from the events, the user's locations and their travel times (`LocationTravelTimeService.network()`, loaded once per request into a `TravelGraph`) and two settings: `planning.default_travel_minutes` (default 30, 0 turns the assumption off) and `planning.walk_tolerance_minutes` (default 10), both on `/plan` and in `preferences`.
+
+- **Located events** (a `location_id`, in person, not `free`): a chain in start order, Home → first place → next place → … → Home, one block per change of place, ending when the event starts (or starting when the last one ends). Two events at the same place need none (a meeting during an office day at the office), an event at Home needs none. An event entirely inside another located event (lunch out during the office day) goes there and back from that event's place. Without a Home location the chain starts from "Home" with no travel times.
+- **Minutes, in order:** the pair's travel times (either direction: a route counts both ways unless the reverse is saved), else the event's own `travel_minutes`, else `default_travel_minutes` with `assumed: true` and one `warnings` line per pair ("Assumed 30 min from Office to Dentist: no travel time saved"). The same pair is warned once per plan.
+- **Mode:** a block between two places lists `options` (`[{mode, minutes}]`, every mode saved for the pair, fastest first) and follows one of them for its length: the fastest public transport, unless walking takes at most `walk_tolerance_minutes` more; car only when it is the only option (walking beats car). `foot`/`walk`/`walking` are walking, `car`/`taxi` car, any other name public transport (`timeline.mode_class`). Title: `"Office → School (metro, 60)"`, `"Office → Dentist (20)"` (event minutes) or `"Dentist → School (assumed 30)"`.
+- **Events with no location** keep the old blocks: `travel_minutes > 0` gives "Travel to X" / "Travel home from X". With 0, in-person events get `default_travel_minutes` each way (`assumed: true`) except all-day, `free` and remote events and events entirely inside an in-person office-tagged or located event; all of them share **one** `warnings` line for the plan (each series once). They do not break the chain of located events.
+- Event items carry `location` (the location's name when linked, else the calendar's location text) and `location_id`.
+- Everything goes through UTC instants, so a DST day keeps elapsed minutes.
 
 ## Saved plans (`planning.day_plans`)
 
@@ -75,7 +87,7 @@ Saving a date archives its active version (`archived_at`) and inserts the next; 
 ### Block kinds
 
 - `event`, `task`, `study_item`, `activity`, `routine_step`, `routine_block` point at a row.
-- `work` (focused work that is not a task; counts toward committed work), `transport` (a commute or trip leg not already covered by an event's `travel_minutes`), `meal`, `break` and `other` are free-form and take no `ref_id`.
+- `work` (focused work that is not a task; counts toward committed work), `transport` (a commute or trip leg that is not already a derived travel block), `meal`, `break` and `other` are free-form and take no `ref_id`.
 
 ### Marking blocks
 
@@ -92,11 +104,11 @@ Saving a date archives its active version (`archived_at`) and inserts the next; 
 
 - **Conventions:** `planning.conventions` is free text (max 2000 chars, form on `/plan`) returned in the `preferences` of every `GET /planning/day`, so each client applies the user's standing rules without being told again.
 - **Travel times:** `travel_times` in the planning settings and `preferences` is a list of `{origin, place, mode, minutes}`: door-to-door minutes between two places (`origin` defaults to `home`, `place` is the destination; e.g. home to office by metro 50 / car 20, office to school by car 20). Since migration 096 they are rows between locations (`organizer.location_travel_times`, [locations.md](locations.md#travel-times)) and no longer a setting: the list shape, the `/plan` form and the `--travel` syntax are unchanged, a list sent to `PUT /planning/settings` replaces every travel time, and a name that is not a location yet becomes one. Home is always `home`; other names are location names in lowercase. Up to 60.
-  - Origin, place and mode are lowercased, one entry per (origin, place, mode), a place cannot be its own origin, max 20.
+  - Origin, place and mode are lowercased, one entry per (origin, place, mode), a place cannot be its own origin.
   - A trip counts both ways unless the reverse is listed too.
   - Entries stored before origins existed read back as from home.
   - Command syntax `[origin>]place:mode=minutes[,...];...` (`office:metro=50,car=20;office>school:car=20`); form on `/plan` (one line per entry, `place, mode, minutes` or `origin, place, mode, minutes`).
-  - Also returned in `preferences`, so clients derive leave-home times and `transport` blocks for days with no event (office days are decided inside the plan, so they have no event to carry `travel_minutes`).
+  - Also returned in `preferences`, so clients derive leave-home times and `transport` blocks for days with no event yet (an office day being planned). Travel times touching archived locations are kept in the list.
 
 ## Planning workflow for clients
 
@@ -105,7 +117,7 @@ The recommended flow for an LLM client is the committed skill `.claude/skills/al
 - One `get` for the whole week (`days` through Sunday, max 7) is enough: it already carries `saved_plan`, `preferences` and `warnings`. `get_saved` / `review` are only for looking back at last week.
 - Personal rules never live in the repo: they belong in `planning.conventions`, `travel_times`, the other `planning.*` preferences and memory, all of which come back in `preferences`. A full skill with names and routines can be kept in `docs/skills/` (gitignored) or in the Claude web skill.
 - Save only the dates that changed (`days` is a JSON string); use `edit` for a window inside an already saved day. Mark outcomes with `miss`/`done` rather than re-saving.
-- Commute legs not covered by an event's `travel_minutes` are `transport` blocks; focused non-task work is `work`.
+- Commute legs that have no derived travel block are `transport` blocks; focused non-task work is `work`. Events the client creates at a frequent place (an office day) get `location_id`, so the commute comes from the travel times.
 - The mcp container fetches the catalog once at startup, so after adding a kind or action restart it before the client sees it.
 
 ## DST

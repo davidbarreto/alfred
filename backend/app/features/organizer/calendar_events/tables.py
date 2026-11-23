@@ -9,6 +9,7 @@ from app.db.types import LocalDateTime
 from app.features.organizer.calendar_events.constants import EVENT_AVAILABILITIES, EVENT_PRESENCES
 from app.features.organizer.activities.tables import Activity  # noqa: F401 — Tag.activities needs Activity registered wherever Tag is mapped
 from app.features.organizer.routines.tables import Routine  # noqa: F401 — registers Routine for the routine_id foreign key
+from app.features.organizer.locations.tables import Location  # noqa: F401 — registers Location for the location_id foreign key
 from app.features.organizer.tags.tables import Tag
 
 
@@ -107,6 +108,10 @@ class CalendarEvent(Base):
     travel_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     routine_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("organizer.routines.id", ondelete="SET NULL"), nullable=True
+    )
+    # The frequent place it happens at; the day plan derives travel from the travel times between locations.
+    location_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("organizer.locations.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     invitees: Mapped[List["CalendarEventInvitee"]] = relationship(

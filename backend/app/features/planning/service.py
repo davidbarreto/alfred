@@ -7,6 +7,7 @@ from app.features.language.sessions.service import SessionService as LanguageSes
 from app.features.organizer.activities.service import ActivityService
 from app.features.organizer.calendar_events.schemas import EventFilters, EventRead
 from app.features.organizer.calendar_events.service import CalendarEventService
+from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.organizer.routines.expansion import expand_scheduled_steps, localize, scheduled_dates
 from app.features.organizer.routines.schemas import RoutineRead
 from app.features.organizer.routines.service import RoutineService
@@ -72,6 +73,7 @@ class DayPlanService:
         activity_service: ActivityService,
         trip_service: TripService,
         holiday_provider: HolidayProvider | None,
+        travel_time_service: LocationTravelTimeService,
     ) -> None:
         self._events = event_service
         self._routines = routine_service
@@ -84,6 +86,7 @@ class DayPlanService:
         self._activities = activity_service
         self._trips = trip_service
         self._holidays = holiday_provider
+        self._travel_times = travel_time_service
 
     async def get_plan(
         self, start: date | None = None, days: int = 1, work_minutes: int | None = None
@@ -97,13 +100,18 @@ class DayPlanService:
         saved = await self._saved.get_saved(dates[0], dates[-1])
         work_task_blocks = await self._work_task_blocks(saved, settings.work_tag)
         routines_by_id, scheduled_routines, note_titles = await self._load_routines(events)
+        graph = await self._travel_graph(settings)
+        assumed_events: list[tuple[int, str]] = []
         day_reads = [
             self._build_day(
                 d, events, routines_by_id, scheduled_routines, note_titles, settings, work_minutes, warnings,
-                work_task_blocks.get(d, []),
+                work_task_blocks.get(d, []), graph, assumed_events,
             )
             for d in dates
         ]
+        if assumed_events:
+            warnings.append(_assumed_travel_warning(assumed_events, graph.default_minutes))
+        warnings[:] = list(dict.fromkeys(warnings))
         holidays = await self._holidays_by_day(dates, warnings)
         trip_days = await self._trip_days(dates)
         for day in day_reads:
@@ -147,6 +155,19 @@ class DayPlanService:
         )
         return await self._events.get_events(filters)
 
+    async def _travel_graph(self, settings: Any) -> timeline.TravelGraph:
+        network = await self._travel_times.network()
+        routes: dict[tuple[int, int], dict[str, int]] = {}
+        for origin, destination, mode, minutes in network.routes:
+            routes.setdefault((origin, destination), {})[mode] = minutes
+        return timeline.TravelGraph(
+            names=network.names,
+            home_id=network.home_id,
+            routes=routes,
+            default_minutes=settings.default_travel_minutes,
+            walk_tolerance=settings.walk_tolerance_minutes,
+        )
+
     async def _load_routines(
         self, events: list[EventRead]
     ) -> tuple[dict[int, RoutineRead], list[RoutineRead], dict[int, str]]:
@@ -171,9 +192,13 @@ class DayPlanService:
         work_minutes: int | None,
         warnings: list[str],
         work_task_blocks: list[tuple[datetime, datetime]],
+        graph: timeline.TravelGraph,
+        assumed_events: list[tuple[int, str]],
     ) -> DayRead:
-        items, overlaps = timeline.build_timeline(events, routines_by_id, note_titles, day, settings.office_tag)
-        warnings.extend(overlaps)
+        day_timeline = timeline.build_timeline(events, routines_by_id, note_titles, day, settings.office_tag, graph)
+        items = day_timeline.items
+        warnings.extend(day_timeline.warnings)
+        assumed_events.extend(day_timeline.assumed_events)
         blocks: list[RoutineBlock] = []
         for routine in scheduled_routines:
             try:
@@ -397,8 +422,21 @@ def _preferences(settings: Any) -> dict[str, Any]:
         "preferred_work_windows": settings.preferred_work_windows or None,
         "conventions": settings.conventions,
         "travel_times": [t.model_dump() for t in settings.travel_times] or None,
+        "default_travel_minutes": settings.default_travel_minutes,
+        "walk_tolerance_minutes": settings.walk_tolerance_minutes,
     }
     return {k: v for k, v in prefs.items() if v is not None}
+
+
+def _assumed_travel_warning(events: list[tuple[int, str]], minutes: int) -> str:
+    """One line for every in-person event whose travel was assumed (each occurrence of a series counts once)."""
+    unique = list(dict.fromkeys(events))
+    listed = ", ".join(f"{title} ({event_id})" for event_id, title in unique[:_MAX_LISTED_IDS])
+    more = f" and {len(unique) - _MAX_LISTED_IDS} more" if len(unique) > _MAX_LISTED_IDS else ""
+    return (
+        f"Assumed {minutes} min travel each way for in-person events with no location or travel minutes: "
+        f"{listed}{more}. Ask the user: link a location, set the travel minutes, or mark it remote or free"
+    )
 
 
 def _task_item(task: TaskRead) -> TaskItem:

@@ -9,6 +9,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 import app.client as api
 from app.config import get_settings
+from app.routes.locations import KINDS
+from app.shared.forward import error_detail, safe_get
 from app.templates_config import templates
 from app.shared.timezone import local_today
 
@@ -92,6 +94,28 @@ async def _event_routines() -> list[dict]:
     return [r for r in routines if not r.get("recurrence_rule")]
 
 
+async def _locations() -> list[dict]:
+    """Every location for the event form's picker: active ones first, archived ones after (an event may sit there)."""
+    locations = await safe_get("/organizer/locations", default=[]) or []
+    return sorted(locations, key=lambda loc: (not loc.get("active", True), loc.get("kind") != "home", loc.get("name", "")))
+
+
+def suggest_location_id(event: dict, locations: list[dict]) -> int | None:
+    """For an event with no location yet: the active location whose name or address equals its calendar location text."""
+    if event.get("location_id") is not None:
+        return None
+    text = " ".join((event.get("location") or "").split()).lower()
+    if not text:
+        return None
+    for loc in locations:
+        if not loc.get("active", True):
+            continue
+        candidates = (loc.get("name"), loc.get("address"))
+        if any(c and " ".join(c.split()).lower() == text for c in candidates):
+            return loc.get("id")
+    return None
+
+
 @router.get("/", response_class=HTMLResponse)
 async def calendar_page(request: Request):
     today = local_today()
@@ -146,6 +170,8 @@ async def calendar_page(request: Request):
     return templates.TemplateResponse(request, "calendar.html", {
         "api_error": api_error,
         "routines": routines,
+        "locations": await _locations(),
+        "location_kinds": KINDS,
         "events": events,
         "events_by_date": events_by_date,
         "weeks": weeks,
@@ -200,6 +226,9 @@ async def calendar_day(date_str: str, request: Request):
 
     _add_display_times(events, _viewer_timezone(request))
     _add_occurrence_dates(events)
+    locations = await _locations()
+    for ev in events:
+        ev["suggested_location_id"] = suggest_location_id(ev, locations)
 
     def _covers_day(ev: dict) -> bool:
         if ev["all_day"]:
@@ -256,8 +285,65 @@ def _event_payload(
         "presence": presence or "in_person",
         "travel_minutes": _whole_number(travel_minutes, "Travel time"),
         "routine_id": _whole_number(routine_id, "Routine") if routine_id else None,
+        "location_id": None,  # set by the route from the picker
         "tags": [t.strip() for t in (tags or "").split(",") if t.strip()],
     }
+
+
+_NEW_LOCATION = "new"
+
+
+def parse_minutes_by_mode(raw: str | None) -> list[tuple[str, int]]:
+    """'metro=20, foot=35' as [(mode, minutes)]; empty means none."""
+    pairs = []
+    for part in filter(None, (p.strip() for p in (raw or "").replace(";", ",").split(","))):
+        mode, equals, minutes = part.partition("=")
+        mode = mode.strip().lower()
+        if not equals or not mode or not minutes.strip().isdigit() or not 1 <= int(minutes) <= 600:
+            raise ValueError(f"Minutes from Home: write mode=minutes, e.g. metro=20, foot=35 (got {part!r}).")
+        pairs.append((mode, int(minutes)))
+    return pairs
+
+
+async def _event_location_id(choice: str | None, name: str | None, kind: str | None, from_home: str | None) -> int | None:
+    """The picked location id; "new" first creates the location and its travel times from Home.
+
+    Raises ValueError with a message for the form.
+    """
+    choice = (choice or "").strip()
+    if not choice:
+        return None
+    if choice != _NEW_LOCATION:
+        if not choice.isdigit():
+            raise ValueError("Pick a location from the list.")
+        return int(choice)
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Give the new location a name.")
+    routes = parse_minutes_by_mode(from_home)
+    home = None
+    if routes:
+        homes = await api.get("/organizer/locations", params={"kind": "home"})
+        if not homes:
+            raise ValueError("There is no Home location yet: add it on Locations, or leave the minutes empty.")
+        home = homes[0]["id"]
+    created = await api.post("/organizer/locations", json={"name": name, "kind": (kind or "").strip() or "other"})
+    for mode, minutes in routes:
+        await api.put(
+            f"/organizer/locations/{home}/travel-times",
+            json={"destination_id": created["id"], "mode": mode, "minutes": minutes},
+        )
+    return created["id"]
+
+
+async def _form_location_id(
+    location_id: str | None, new_location_name: str | None, new_location_kind: str | None,
+    new_location_from_home: str | None,
+) -> int | None:
+    try:
+        return await _event_location_id(location_id, new_location_name, new_location_kind, new_location_from_home)
+    except httpx.HTTPStatusError as e:
+        raise ValueError(error_detail(e, "Could not create the location.")) from e
 
 
 @router.post("/", response_class=HTMLResponse)
@@ -278,6 +364,10 @@ async def create_event(
     travel_minutes: Annotated[str | None, Form()] = None,
     routine_id: Annotated[str | None, Form()] = None,
     tags: Annotated[str | None, Form()] = None,
+    location_id: Annotated[str | None, Form()] = None,
+    new_location_name: Annotated[str | None, Form()] = None,
+    new_location_kind: Annotated[str | None, Form()] = None,
+    new_location_from_home: Annotated[str | None, Form()] = None,
 ):
     try:
         payload = _event_payload(
@@ -285,8 +375,13 @@ async def create_event(
             recurrence_rule, timezone, end_date, notification_profile,
             availability, presence, travel_minutes, routine_id, tags,
         )
+        payload["location_id"] = await _form_location_id(
+            location_id, new_location_name, new_location_kind, new_location_from_home,
+        )
     except ValueError as exc:
         return HTMLResponse(str(exc), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Could not create the location.", status_code=422)
     try:
         await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -320,6 +415,10 @@ async def update_event(
     travel_minutes: Annotated[str | None, Form()] = None,
     routine_id: Annotated[str | None, Form()] = None,
     tags: Annotated[str | None, Form()] = None,
+    location_id: Annotated[str | None, Form()] = None,
+    new_location_name: Annotated[str | None, Form()] = None,
+    new_location_kind: Annotated[str | None, Form()] = None,
+    new_location_from_home: Annotated[str | None, Form()] = None,
 ):
     try:
         payload = _event_payload(
@@ -327,8 +426,13 @@ async def update_event(
             recurrence_rule, timezone, end_date, notification_profile,
             availability, presence, travel_minutes, routine_id, tags,
         )
+        payload["location_id"] = await _form_location_id(
+            location_id, new_location_name, new_location_kind, new_location_from_home,
+        )
     except ValueError as exc:
         return HTMLResponse(str(exc), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Could not create the location.", status_code=422)
     try:
         await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:

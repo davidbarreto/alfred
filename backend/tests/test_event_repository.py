@@ -135,6 +135,19 @@ class TestGetEvents:
         await repo.get_events(EventFilters(q="sync"))
         session.execute.assert_called_once()
 
+    async def test_location_filter_applied(self):
+        from sqlalchemy.dialects import postgresql
+
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        await CalendarEventRepository(session).get_events(EventFilters(location_id=4))
+
+        sql = str(session.execute.call_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        ))
+        assert "organizer.calendar_events.location_id = 4" in sql
+
     async def test_range_query_includes_recurring_series_regardless_of_own_start(self):
         # A recurring series can start well before the queried range and still produce
         # occurrences inside it, so it must not be excluded by start_datetime alone.

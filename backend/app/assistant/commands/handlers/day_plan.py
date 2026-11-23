@@ -21,7 +21,9 @@ from app.features.planning.settings_service import PlanningSettingsService
 logger = logging.getLogger(__name__)
 
 _PORTAL_SOURCES = {"web", "portal"}
-_INT_SETTINGS = ("work_target_minutes", "office_days_per_week", "office_min_minutes")
+_INT_SETTINGS = (
+    "work_target_minutes", "office_days_per_week", "office_min_minutes", "default_travel_minutes", "walk_tolerance_minutes",
+)
 _LIST_SETTINGS = ("preferred_work_windows", "workdays")
 _TEXT_SETTINGS = ("wake_time", "sleep_time", "work_tag", "office_tag", "conventions")
 

@@ -96,6 +96,22 @@
         </div>
       </div>
 
+      <div class="card bg-white" id="location-events">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Upcoming events</h2>
+            {% if events_total > events | length %}<a href="/locations/{{ location.id }}/events" class="text-xs text-[#378ADD] hover:underline">See all {{ events_total }}</a>{% endif %}
+          </div>
+          {% if events %}
+          <ul class="divide-y divide-gray-100">
+            {% for ev in events %}{% include "_location_event_row.html" %}{% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-sm text-gray-400">No events here in the next 60 days. Pick this location on an event's form.</p>
+          {% endif %}
+        </div>
+      </div>
+
       <div class="card bg-white" id="location-address">
         <div class="card-body p-5 space-y-2">
           <h2 class="text-sm font-semibold text-gray-900">Address</h2>

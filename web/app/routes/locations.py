@@ -1,3 +1,4 @@
+from datetime import datetime, time, timedelta
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Request
@@ -10,13 +11,15 @@ from app.templates_config import templates
 
 router = APIRouter(prefix="/locations")
 
-_KINDS = ("home", "work", "school", "gym", "supermarket", "pharmacy", "bakery", "market", "other")
+KINDS = ("home", "work", "school", "gym", "supermarket", "pharmacy", "bakery", "market", "other")
 _DAYS = (("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"),
          ("sat", "Saturday"), ("sun", "Sunday"))
 _HOURS_HELP = "mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed"
 _MODES = ("foot", "metro", "bus", "train", "tram", "car", "taxi", "bike")
 # Rows of a list card on the detail page; the rest are on their own page.
 _CARD_LIMIT = 5
+# How far ahead a location lists its events (recurring ones are expanded into occurrences).
+_EVENTS_AHEAD_DAYS = 60
 
 
 def _ranges_text(ranges: list | None) -> str:
@@ -64,7 +67,7 @@ async def locations_page(request: Request):
         "available": locations is not None,
         "groups": group_locations(locations or []),
         "categories": categories,
-        "kinds": _KINDS,
+        "kinds": KINDS,
         "hours_help": _HOURS_HELP,
     })
 
@@ -79,6 +82,7 @@ async def location_detail(request: Request, location_id: int):
     categories = await safe_get("/organizer/shopping-categories", default=[])
     travel_times = await safe_get(f"/organizer/locations/{location_id}/travel-times", default=[])
     others = await _other_locations(location_id)
+    events = await upcoming_events(location_id)
     today_key = _DAYS[local_today().weekday()][0]
     return templates.TemplateResponse(request, "location_detail.html", {
         "location": location,
@@ -90,8 +94,10 @@ async def location_detail(request: Request, location_id: int):
         "travel_times": travel_times[:_CARD_LIMIT],
         "travel_times_total": len(travel_times),
         "others": others,
+        "events": events[:_CARD_LIMIT],
+        "events_total": len(events),
         "modes": _MODES,
-        "kinds": _KINDS,
+        "kinds": KINDS,
         "hours_help": _HOURS_HELP,
     })
 
@@ -105,6 +111,29 @@ async def location_travel_times(request: Request, location_id: int):
     return templates.TemplateResponse(request, "location_travel_times.html", {
         "location": location, "travel_times": travel_times, "others": await _other_locations(location_id), "modes": _MODES,
     })
+
+
+@router.get("/{location_id}/events", response_class=HTMLResponse)
+async def location_events(request: Request, location_id: int):
+    location = await safe_get(f"/organizer/locations/{location_id}")
+    if location is None:
+        return templates.TemplateResponse(request, "location_detail.html", {"location": None}, status_code=404)
+    return templates.TemplateResponse(request, "location_events.html", {
+        "location": location, "events": await upcoming_events(location_id), "days": _EVENTS_AHEAD_DAYS,
+    })
+
+
+async def upcoming_events(location_id: int) -> list[dict]:
+    """Timed and all-day events at this location from today through the next 60 days, each occurrence listed."""
+    today = local_today()
+    params = {
+        "location_id": location_id,
+        "start_from": datetime.combine(today, time.min).isoformat(),
+        "start_to": datetime.combine(today + timedelta(days=_EVENTS_AHEAD_DAYS), time.max).isoformat(timespec="seconds"),
+        "limit": 500,
+    }
+    events = await safe_get("/organizer/calendar-events", params=params, default=[])
+    return sorted(events or [], key=lambda e: e["start_datetime"])
 
 
 async def _other_locations(location_id: int) -> list[dict]:

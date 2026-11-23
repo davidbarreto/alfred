@@ -6,6 +6,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.features.organizer.calendar_events.schemas import EventRead
+from app.features.organizer.locations.travel_time_service import TravelNetwork
 from app.features.organizer.routines.schemas import RoutineRead, RoutineStepRead
 from app.features.organizer.tasks.schemas import TaskRead
 from app.features.planning.schemas import PlanningSettingsRead
@@ -69,9 +70,12 @@ def parts():
     trips.get_trips.return_value = []
     holidays = AsyncMock()
     holidays.get_holidays.return_value = []
+    travel_times = AsyncMock()
+    travel_times.network.return_value = TravelNetwork(names={}, home_id=None, routes=[])
     return SimpleNamespace(
         events=events, routines=routines, tasks=tasks, study=study, language=language, shopping=shopping,
         settings=settings, saved=saved, activities=activities, trips=trips, holidays=holidays,
+        travel_times=travel_times,
     )
 
 
@@ -85,7 +89,7 @@ def service(parts):
         event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
         study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
         settings_service=parts.settings, saved_plan_service=parts.saved, activity_service=parts.activities,
-        trip_service=parts.trips, holiday_provider=parts.holidays,
+        trip_service=parts.trips, holiday_provider=parts.holidays, travel_time_service=parts.travel_times,
     )
 
 
@@ -103,7 +107,9 @@ class TestSingleDay:
         assert plan["timeline"] == [] and plan["routine_blocks"] == [] and plan["all_day"] == []
         assert "days" not in plan
         assert plan["work"] == {"target_minutes": 480, "committed_minutes": 0, "remaining_minutes": 480}
-        assert plan["preferences"] == {"work_target_minutes": 480}
+        assert plan["preferences"] == {
+            "work_target_minutes": 480, "default_travel_minutes": 30, "walk_tolerance_minutes": 10,
+        }
         assert "shopping" not in plan and "office" not in plan and "saved_plan" not in plan
 
     async def test_defaults_to_today_in_the_local_zone(self, service):
@@ -118,8 +124,10 @@ class TestSingleDay:
 
     async def test_timeline_work_and_all_day(self, service, parts):
         parts.events.get_events.return_value = [
-            _event(1, "Standup", datetime(2026, 10, 21, 10, 0), datetime(2026, 10, 21, 10, 30), tags=["work"]),
-            _event(2, "Call", datetime(2026, 10, 21, 14, 0), datetime(2026, 10, 21, 15, 0), tags=["work"]),
+            _event(1, "Standup", datetime(2026, 10, 21, 10, 0), datetime(2026, 10, 21, 10, 30), tags=["work"],
+                   presence="remote_home"),
+            _event(2, "Call", datetime(2026, 10, 21, 14, 0), datetime(2026, 10, 21, 15, 0), tags=["work"],
+                   presence="remote_home"),
             _event(3, "Card due", datetime(2026, 10, 21, 0, 0), datetime(2026, 10, 21, 23, 59, 59), all_day=True),
         ]
         parts.settings.get.return_value = _settings(preferred_work_windows=["10:00-14:00"])
@@ -226,7 +234,9 @@ class TestMultiDay:
 
         assert "timeline" not in plan and "work" not in plan
         assert [d["date"] for d in plan["days"]] == ["2026-10-21", "2026-10-22", "2026-10-23"]
-        assert [[i["title"] for i in d["timeline"]] for d in plan["days"]] == [["Mon"], ["Thu"], ["Fri"]]
+        assert [[i["title"] for i in d["timeline"] if i["kind"] == "event"] for d in plan["days"]] == [
+            ["Mon"], ["Thu"], ["Fri"],
+        ]
         assert all("work" in d for d in plan["days"])
 
     async def test_daily_recurring_task_appears_once_with_three_due_dates(self, service, parts):
@@ -245,7 +255,8 @@ class TestMultiDay:
 class TestDstDay:
     async def test_25_hour_day_computes_correct_work_durations(self, service, parts):
         parts.events.get_events.return_value = [
-            _event(1, "Night shift", datetime(2026, 10, 25, 0, 0), datetime(2026, 10, 25, 3, 0), tags=["work"]),
+            _event(1, "Night shift", datetime(2026, 10, 25, 0, 0), datetime(2026, 10, 25, 3, 0), tags=["work"],
+                   travel_minutes=0, presence="remote_anywhere"),
         ]
         plan = _dump(await service.get_plan(date(2026, 10, 25)))
         assert plan["work"]["committed_minutes"] == 240
@@ -433,7 +444,7 @@ class TestOtherSections:
         plan = _dump(await service.get_plan(date(2026, 10, 21)))
         assert plan["preferences"] == {
             "wake_time": "07:30", "sleep_time": "23:30", "work_target_minutes": 480,
-            "preferred_work_windows": ["10:00-14:00"],
+            "preferred_work_windows": ["10:00-14:00"], "default_travel_minutes": 30, "walk_tolerance_minutes": 10,
         }
 
     async def test_travel_times_are_part_of_the_preferences(self, service, parts):
@@ -631,7 +642,7 @@ class TestHolidays:
             event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
             study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
             settings_service=parts.settings, saved_plan_service=parts.saved, activity_service=parts.activities,
-            trip_service=parts.trips, holiday_provider=None,
+            trip_service=parts.trips, holiday_provider=None, travel_time_service=parts.travel_times,
         )
         plan = _dump(await service.get_plan(date(2026, 12, 25)))
         assert "holidays" not in plan and plan["warnings"] == []
@@ -697,3 +708,49 @@ class TestTrips:
         parts.trips.get_trips.return_value = [SimpleNamespace(id=7)]
         parts.trips.get_trip_detail.return_value = None
         assert "trips" not in _dump(await service.get_plan(date(2026, 12, 20)))
+
+
+@freeze_time("2026-10-21 08:00:00")
+class TestDerivedTravel:
+    async def test_travel_comes_from_the_locations_and_settings(self, service, parts):
+        parts.travel_times.network.return_value = TravelNetwork(
+            names={1: "Casa", 2: "Office"}, home_id=1, routes=[(1, 2, "metro", 50), (1, 2, "foot", 56)],
+        )
+        parts.settings.get.return_value = _settings(walk_tolerance_minutes=5)
+        parts.events.get_events.return_value = [
+            _event(1, "Office", datetime(2026, 10, 21, 9, 0), datetime(2026, 10, 21, 17, 0), location_id=2),
+        ]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        travel = [i for i in plan["timeline"] if i["kind"] == "travel"]
+        assert [t["title"] for t in travel] == ["Casa → Office (metro, 50)", "Office → Casa (metro, 50)"]
+        assert travel[0]["options"] == [{"mode": "metro", "minutes": 50}, {"mode": "foot", "minutes": 56}]
+        event = next(i for i in plan["timeline"] if i["kind"] == "event")
+        assert (event["location"], event["location_id"]) == ("Office", 2)
+        assert plan["warnings"] == []
+
+    async def test_assumed_travel_is_one_warning_line_for_the_whole_plan(self, service, parts):
+        parts.events.get_events.return_value = [
+            _event(7, "Rehearsal", datetime(2026, 10, 21, 19, 0), datetime(2026, 10, 21, 21, 0)),
+            _event(7, "Rehearsal", datetime(2026, 10, 22, 19, 0), datetime(2026, 10, 22, 21, 0)),
+            _event(8, "Party", datetime(2026, 10, 22, 22, 0), datetime(2026, 10, 22, 23, 30)),
+        ]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))
+
+        assert plan["warnings"] == [
+            "Assumed 30 min travel each way for in-person events with no location or travel minutes: "
+            "Rehearsal (7), Party (8). Ask the user: link a location, set the travel minutes, or mark it remote or free",
+        ]
+
+    async def test_pair_warnings_are_not_repeated_on_each_day(self, service, parts):
+        parts.travel_times.network.return_value = TravelNetwork(names={1: "Casa", 3: "School"}, home_id=1, routes=[])
+        parts.events.get_events.return_value = [
+            _event(5, "Pickup", datetime(2026, 10, 21, 17, 0), datetime(2026, 10, 21, 17, 30), location_id=3),
+            _event(5, "Pickup", datetime(2026, 10, 22, 17, 0), datetime(2026, 10, 22, 17, 30), location_id=3),
+        ]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))
+
+        assert plan["warnings"] == ["Assumed 30 min from Casa to School: no travel time saved"]

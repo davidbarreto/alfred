@@ -266,7 +266,7 @@ class TestMiss:
 
     def test_save_details_describe_work_transport_and_missed_blocks(self):
         details = COMMAND_DEFINITIONS["day_plan"]["save"]["details"]
-        for phrase in ("work/transport", "travel_minutes", "missed=true", "Free-form kinds take no ref_id"):
+        for phrase in ("work/transport", "derived travel block", "missed=true", "Free-form kinds take no ref_id"):
             assert phrase in details, phrase
 
     def test_save_details_say_eating_is_a_meal_not_a_break(self):

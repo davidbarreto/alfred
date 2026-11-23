@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,7 @@ from app.features.organizer.locations.errors import LocationValidationError
 from app.features.organizer.locations.repository import LocationRepository
 from app.features.organizer.locations.schemas import (
     MAX_TRAVEL_TIMES,
+    LocationFilters,
     LocationTravelTimeRead,
     LocationTravelTimeSet,
 )
@@ -31,6 +33,16 @@ def route_label(travel_time: LocationTravelTime) -> str:
         f"{travel_time.origin.name} → {travel_time.destination.name} by {travel_time.mode} "
         f"({travel_time.minutes} min)"
     )
+
+
+@dataclass(frozen=True)
+class TravelNetwork:
+    """Every location's name (archived ones too: past events may sit there) and every route between them."""
+
+    names: dict[int, str]
+    home_id: int | None
+    # (origin id, destination id, mode, minutes)
+    routes: list[tuple[int, int, str, int]]
 
 
 class LocationTravelTimeService:
@@ -72,6 +84,16 @@ class LocationTravelTimeService:
         await self._repo.delete(travel_time)
         logger.info("Location travel time deleted: id=%d", travel_time_id)
         return True
+
+    async def network(self) -> TravelNetwork:
+        """What the day plan needs to derive travel between events' locations, in two queries."""
+        locations = await self._locations.list(LocationFilters(limit=500))
+        home = next((loc.id for loc in locations if loc.kind == HOME_KIND), None)
+        return TravelNetwork(
+            names={loc.id: loc.name for loc in locations},
+            home_id=home,
+            routes=[(t.origin_id, t.destination_id, t.mode, t.minutes) for t in await self._repo.list_all()],
+        )
 
     async def as_preferences(self) -> list[dict]:
         """Every travel time as the planning preferences list: [{origin, place, mode, minutes}], names lowercase."""

@@ -82,6 +82,24 @@ class TestPreferences:
         service._repo.replace_all.assert_awaited_once_with([])
 
 
+class TestNetwork:
+    async def test_names_home_and_routes_of_every_location(self, service):
+        service._locations.list.return_value = [_HOME, _OFFICE, _SCHOOL]
+        service._repo.list_all.return_value = [_travel_time(1, _HOME, _OFFICE, "metro", 50)]
+
+        network = await service.network()
+
+        assert network.names == {1: "Casa", 2: "Office", 3: "School by the Park"}
+        assert network.home_id == 1
+        assert network.routes == [(1, 2, "metro", 50)]
+        assert service._locations.list.call_args.args[0].active is None  # archived places too
+
+    async def test_no_home(self, service):
+        service._locations.list.return_value = [_OFFICE]
+        service._repo.list_all.return_value = []
+        assert (await service.network()).home_id is None
+
+
 class TestFindLocation:
     async def test_home_means_the_home_location_whatever_its_name(self, service):
         assert await service.find_location(" HOME ") is _HOME

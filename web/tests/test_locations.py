@@ -22,8 +22,10 @@ _GROCERIES = {"id": 1, "name": "groceries"}
 _HOURS = {"mon": [["08:00", "13:00"], ["14:00", "20:00"]], "sun": [], "hol": []}
 
 
-def _routes(locations=None, location=None, categories=None, travel_times=None):
+def _routes(locations=None, location=None, categories=None, travel_times=None, events=None):
     def fake_get(path, params=None):
+        if path == "/organizer/calendar-events":
+            return events if events is not None else []
         if path == "/organizer/locations":
             return locations if locations is not None else []
         if path.endswith("/travel-times"):
@@ -276,3 +278,41 @@ class TestTravelTimeWrites:
         mock_api["put"].assert_awaited_once_with("/organizer/locations/1/travel-times", json=body)
         assert client.delete("/locations/travel-times/7").status_code == 200
         mock_api["delete"].assert_awaited_once_with("/organizer/locations/travel-times/7")
+
+
+def _calendar_event(id, start, title="Pickup", all_day=False):
+    return {"id": id, "title": title, "start_datetime": start, "end_datetime": start, "all_day": all_day,
+            "presence": "in_person"}
+
+
+@pytest.mark.usefixtures("monday")
+class TestLocationEvents:
+    def test_detail_lists_the_next_five_with_a_link_to_all(self, client, mock_api):
+        events = [_calendar_event(i, f"2026-11-{23 + i}T17:00:00+00:00") for i in range(7)]
+        mock_api["get"].side_effect = _routes(location=_location(id=3, name="School"), events=list(reversed(events)))
+
+        text = client.get("/locations/3").text
+
+        assert 'id="location-events"' in text
+        assert text.count('data-event="') == 5
+        assert "2026-11-23 17:00" in text and "2026-11-28 17:00" not in text  # sorted, capped at 5
+        assert 'href="/locations/3/events"' in text and "See all 7" in text
+        calls = [c for c in mock_api["get"].await_args_list if c.args[0] == "/organizer/calendar-events"]
+        params = calls[0].kwargs["params"]
+        assert params["location_id"] == 3
+        assert params["start_from"] == "2026-11-23T00:00:00" and params["start_to"] == "2027-01-22T23:59:59"
+
+    def test_no_link_when_everything_fits(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(), events=[_calendar_event(1, "2026-11-24T09:00:00+00:00")])
+        text = client.get("/locations/1").text
+        assert "See all" not in text and 'data-event="1"' in text
+
+    def test_full_page_lists_every_event(self, client, mock_api):
+        events = [_calendar_event(i, f"2026-11-{23 + i}T17:00:00+00:00") for i in range(7)]
+        mock_api["get"].side_effect = _routes(location=_location(id=3, name="School"), events=events)
+        text = client.get("/locations/3/events").text
+        assert text.count('data-event="') == 7 and "Events at School in the next 60 days" in text
+
+    def test_full_page_missing_location_is_404(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=None)
+        assert client.get("/locations/9/events").status_code == 404

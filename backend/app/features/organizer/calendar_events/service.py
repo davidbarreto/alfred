@@ -18,6 +18,7 @@ from app.features.organizer.calendar_events.schemas import (
 )
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.recurrence import end_rule_before, expand_occurrences, occurrence_instance_id
+from app.features.organizer.locations.repository import LocationRepository
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,14 @@ _OAUTH_REQUIRED = HTTPException(
 )
 _SYNC_LOOKAHEAD = relativedelta(months=3)
 
-# Planning fields and tags live only in Alfred's DB: they are never sent to Google (the provider
-# picks specific keys anyway) and sync() never writes them. An update touching only
-# these fields does not need Google, so it works without OAuth and skips the API call.
-_ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id", "tags"})
+# Planning fields and tags live only in Alfred's DB: they are stripped before every Google call
+# and sync() never writes them. An update touching only these fields does not need Google,
+# so it works without OAuth and skips the API call.
+_ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id", "location_id", "tags"})
+
+
+def _for_google(record: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in record.items() if k not in _ALFRED_ONLY_FIELDS}
 
 
 def _comparable(field: str, value: Any) -> Any:
@@ -91,6 +96,24 @@ class CalendarEventService:
         self._provider = provider
         self._session = session
         self._repo = CalendarEventRepository(session)
+        self._locations = LocationRepository(session)
+
+    async def find_location_id(self, ref: str) -> int:
+        """The id of a location given by id or name (case-insensitive); an unknown one is a 422."""
+        ref = ref.strip()
+        location = await self._locations.get(int(ref)) if ref.isdigit() else await self._locations.get_by_name(ref)
+        if location is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Unknown location {ref!r}; add it first with location add",
+            )
+        return location.id
+
+    async def _check_location(self, location_id: int | None) -> None:
+        if location_id is not None and await self._locations.get(location_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown location id {location_id}"
+            )
 
     async def get_event(self, event_id: int) -> EventRead | None:
         event_orm = await self._repo.get_event(event_id)
@@ -197,7 +220,8 @@ class CalendarEventService:
         if self._provider is None:
             logger.warning("CalendarEvent create: Google Calendar not authorized")
             raise _OAUTH_REQUIRED
-        event_record = await self._provider.create(event_create.model_dump(), self._session)
+        await self._check_location(event_create.location_id)
+        event_record = await self._provider.create(_for_google(event_create.model_dump()), self._session)
         # The provider converts start/end into the user's local timezone before returning;
         # persist that converted value instead of the caller's raw payload so the naive
         # DB datetime matches what _from_google_event guarantees elsewhere (see sync()).
@@ -211,6 +235,8 @@ class CalendarEventService:
         return EventRead.model_validate(event_orm)
 
     async def update_event(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
+        if "location_id" in event_update.model_fields_set:
+            await self._check_location(event_update.location_id)
         event = await self._repo.get_event(event_id) if event_update.model_fields_set else None
         if event is not None:
             changed = _changed_fields(event, event_update)
@@ -225,7 +251,7 @@ class CalendarEventService:
             return None
         event_record = await self._provider.update(
             event.provider_id,
-            event_update.model_dump(exclude_unset=True),
+            _for_google(event_update.model_dump(exclude_unset=True)),
             self._session,
         )
         # Same timezone-conversion guarantee as create_event: always resync the naive

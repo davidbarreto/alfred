@@ -13,6 +13,10 @@ _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 
 DEFAULT_WORKDAYS = WEEKDAYS[:5]
 CONVENTIONS_MAX_LENGTH = 2000
+# One-way minutes assumed for in-person travel with no travel time saved (0 switches the assumption off), and how
+# many more minutes walking may take than public transport and still be chosen.
+DEFAULT_TRAVEL_MINUTES = 30
+DEFAULT_WALK_TOLERANCE_MINUTES = 10
 
 
 HOME = "home"
@@ -96,6 +100,8 @@ class PlanningSettingsRead(BaseModel):
     office_min_minutes: int | None = None
     conventions: str | None = None
     travel_times: list[TravelTime] = []
+    default_travel_minutes: int = DEFAULT_TRAVEL_MINUTES
+    walk_tolerance_minutes: int = DEFAULT_WALK_TOLERANCE_MINUTES
 
 
 class PlanningSettingsUpdate(BaseModel):
@@ -112,6 +118,8 @@ class PlanningSettingsUpdate(BaseModel):
     office_min_minutes: int | None = Field(default=None, ge=0, le=1440)
     conventions: str | None = Field(default=None, max_length=CONVENTIONS_MAX_LENGTH)
     travel_times: list[TravelTime] | None = Field(default=None, max_length=MAX_TRAVEL_TIMES)
+    default_travel_minutes: int | None = Field(default=None, ge=0, le=600)
+    walk_tolerance_minutes: int | None = Field(default=None, ge=0, le=120)
 
     @field_validator("wake_time", "sleep_time")
     @classmethod
@@ -156,6 +164,13 @@ class PlanningSettingsUpdate(BaseModel):
         return value.strip() if value is not None else None
 
 
+class TravelOption(BaseModel):
+    """One way to make a derived trip: a mode and its door-to-door minutes from the travel times."""
+
+    mode: str
+    minutes: int
+
+
 class TimelineItem(BaseModel):
     kind: str
     title: str
@@ -165,7 +180,13 @@ class TimelineItem(BaseModel):
     routine_step_id: int | None = None
     availability: str | None = None
     presence: str | None = None
+    # Events: the linked location's name (else the calendar's location text); routine steps: the step's location.
     location: str | None = None
+    location_id: int | None = None
+    # Travel blocks between two locations: every mode saved for the pair; the block's length follows one of them.
+    options: list[TravelOption] | None = None
+    # Travel with no saved time or event minutes: the default was assumed (ask the user, offer to save it).
+    assumed: bool | None = None
     tags: list[str] | None = None
     notification_profile: str | None = None
     context: str | None = None

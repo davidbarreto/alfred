@@ -5,7 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
-from app.features.planning.schemas import DEFAULT_WORKDAYS, PlanningSettingsRead, PlanningSettingsUpdate
+from app.features.planning.schemas import (
+    DEFAULT_TRAVEL_MINUTES,
+    DEFAULT_WALK_TOLERANCE_MINUTES,
+    DEFAULT_WORKDAYS,
+    PlanningSettingsRead,
+    PlanningSettingsUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +21,10 @@ _KEY_PREFIX = "planning."
 DEFAULT_WORK_TARGET_MINUTES = 480
 DEFAULT_WORK_TAG = "work"
 DEFAULT_OFFICE_TAG = "office"
+
+
+def _int_or(raw: str | None, default: int) -> int:
+    return int(raw) if raw else default
 
 
 def _key(field: str) -> str:
@@ -45,6 +55,8 @@ class PlanningSettingsService:
             office_min_minutes=int(raw["office_min_minutes"]) if raw["office_min_minutes"] else None,
             conventions=raw["conventions"] or None,
             travel_times=await self._travel_times.as_preferences(),
+            default_travel_minutes=_int_or(raw["default_travel_minutes"], DEFAULT_TRAVEL_MINUTES),
+            walk_tolerance_minutes=_int_or(raw["walk_tolerance_minutes"], DEFAULT_WALK_TOLERANCE_MINUTES),
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:

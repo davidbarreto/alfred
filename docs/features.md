@@ -36,7 +36,7 @@ Events mirrored from and written through to Google Calendar (OAuth, one-time con
 
 - Create, list (default next 14 days), update, delete; all-day and timed events, locations, recurrence.
 - **Recurring events:** skip or restore one occurrence, move one occurrence to another time, end a series. Skips are Alfred-only; moves and ends are written to Google ([modules/planning.md](modules/planning.md#skipping-moving-and-ending-recurring-events)).
-- Planning fields per event: `availability`, `presence`, `travel_minutes`, attached routine.
+- Planning fields per event: `availability`, `presence`, `travel_minutes`, attached routine, and the location it happens at (one of the user's [locations](modules/locations.md#events-at-a-location): the day plan derives travel from the travel times between them).
 - **Notifications:** events notify at configurable offsets per profile (`/organizer/calendar-notification-settings`); the n8n workflow polls `/organizer/calendar-notifications/due`.
 - **Sync:** `POST /integration/google-calendar/sync` pulls changes from Google, including moved instances.
 - **Portal:** `/calendar` and `/calendar/day/{date}` (day view with skip/move/end actions).
@@ -67,7 +67,8 @@ Frequent everyday places (home, work, school, the shops near them) with address,
 
 - Opening hours typed as text (`mon-fri 08:00-20:00; sun closed; holidays closed`); today's hours and "open now" on every location, using the first `HOLIDAY_CALENDARS` calendar for holidays.
 - One home; archive instead of delete; no maps provider (hours and travel are entered by hand or by Claude after the user confirms).
-- **Portal:** `/locations` and `/locations/{id}`.
+- Events can sit at a location (picker with *New location…* on the event form); the day plan derives travel between them and lists every mode.
+- **Portal:** `/locations`, `/locations/{id}` (hours, travel times, upcoming events), `/locations/{id}/travel-times`, `/locations/{id}/events`.
 - **Commands:** `location` add / list / show / update / delete. **API:** `/organizer/locations`.
 
 ## Memories, working memory and recall

@@ -28,6 +28,8 @@ FLAG_EVENT_AVAILABILITY = {"--availability": "availability"}
 FLAG_EVENT_PRESENCE = {"--presence": "presence"}
 FLAG_TRAVEL = {"--travel": "travel_minutes"}
 FLAG_ROUTINE = {"--routine": "routine_id"}
+# --location is the calendar's free-text location (sent to Google); --at links one of the user's locations.
+FLAG_AT_LOCATION = {"--at": "location_id"}
 
 # --- Finance Flag Constants ---
 FLAG_AMOUNT = {"-a": "amount", "--amount": "amount"}
@@ -60,9 +62,14 @@ TASK_UPDATE_FLAGS = {
 _EVENT_PLANNING_DETAILS = (
     f"Planning fields (series-wide, Alfred only, never sent to Google): availability = how much the event blocks, one of "
     f"{'/'.join(EVENT_AVAILABILITIES)} (unset: all-day events are free, timed ones blocked); presence = "
-    f"{'/'.join(EVENT_PRESENCES)} (default in_person); travel_minutes = one-way travel in minutes, applied before and "
-    "after the event (default 0); routine_id = an event-attached routine whose steps run around this event. "
-    "Pass an empty availability or routine_id to clear it."
+    f"{'/'.join(EVENT_PRESENCES)} (default in_person); location_id = one of the user's frequent places (alfred_location, "
+    "id or name) the event happens at, so the day plan derives travel from the travel times between places; travel_minutes "
+    "= one-way travel in minutes, used when no travel time is saved for the trip (default 0; with neither, in-person events "
+    "get the assumed planning default); routine_id = an event-attached routine whose steps run around this event. "
+    "Pass an empty availability, routine_id or location_id to clear it. location (free text) is the calendar's own "
+    "location and is sent to Google; location_id never is. Locations are for frequent places only: for a one-off "
+    "appointment set travel_minutes (ask the user), and mark online events remote. When the user says it is a place they "
+    "go to often, create it first with alfred_location add (with --from travel times the user gives) and pass its id."
 )
 _EVENT_SKIP_DETAILS = (
     "id is the event id and date the day of the occurrence to leave out. Alfred only: the event in Google Calendar is "
@@ -96,7 +103,9 @@ TASK_SNOOZE_FLAGS = {**FLAG_DAYS}
 NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
 EVENT_LIST_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_LIMIT}
-EVENT_PLANNING_FLAGS = {**FLAG_EVENT_AVAILABILITY, **FLAG_EVENT_PRESENCE, **FLAG_TRAVEL, **FLAG_ROUTINE}
+EVENT_PLANNING_FLAGS = {
+    **FLAG_EVENT_AVAILABILITY, **FLAG_EVENT_PRESENCE, **FLAG_TRAVEL, **FLAG_ROUTINE, **FLAG_AT_LOCATION,
+}
 EVENT_ADD_FLAGS = {
     **FLAG_START, **FLAG_END, **FLAG_DURATION, **FLAG_RECURRENCE, **FLAG_NOTES, **FLAG_TAGS, **FLAG_LOCATION,
     **EVENT_PLANNING_FLAGS,
@@ -189,7 +198,7 @@ PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
     "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
     "--office-days": "office_days_per_week", "--office-min": "office_min_minutes", "--conventions": "conventions",
-    "--travel": "travel_times",
+    "--travel": "travel_times", "--default-travel": "default_travel_minutes", "--walk-tolerance": "walk_tolerance_minutes",
 }
 _PLANNING_SETTINGS_DETAILS = (
     "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
@@ -202,6 +211,9 @@ _PLANNING_SETTINGS_DETAILS = (
     "where the origin defaults to home (e.g. office:metro=50,car=20;office>school:car=20,walk=10; up to 60 entries, empty resets; the list replaces every travel time). Places are locations: a name that is not one yet becomes a new location. "
     "A trip counts both ways unless the reverse is listed too. They come back in the preferences as [{origin, place, mode, minutes}] so clients "
     "derive leave-home times and transport blocks without asking. "
+    "default_travel_minutes (default 30, 0 turns it off) is the one-way travel assumed for an in-person event when no travel "
+    "time is saved for its places and it has no travel_minutes of its own; walk_tolerance_minutes (default 10) is how many more "
+    "minutes walking may take than the fastest public transport and still be the mode a derived travel block follows. "
     "Unset values switch the related section off."
 )
 _DAY_PLAN_GET_DETAILS = (
@@ -209,8 +221,9 @@ _DAY_PLAN_GET_DETAILS = (
     "daily work target for this request (0 for a day off). Alfred only gathers facts; it never schedules or notifies, "
     "and free slots are not returned: derive gaps from the timeline. All datetimes carry their UTC offset; timezone is "
     "the display zone. With days=1 the day's fields sit at the top level, otherwise under days[]. "
-    "Per day: timeline (events with availability/presence/notification_profile, routine_step entries around events, "
-    "derived travel blocks, sorted; overlaps are only reported in warnings), routine_blocks (steps of scheduled "
+    "Per day: timeline (events with availability/presence/notification_profile and location (location_id when the event "
+    "is at one of the user's locations), routine_step entries around events, derived travel blocks, sorted; overlaps are "
+    "only reported in warnings), routine_blocks (steps of scheduled "
     "routines with a duration and a window, fixed=true when the window is exactly the duration), all_day, work "
     "(target, committed by events tagged with the work tag plus the saved work blocks and saved task blocks of work-tagged tasks, missed blocks excluded, overlaps counted once, remaining, preferred windows). Once per request: "
     "preferences; overdue_tasks; due_tasks (deadline in the range or the next 3 days; you choose the day); "
@@ -219,7 +232,15 @@ _DAY_PLAN_GET_DETAILS = (
     "shopping (omitted when nothing to buy); office (only when configured: goal, planned_this_week, days_left_in_week "
     "counted from the first date through Sunday); warnings. Tasks not yet available (available_from after the range) "
     "are left out. light/aware events are droppable, important/cant_miss are not. Missing estimates and contexts are "
-    "assumed (30 min, anywhere) and listed in warnings: ask the user and write answers back with the task update action."
+    "assumed (30 min, anywhere) and listed in warnings: ask the user and write answers back with the task update action. "
+    "Travel blocks are derived, never stored: in-person events at a location chain Home -> place -> next place -> Home "
+    "(none between two events at the same place, none for remote, free or all-day events); a travel block between two "
+    "places has title 'Office → School (metro, 60)' and options [{mode, minutes}] with every saved mode for the pair, its "
+    "length follows the fastest public transport unless walking is within walk_tolerance_minutes, car only when it is the "
+    "only option; offer the car when it is much faster (about 15 min or more). Events with no location use their own "
+    "travel_minutes ('Travel to X' / 'Travel home from X'). With neither, default_travel_minutes is assumed: the block "
+    "has assumed=true and warnings say so; treat it as a question for the user (save a travel time, set the event's "
+    "travel minutes, or mark it remote or free), not a fact."
 )
 
 _DAY_PLAN_SAVE_DETAILS = (
@@ -229,8 +250,8 @@ _DAY_PLAN_SAVE_DETAILS = (
     "\"title\": text, \"note\": optional text}. ref_id kinds: event=calendar event id, task=task id, study_item=study plan "
     "item id, routine_step and routine_block=routine step id, activity=activity id. Free-form kinds take no ref_id: work (focused work "
     "that is not a specific task, counts toward the day's committed work time), transport (a commute or trip leg such as home to office or "
-    "metro to school; use it for travel that is NOT already covered by an event's travel_minutes, since those legs come as derived travel "
-    "blocks), meal, break and other. Choose the kind by what the block is: ANY eating block (breakfast, lunch, dinner, snack, eat, have lunch) "
+    "metro to school; use it for travel that is NOT already a derived travel block of the timeline, such as the commute of an office "
+    "day that has no event yet), meal, break and other. Choose the kind by what the block is: ANY eating block (breakfast, lunch, dinner, snack, eat, have lunch) "
     "is kind meal, never break; break is only a pause to rest with no meal in it (coffee, walk, nap, stretch); other is for what fits none of the kinds. "
     "A saved block may carry missed=true: the user marked it as not done (the task stays open, it is not done or overdue because of it). "
     "A block may instead carry done=true (the user confirmed it; marking one clears the other). Blocks with neither flag whose end has "

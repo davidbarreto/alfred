@@ -239,3 +239,23 @@ class TestParseTravelTimes:
     def test_malformed_text_is_rejected(self, text):
         with pytest.raises(ValueError):
             parse_travel_times(text)
+
+
+class TestTravelDefaults:
+    async def test_defaults(self, service):
+        settings = await service.get()
+        assert (settings.default_travel_minutes, settings.walk_tolerance_minutes) == (30, 10)
+
+    async def test_zero_is_kept_and_null_resets(self, service, store):
+        result = await service.update(PlanningSettingsUpdate(default_travel_minutes=0, walk_tolerance_minutes=5))
+        assert store.values["planning.default_travel_minutes"] == "0"
+        assert (result.default_travel_minutes, result.walk_tolerance_minutes) == (0, 5)
+        result = await service.update(PlanningSettingsUpdate(default_travel_minutes=None))
+        assert result.default_travel_minutes == 30
+
+    @pytest.mark.parametrize("field,value", [
+        ("default_travel_minutes", -1), ("default_travel_minutes", 601), ("walk_tolerance_minutes", 121),
+    ])
+    def test_out_of_range_rejected(self, field, value):
+        with pytest.raises(ValidationError):
+            PlanningSettingsUpdate(**{field: value})

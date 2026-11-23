@@ -20,8 +20,8 @@ def styled_for_tts(
     instead of voicing them, which left bilingual replies audibly missing the English
     half entirely rather than just mispronouncing it.
 
-    `slow` asks for a beginner-friendly pace (used for CEFR A0, where David is hearing
-    the target language for close to the first time)."""
+    `slow` asks for a beginner-friendly pace (used for CEFR A0, where the learner is
+    hearing the target language for close to the first time)."""
     delivery = f"in a {tone} tone" if tone else "exactly as written"
     pace_note = " Speak slowly and clearly, at a pace a total beginner can follow." if slow else ""
     mix_note = (

@@ -28,7 +28,7 @@ Segments are separated by `;` or new lines. Days are names (`mon`, `monday`), ra
 
 Every location response has `today`: the local date, today's `hours` ("08:00-20:00", "closed" or null when unknown), `holiday` (names), a `note` and `open_now` (null when unknown).
 
-Holidays come from the **first calendar in `HOLIDAY_CALENDARS`** (PT by default), the planning holiday calendar (`get_planning_holiday_provider` in `dependencies.py`). The other calendars (BR) still show on the dashboard and in the briefing, but do not close shops. On a holiday a location uses its `hol` hours; when those are unknown it shows the weekday hours with the note "holiday, hours unknown" and `open_now` is null. The holiday lookup runs once per request, only when some listed location has hours, and a failing provider counts as no holiday.
+Holidays come from the **first calendar in `HOLIDAY_CALENDARS`** (PT by default), the planning holiday calendar (`get_planning_holiday_provider` in `dependencies.py`, also the source of the day plan's `holidays`). The other calendars (BR) still show on the dashboard and in the briefing, but do not close shops. On a holiday a location uses its `hol` hours; when those are unknown it shows the weekday hours with the note "holiday, hours unknown" and `open_now` is null. The holiday lookup runs once per request, only when some listed location has hours, and a failing provider counts as no holiday.
 
 ## Portal
 

@@ -279,7 +279,7 @@ class DayRead(BaseModel):
     routine_blocks: list[RoutineBlock] = []
     all_day: list[AllDayItem] = []
     work: WorkSummary
-    # Public holidays as "Name (PT)" or "Name (PT, BR)"; omitted when none.
+    # Public holidays of the planning calendar (first HOLIDAY_CALENDARS entry) as "Name (PT)"; omitted when none.
     holidays: list[str] | None = None
     trips: list[TripDay] | None = None
 

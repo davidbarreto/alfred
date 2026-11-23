@@ -10,6 +10,7 @@ from app.dependencies import (
     get_conversation_tts_service,
     get_extraction_llm_provider,
     get_exchange_rate_provider,
+    get_day_plan_service,
     get_holiday_provider,
     get_planning_holiday_provider,
     get_llm_provider,
@@ -117,6 +118,16 @@ class TestDisableIntegrations:
 
         assert provider._calendars == {"PT": "pt-cal"}
         assert get_holiday_provider()._calendars == {"PT": "pt-cal", "BR": "br-cal"}
+
+    def test_day_plan_lists_only_the_planning_calendar(self, monkeypatch):
+        monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")
+        monkeypatch.setenv("GCP_API_KEY", "test-key")
+        monkeypatch.setenv("HOLIDAY_CALENDARS", "BR=br-cal,PT=pt-cal")
+        get_settings.cache_clear()
+
+        service = get_day_plan_service(session=AsyncMock())
+
+        assert service._holidays._calendars == {"BR": "br-cal"}
 
     def test_planning_holiday_provider_is_none_without_an_api_key(self, monkeypatch):
         monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")

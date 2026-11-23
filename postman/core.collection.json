@@ -971,7 +971,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"category\": \"fact\",\n  \"content\": \"David works at Devexperts\",\n  \"importance\": 0.9,\n  \"confidence\": 1.0,\n  \"extra_metadata\": { \"subject\": \"david\", \"predicate\": \"works_at\", \"object\": \"Devexperts\" }\n}"
+          "raw": "{\n  \"category\": \"fact\",\n  \"content\": \"Sam works at Acme\",\n  \"importance\": 0.9,\n  \"confidence\": 1.0,\n  \"extra_metadata\": { \"subject\": \"sam\", \"predicate\": \"works_at\", \"object\": \"Acme\" }\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/memories/",
@@ -1184,8 +1184,8 @@
               "pm.test('Returned memory matches ID', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_memory_id')));",
-              "    pm.expect(json.content).to.eql('David works at Devexperts');",
-              "    pm.expect(json.extra_metadata).to.deep.eql({ subject: 'david', predicate: 'works_at', object: 'Devexperts' });",
+              "    pm.expect(json.content).to.eql('Sam works at Acme');",
+              "    pm.expect(json.extra_metadata).to.deep.eql({ subject: 'sam', predicate: 'works_at', object: 'Acme' });",
               "});"
             ],
             "type": "text/javascript"
@@ -1877,7 +1877,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"source_type\": \"memory\",\n  \"source_id\": 1,\n  \"content\": \"David works at Devexperts as a software engineer\"\n}"
+          "raw": "{\n  \"source_type\": \"memory\",\n  \"source_id\": 1,\n  \"content\": \"Sam works at Acme as a software engineer\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/embeddings/",
@@ -1923,7 +1923,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"Where does David work?\",\n  \"limit\": 5,\n  \"threshold\": 0.5\n}"
+          "raw": "{\n  \"query\": \"Where does Sam work?\",\n  \"limit\": 5,\n  \"threshold\": 0.5\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/embeddings/search",
@@ -1964,7 +1964,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"query\": \"Where does David work?\",\n  \"source_types\": [\"memory\"],\n  \"limit\": 10,\n  \"threshold\": 0.5\n}"
+          "raw": "{\n  \"query\": \"Where does Sam work?\",\n  \"source_types\": [\"memory\"],\n  \"limit\": 10,\n  \"threshold\": 0.5\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/embeddings/search",
@@ -3073,6 +3073,179 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"overload_max_listed\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p1 - Assistant Settings - Get (remember current values)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Base persona is the committed generic text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.base_persona).to.include('# Alfred');",
+              "    pm.expect(json).to.have.property('user_name');",
+              "    pm.expect(json).to.have.property('persona_additions');",
+              "    // Restored by 89p4, so a run never leaves its test values behind.",
+              "    pm.environment.set('assistant_original', JSON.stringify({ user_name: json.user_name, persona_additions: json.persona_additions }));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/assistant-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "assistant-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89p2 - Assistant Settings - Update (trimmed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Name collapsed to one line, additions trimmed', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.user_name).to.eql('Postman User');",
+              "    pm.expect(json.persona_additions).to.eql('Plays the cello.');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/assistant-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "assistant-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_name\": \"  Postman   User \",\n  \"persona_additions\": \"\\n Plays the cello. \\n\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p3 - Assistant Settings - Name Too Long (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/assistant-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "assistant-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"user_name\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p4 - Assistant Settings - Restore Original",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Back to the remembered values', () => {",
+              "    const original = JSON.parse(pm.environment.get('assistant_original'));",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.user_name).to.eql(original.user_name);",
+              "    pm.expect(json.persona_additions).to.eql(original.persona_additions);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/assistant-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "assistant-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{assistant_original}}",
           "options": {
             "raw": {
               "language": "json"

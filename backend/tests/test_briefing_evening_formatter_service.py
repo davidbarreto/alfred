@@ -108,7 +108,18 @@ class TestEveningDigestFormatterService:
     def service(self, mock_llm, mock_session):
         svc = EveningDigestFormatterService(llm_provider=mock_llm, session=mock_session)
         svc._repo = AsyncMock()
+        svc._assistant_settings = AsyncMock()
+        svc._assistant_settings.user_label.return_value = "Sam"
         return svc
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_names_the_user(self, service, mock_llm):
+        with patch("app.features.briefing.evening_formatter_service.create_llm_call", new_callable=AsyncMock):
+            await service.format(_make_digest())
+
+        system = mock_llm.complete.call_args.kwargs["system"]
+        assert "You are Alfred, Sam's personal AI assistant." in system
+        assert "{user}" not in system
 
     @pytest.mark.asyncio
     async def test_returns_formatted_digest_with_header(self, service):

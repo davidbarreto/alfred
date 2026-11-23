@@ -281,7 +281,7 @@ def _backend(overrides=None):
         "/finance/budgets/status": [{"category_name": "Food", "limit_amount": "400", "spent": "380"}],
         "/organizer/contacts": [{"name": "Bruno", "birthday": "1985-11-14"}],
         "/study/plans/overview": {"active": [{"title": "Graphs", "items": [{"description": "BFS", "is_done": False}]}]},
-        "/briefing/history": [{"date": "2026-11-13", "type": "morning", "text": "Good morning David"}],
+        "/briefing/history": [{"date": "2026-11-13", "type": "morning", "text": "Good morning Sam"}],
         "/metrics/series": [{"name": "coffee", "kind": "count", "unit": None, "is_archived": False, "entry_count": 4}],
         "/metrics/series/coffee/daily": {"points": [{"date": "2026-11-13", "n": 2, "total": None}]},
         "/travel/trips": [{"id": 7, "name": "Lisbon", "start_date": "2026-12-17", "end_date": "2026-12-24"}],
@@ -346,7 +346,7 @@ class TestDashboardPage:
         assert "Food" in text and "€380 / €400" in text
         assert "Bruno" in text and "Tomorrow" in text
         assert "Graphs" in text and "Next: BFS" in text
-        assert "coffee" in text and "Good morning David" in text
+        assert "coffee" in text and "Good morning Sam" in text
         assert "Spanish" in text and "2/5" in text and "Paused one" not in text
         assert "Partly cloudy" in text and "Bring a light jacket" in text
         assert "Natal" in text and "in 3 days" in text and ">PT</span>" in text
@@ -402,7 +402,7 @@ class TestDashboardPage:
 
 
 class TestBriefingCardByTime:
-    MORNING = {"date": "2026-11-13", "type": "morning", "text": "Good morning David"}
+    MORNING = {"date": "2026-11-13", "type": "morning", "text": "Good morning Sam"}
     EVENING = {"date": "2026-11-13", "type": "evening", "text": "Wins of the day"}
 
     def _get(self, client, mock_api, morning, evening):
@@ -415,7 +415,7 @@ class TestBriefingCardByTime:
     def test_daytime_shows_only_the_morning_briefing(self, client, mock_api):
         text = self._get(client, mock_api, self.MORNING, self.EVENING)
 
-        assert "Good morning David" in text and "Morning briefing" in text
+        assert "Good morning Sam" in text and "Morning briefing" in text
         assert "Wins of the day" not in text
 
     @pytest.mark.usefixtures("night")
@@ -423,7 +423,7 @@ class TestBriefingCardByTime:
         text = self._get(client, mock_api, self.MORNING, self.EVENING)
 
         assert "Wins of the day" in text and "Evening digest" in text and "/briefing/evening" in text
-        assert "Good morning David" not in text
+        assert "Good morning Sam" not in text
 
     @pytest.mark.usefixtures("night")
     def test_night_falls_back_to_morning_until_tonights_digest_exists(self, client, mock_api):
@@ -431,7 +431,7 @@ class TestBriefingCardByTime:
 
         text = self._get(client, mock_api, self.MORNING, stale)
 
-        assert "Good morning David" in text and "Morning briefing" in text
+        assert "Good morning Sam" in text and "Morning briefing" in text
         assert "Wins of the day" not in text
 
 

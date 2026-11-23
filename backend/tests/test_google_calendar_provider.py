@@ -130,7 +130,7 @@ class TestList:
             {
                 "id": "gc-1",
                 "eventType": "birthday",
-                "summary": "Aniversário de Maria Barreto",
+                "summary": "Aniversário de Maria Exemplo",
                 "start": {"date": "1953-08-23"},
                 "end": {"date": "1953-08-24"},
             },

@@ -450,7 +450,7 @@ class TestContactService:
     async def test_get_upcoming_birthdays_flags_self(self, service):
         today = date(2026, 6, 23)
         contact = MagicMock()
-        contact.name = "David Barreto"
+        contact.name = "Sam Example"
         contact.birthday = date(1990, 6, 28)
         contact.is_self = True
 

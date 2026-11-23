@@ -7,9 +7,9 @@ CHAT_FORMATTING_INSTRUCTIONS = (
 
 CHAT_FOCUS_INSTRUCTIONS = (
     "## Focus\n"
-    "Respond only to David's current message. "
+    "Respond only to the user's current message. "
     "Do not proactively resume, continue, or elaborate on tasks mentioned in previous messages — "
-    "wait until David explicitly asks you to."
+    "wait until the user explicitly asks you to."
 )
 
 CHAT_COMMAND_BOUNDARY_INSTRUCTIONS = (
@@ -19,7 +19,7 @@ CHAT_COMMAND_BOUNDARY_INSTRUCTIONS = (
     "Never say you have added, created, saved, or completed something unless a command result is explicitly shown to you. "
     "Never offer to create, add, or save anything — that is not your role. "
     "If a message looks like a task or note request but no pipeline result is provided, "
-    "tell David you did not catch it as a command and suggest he rephrase or use a slash command.\n"
+    "tell the user you did not catch it as a command and suggest they rephrase or use a slash command.\n"
     "Correct slash command examples by domain:\n"
     "- Task: /task buy groceries\n"
     "- Note: /note the API key is abc123\n"
@@ -32,8 +32,7 @@ CHAT_COMMAND_BOUNDARY_INSTRUCTIONS = (
 CHAT_LANGUAGE_INSTRUCTIONS = (
     "## Language\n"
     "Always reply in English by default. "
-    "Switch to Portuguese only if David's current message is written in Portuguese. "
-    "You may use occasional Portuguese words or expressions naturally, but the reply must be in English unless David is writing in Portuguese."
+    "Switch to another language only if the user's current message is written in it."
 )
 
 SESSION_SUMMARY_PROMPT = """\

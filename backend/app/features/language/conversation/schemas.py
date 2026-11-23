@@ -23,7 +23,7 @@ class ConversationStartRead(BaseModel):
     thread_id: int
     track_code: str
     language_name: str
-    # Roleplay always opens with a line; free conversation only does at A0, where David
+    # Roleplay always opens with a line; free conversation only does at A0, where the learner
     # has no scaffolding to start from otherwise.
     opening_text: str | None = None
     opening_audio_ref: str | None = None

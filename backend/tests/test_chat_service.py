@@ -160,6 +160,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         production_service=production_service,
         language_session_service=language_session_service,
     )
+    service._assistant_settings = AsyncMock()
+    service._assistant_settings.persona.return_value = "You are Alfred. The user's name is Sam."
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
 
@@ -292,15 +294,21 @@ def _fixed_now(year=2026, month=6, day=17, hour=14, minute=30):
 
 
 class TestBuildSystemPrompt:
-    def test_includes_real_persona_not_fallback(self):
+    def test_defaults_to_the_committed_base_persona_not_fallback(self):
         prompt = _build_system_prompt([])
-        # A string only present in the real persona.md — fails if path is wrong and fallback fires
-        assert "Alfred" in prompt and "David" in prompt
+        # A string only present in persona.md: fails if the path is wrong and the one-line fallback fires
+        assert "Alfred" in prompt and "## Core Philosophy" in prompt
+
+    def test_uses_the_given_persona(self):
+        prompt = _build_system_prompt([], persona="You are Alfred. The user's name is Sam.")
+
+        assert "The user's name is Sam." in prompt
+        assert "## Core Philosophy" not in prompt
 
     def test_includes_memories(self):
-        memories = [_make_embedding_result("memory", "David likes bread")]
+        memories = [_make_embedding_result("memory", "Sam likes bread")]
         prompt = _build_system_prompt(memories)
-        assert "David likes bread" in prompt
+        assert "Sam likes bread" in prompt
         assert "memory" in prompt
 
     def test_no_memory_section_when_empty(self):

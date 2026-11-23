@@ -213,7 +213,7 @@ class TestStart:
             track_id=1, message_id=42, mode="conversation", scenario=None, voice_reply=True
         )
 
-        # Free conversation waits for David to speak first — no opener, no LLM call, no turn.
+        # Free conversation waits for the learner to speak first — no opener, no LLM call, no turn.
         parts["thread_repo"].create_thread.assert_awaited_once_with(
             1, 5, "conversation", None, True, None
         )

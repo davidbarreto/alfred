@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.prompts import EVENING_DIGEST_SYSTEM_PROMPT
+from app.features.core.assistant_settings.service import AssistantSettingsService
 from app.features.briefing.repository import BriefingRepository
 from app.features.briefing.schemas import EveningDigest, FormattedBriefing
 from app.integrations.llm_calls.repository import create_llm_call
@@ -69,6 +70,7 @@ class EveningDigestFormatterService:
         self._llm_provider = llm_provider
         self._session = session
         self._repo = BriefingRepository(session)
+        self._assistant_settings = AssistantSettingsService(session)
 
     async def get_saved(self, digest_date: date | None = None) -> FormattedBriefing | None:
         if digest_date is None:
@@ -85,7 +87,8 @@ class EveningDigestFormatterService:
         messages = [{"role": "user", "content": context}]
 
         t0 = time_module.monotonic()
-        llm_response = await self._llm_provider.complete(messages, system=EVENING_DIGEST_SYSTEM_PROMPT)
+        system = EVENING_DIGEST_SYSTEM_PROMPT.format(user=await self._assistant_settings.user_label())
+        llm_response = await self._llm_provider.complete(messages, system=system)
         latency_ms = int((time_module.monotonic() - t0) * 1000)
 
         text = f"{_HEADER}\n\n{llm_response.text.strip()}"

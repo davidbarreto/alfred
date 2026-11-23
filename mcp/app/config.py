@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     backend_url: str = Field(default="http://api:8000", validation_alias="BACKEND_URL")
     alfred_api_token: str = Field(validation_alias="ALFRED_API_TOKEN")
 
-    # Public URL this server is reachable at (behind nginx), e.g. "https://mcp.dbflabs.com".
+    # Public URL this server is reachable at (behind nginx), e.g. "https://mcp.example.com".
     # Used as the OAuth issuer and to build absolute endpoint URLs in the
     # .well-known metadata documents — required for remote clients (Claude
     # Desktop/web) to discover and complete the OAuth flow correctly.

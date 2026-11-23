@@ -44,8 +44,8 @@ from app.shared.protocols.llm import LlmProvider
 logger = logging.getLogger(__name__)
 
 _MAX_VOCABULARY_CANDIDATES = 3
-# Free conversation otherwise waits for David to speak first; at total-beginner level that
-# leaves him with no scaffolding, so this is the one level that also gets an opening line.
+# Free conversation otherwise waits for the learner to speak first; at total-beginner level that
+# leaves them with no scaffolding, so this is the one level that also gets an opening line.
 _BEGINNER_LEVEL = "A0"
 
 
@@ -202,7 +202,7 @@ class ConversationService:
     ) -> ConversationStartRead:
         """Open a practice thread. Roleplay needs a scenario and gets an in-character
         opening line; free conversation takes an optional topic and normally waits for
-        David to speak first, except at A0 where he has no scaffolding to draw on, so it
+        the learner to speak first, except at A0 where they have no scaffolding to draw on, so it
         gets an English-led opening line too. level_override is a punctual per-session
         CEFR override (e.g. "A0" for a total-beginner register); it falls back to the
         track's own level and is never written back to the track."""

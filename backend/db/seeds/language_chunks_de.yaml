@@ -87,8 +87,8 @@ de:
 - type: word
   text: ich
   translation: I
-  example: Ich bin David.
-  example_translation: I am David.
+  example: Ich bin Paul.
+  example_translation: I am Paul.
   cefr_level: A1
   frequency_rank: 11
   tags: [Connectors]
@@ -778,16 +778,16 @@ de:
 - type: collocation
   text: Wie heißt du?
   translation: What is your name?
-  example: Wie heißt du? Ich heiße David.
-  example_translation: What's your name? My name is David.
+  example: Wie heißt du? Ich heiße Paul.
+  example_translation: What's your name? My name is Paul.
   cefr_level: A1
   frequency_rank: 96
   tags: [Greetings]
 - type: collocation
   text: Ich heiße
   translation: My name is
-  example: Ich heiße David.
-  example_translation: My name is David.
+  example: Ich heiße Paul.
+  example_translation: My name is Paul.
   cefr_level: A1
   frequency_rank: 97
   tags: [Greetings]

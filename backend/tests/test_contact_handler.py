@@ -44,10 +44,10 @@ class TestHandleContactList:
 
 class TestHandleContactSearch:
     async def test_search_passes_name_filter(self, mock_service):
-        await handle_contact("search", {"query": "David"}, mock_service)
+        await handle_contact("search", {"query": "Alex"}, mock_service)
 
         called_filters = mock_service.get_contacts.call_args.args[0]
-        assert called_filters.name == "David"
+        assert called_filters.name == "Alex"
 
 
 class TestHandleContactUnknown:

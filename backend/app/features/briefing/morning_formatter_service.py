@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.prompts import MORNING_BRIEFING_SYSTEM_PROMPT
+from app.features.core.assistant_settings.service import AssistantSettingsService
 from app.features.briefing.repository import BriefingRepository
 from app.features.briefing.schemas import FormattedBriefing, MorningBriefing
 from app.integrations.llm_calls.repository import create_llm_call
@@ -120,7 +121,7 @@ def _build_context(briefing: MorningBriefing) -> str:
         lines.append("Birthdays:")
         for b in briefing.birthdays:
             if b.is_self:
-                label = "David's own birthday"
+                label = "The user's own birthday"
             elif b.relationship in ("family", "relative"):
                 label = f"{b.name} ({b.relationship})"
             else:
@@ -191,6 +192,7 @@ class MorningBriefingFormatterService:
         self._llm_provider = llm_provider
         self._session = session
         self._repo = BriefingRepository(session)
+        self._assistant_settings = AssistantSettingsService(session)
 
     async def get_saved(self, briefing_date: date | None = None) -> FormattedBriefing | None:
         if briefing_date is None:
@@ -207,7 +209,8 @@ class MorningBriefingFormatterService:
         messages = [{"role": "user", "content": context}]
 
         t0 = time_module.monotonic()
-        llm_response = await self._llm_provider.complete(messages, system=MORNING_BRIEFING_SYSTEM_PROMPT)
+        system = MORNING_BRIEFING_SYSTEM_PROMPT.format(user=await self._assistant_settings.user_label())
+        llm_response = await self._llm_provider.complete(messages, system=system)
         latency_ms = int((time_module.monotonic() - t0) * 1000)
 
         text = f"{_HEADER}\n\n{llm_response.text.strip()}"

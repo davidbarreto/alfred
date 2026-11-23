@@ -1001,7 +1001,7 @@ class TestLinkTransfer:
             id=1, account_id=1, type="transfer", amount=Decimal("-100.00"), currency="EUR",
             date=same_date, amount_eur=Decimal("100.00"),
         )
-        txn.bank_description = "David Ferreira"
+        txn.bank_description = "Some Person"
         counterpart = _make_txn_orm(
             id=2, account_id=2, type="transfer", amount=Decimal("560.00"), currency="BRL",
             date=same_date, amount_eur=Decimal("103.00"),

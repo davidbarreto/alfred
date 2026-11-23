@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     statement_storage_dir: str = Field(default="/data/statements", validation_alias="STATEMENT_STORAGE_DIR")
 
     # CORS — comma-separated list of allowed origins for browser clients
-    # e.g. "http://localhost:8080,https://portal.dbflabs.com"
+    # e.g. "http://localhost:8080,https://portal.example.com"
     cors_origins: str = Field(default="", validation_alias="CORS_ORIGINS")
 
     # Reminders — snooze/reset defaults (escalation and overload tuning live in core.settings)

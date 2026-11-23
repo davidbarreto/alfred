@@ -6,7 +6,7 @@ PostgreSQL + pgvector, SQLAlchemy 2.0 `Mapped[]` models, Alembic migrations. Per
 
 | Schema | Holds |
 |---|---|
-| `core` | chats, sessions, messages, memories, embeddings, working memory, command executions, settings (`reminders.*`, `planning.*`), `overload_log`, `api_requests` |
+| `core` | chats, sessions, messages, memories, embeddings, working memory, command executions, settings (`reminders.*`, `planning.*`, `assistant.*`), `overload_log`, `api_requests` |
 | `organizer` | tasks, notes, calendar events (+ skips, overrides), contacts, shopping (products, items, wishlist, recurrence), locations, routines, activities, interviews, shared tags |
 | `monitoring` | monitors, alerts, executions |
 | `finance` | accounts, budgets, categories, transactions, recurring transactions |
@@ -28,7 +28,7 @@ Migrations, foreign keys, `created_at`/`updated_at`, boolean and timestamp namin
 - **Embeddings.** Stored in a generic `core.embeddings` table with `source_id` foreign keys. Treat it as a derived index, not a source of truth; it can be rebuilt.
 - **Shared tags.** `organizer.tags` holds the M2M tag tables for tasks, notes and events. Interviews, metrics, finance transactions and activities have their own tag vocabularies. Beware the SQLAlchemy class-name collision (`Tag` vs the organizer tag) when importing.
 - **Derived, not stored.** Metric durations are `ended_at - started_at`; calendar occurrences are expanded from an RRULE at read time; routine steps are expanded, not stored per occurrence.
-- **Settings in `core.settings`.** Key/value rows namespaced `reminders.<field>` and `planning.<field>`; defaults are constants in the settings services.
+- **Settings in `core.settings`.** Key/value rows namespaced `reminders.<field>`, `planning.<field>`, `assistant.<field>` and others; defaults are constants in the settings services. Personal text (persona additions, the user's name, the home address) lives here, never in the repository.
 - **Seeds.** `db/seeds/*.yaml` are loaded on every deploy from `entrypoint.sh` by insert-only scripts (interview prep questions, language chunks).
 
 ## Tables by module

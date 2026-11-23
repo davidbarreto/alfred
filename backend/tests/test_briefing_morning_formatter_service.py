@@ -363,10 +363,10 @@ class TestBuildContext:
 
     def test_self_birthday_not_labeled_with_own_name(self):
         briefing = _make_briefing(
-            birthdays=[BirthdayItem(name="David Barreto", days_until=8, date=date(2026, 7, 28), is_self=True)]
+            birthdays=[BirthdayItem(name="Sam Example", days_until=8, date=date(2026, 7, 28), is_self=True)]
         )
         context = _build_context(briefing)
-        assert "David Barreto" not in context
+        assert "Sam Example" not in context
         assert "own birthday" in context
 
 
@@ -391,7 +391,18 @@ class TestMorningBriefingFormatterService:
     def service(self, mock_llm, mock_session):
         svc = MorningBriefingFormatterService(llm_provider=mock_llm, session=mock_session)
         svc._repo = AsyncMock()
+        svc._assistant_settings = AsyncMock()
+        svc._assistant_settings.user_label.return_value = "Sam"
         return svc
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_names_the_user(self, service, mock_llm):
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock):
+            await service.format(_make_briefing())
+
+        system = mock_llm.complete.call_args.kwargs["system"]
+        assert "You are Alfred, Sam's personal AI assistant." in system
+        assert "{user}" not in system
 
     @pytest.mark.asyncio
     async def test_returns_formatted_briefing(self, service):

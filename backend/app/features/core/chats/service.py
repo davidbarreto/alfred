@@ -4,7 +4,6 @@ import asyncio
 import html
 import json
 import logging
-import pathlib
 import re
 import time
 from datetime import datetime, timezone
@@ -41,6 +40,7 @@ from app.features.language.sessions.schemas import LoopAdvanceRequest, NextPract
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.sessions.tables import LearningSession
+from app.features.core.assistant_settings.service import AssistantSettingsService, base_persona
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.protocols.llm import LlmProvider, StreamMeta
 from app.shared.utils.timezone import local_now
@@ -48,7 +48,6 @@ from app.shared.utils.timezone import local_now
 _LANGUAGE_PENDING_KEY = "language:pending"
 _CHUNK_LOOP_MODES = {"practice", "review"}
 
-_PERSONA_PATH = pathlib.Path(__file__).parents[3] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
 _MEMORY_LIMIT = 5
 _MEMORY_THRESHOLD = 0.6
@@ -57,12 +56,6 @@ _MEMORY_THRESHOLD = 0.6
 def _is_language_command(detected_intents: list[str] | None) -> bool:
     return bool(detected_intents) and any(intent.startswith("language.") for intent in detected_intents)
 
-
-def _load_persona() -> str:
-    try:
-        return _PERSONA_PATH.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return "You are Alfred, a helpful personal AI assistant."
 
 
 
@@ -74,7 +67,9 @@ def _build_system_prompt(
     working_memories: list[WorkingMemoryRead] | None = None,
     language_session: LearningSession | None = None,
     production_section: str | None = None,
+    persona: str | None = None,
 ) -> str:
+    """`persona` is the full persona (base + the user's additions); the base persona alone when omitted."""
     now = local_now().strftime("%A, %B %d, %Y at %H:%M %Z")
     parts = []
 
@@ -91,7 +86,7 @@ def _build_system_prompt(
         )
 
     parts += [
-        _load_persona(),
+        persona or base_persona(),
         f"## Current date and time\nNow is {now}.",
         CHAT_FORMATTING_INSTRUCTIONS,
         CHAT_LANGUAGE_INSTRUCTIONS,
@@ -243,6 +238,7 @@ class ChatService:
         self._chunk_service = chunk_service
         self._production_service = production_service
         self._language_session_service = language_session_service
+        self._assistant_settings = AssistantSettingsService(session)
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -428,7 +424,10 @@ class ChatService:
             logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session, production_section)
+        system_prompt = _build_system_prompt(
+            memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session,
+            production_section, persona=await self._assistant_settings.persona(),
+        )
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -546,7 +545,10 @@ class ChatService:
             recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session, production_section)
+        system_prompt = _build_system_prompt(
+            memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session,
+            production_section, persona=await self._assistant_settings.persona(),
+        )
         messages_list = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()

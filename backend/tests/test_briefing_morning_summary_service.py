@@ -602,7 +602,7 @@ class TestBuild:
     async def test_birthdays_passthrough_is_self_flag(self, mock_session, mock_weather_client, mock_holiday_client):
         mock_contact_service = AsyncMock()
         mock_contact_service.get_upcoming_birthdays.return_value = [
-            {"name": "David Barreto", "days_until": 8, "date": date(2026, 7, 28), "is_self": True},
+            {"name": "Sam Example", "days_until": 8, "date": date(2026, 7, 28), "is_self": True},
         ]
         svc = MorningBriefingSummaryService(
             session=mock_session,

@@ -6,7 +6,7 @@ Runbook for running, checking and debugging Alfred: commands and procedures only
 
 | What | Where |
 |---|---|
-| Production host | `ssh david@davidbf.com` (Contabo VPS) |
+| Production host | `ssh <user>@<vps-host>` (Contabo VPS; the same host and user as the `VPS_HOST` / `VPS_USER` deploy secrets) |
 | App checkout and compose files | `/opt/stacks/alfred/` (`infra/docker-compose.yml`, `infra/.env`) |
 | Persistent data (DB, audio, statements, n8n, MCP) | `/srv/data/alfred/` |
 
@@ -77,7 +77,7 @@ $COMPOSE exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select
 Backup: stream the dump to your own machine, so no file is written on the VPS:
 
 ```bash
-ssh david@davidbf.com 'docker compose -f /opt/stacks/alfred/infra/docker-compose.yml --project-directory /opt/stacks/alfred/infra exec -T db sh -c "pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\""' > alfred-$(date +%F).sql
+ssh <user>@<vps-host> 'docker compose -f /opt/stacks/alfred/infra/docker-compose.yml --project-directory /opt/stacks/alfred/infra exec -T db sh -c "pg_dump -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\""' > alfred-$(date +%F).sql
 ```
 
 The database holds everything and the data directory is not otherwise backed up (see [docker.md](docker.md#volumes-data-that-lives-on-the-host)).

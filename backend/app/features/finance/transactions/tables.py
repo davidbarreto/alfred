@@ -59,3 +59,9 @@ class Transaction(Base):
     tags: Mapped[List["FinanceTag"]] = relationship(
         "app.features.finance.tags.tables.FinanceTag", secondary=transactions_tags, back_populates="transactions"
     )
+
+
+# The relationships above name these classes as strings: load them so this module works when imported alone.
+import app.features.finance.accounts.tables  # noqa: E402,F401
+import app.features.finance.categories.tables  # noqa: E402,F401
+import app.features.finance.tags.tables  # noqa: E402,F401

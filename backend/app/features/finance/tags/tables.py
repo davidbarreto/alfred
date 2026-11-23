@@ -39,3 +39,7 @@ class FinanceTag(Base):
         secondary=transactions_tags,
         back_populates="tags",
     )
+
+
+# The relationships above name these classes as strings: load them so this module works when imported alone.
+import app.features.finance.transactions.tables  # noqa: E402,F401

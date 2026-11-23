@@ -32,3 +32,8 @@ class RecurringTransaction(Base):
 
     account: Mapped["Account"] = relationship("Account", back_populates="recurring_transactions")
     category: Mapped[Optional["Category"]] = relationship("Category")
+
+
+# The relationships above name these classes as strings: load them so this module works when imported alone.
+import app.features.finance.accounts.tables  # noqa: E402,F401
+import app.features.finance.categories.tables  # noqa: E402,F401

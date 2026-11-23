@@ -27,3 +27,8 @@ class Category(Base):
         "Transaction", back_populates="category"
     )
     budget_targets: Mapped[List["BudgetTarget"]] = relationship("BudgetTarget", back_populates="category")
+
+
+# The relationships above name these classes as strings: load them so this module works when imported alone.
+import app.features.finance.transactions.tables  # noqa: E402,F401
+import app.features.finance.budgets.tables  # noqa: E402,F401

@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -46,6 +47,7 @@ _EVENT_LIMIT = 500
 _ASSUMED_ESTIMATE_MINUTES = 30
 _ASSUMED_CONTEXT = "anywhere"
 _SHOPPING_RUN_MINUTES = 45
+_UNCATEGORISED = "other"
 _UTC = timezone.utc
 
 
@@ -315,11 +317,18 @@ class DayPlanService:
         due_recurring = await self._shopping.list_due_recurrences()
         if not pending and not due_recurring:
             return None
+        names = await self._shopping.category_names() if pending else {}
         return ShoppingSection(
             pending_items=len(pending),
             due_recurring=len(due_recurring),
             suggested_run=SuggestedRun(estimate_minutes=_SHOPPING_RUN_MINUTES, context="out"),
+            by_category=_count_by([names.get(item.category_id, _UNCATEGORISED) for item in pending]),
         )
+
+
+def _count_by(keys: list[str]) -> dict[str, int]:
+    """Counts per key, largest first: enough for the planner to tell a pharmacy stop from a supermarket run."""
+    return dict(Counter(keys).most_common())
 
 
 def _preferences(settings: Any) -> dict[str, Any]:

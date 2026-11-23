@@ -192,6 +192,14 @@
               "});",
               "pm.test('Timeline datetimes carry an offset', () => {",
               "    pm.response.json().timeline.forEach(i => pm.expect(i.start).to.match(/[+-]\\d{2}:\\d{2}$/));",
+              "});",
+              "pm.test('Shopping counts per category add up to the pending items', () => {",
+              "    const shopping = pm.response.json().shopping;",
+              "    if (!shopping) return;",
+              "    pm.expect(shopping.by_category).to.be.an('object');",
+              "    if (shopping.pending_items === 0) return;",
+              "    const total = Object.values(shopping.by_category).reduce((a, b) => a + b, 0);",
+              "    pm.expect(total).to.eql(shopping.pending_items);",
               "});"
             ],
             "type": "text/javascript"

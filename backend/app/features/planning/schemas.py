@@ -257,6 +257,7 @@ class ShoppingSection(BaseModel):
     pending_items: int
     due_recurring: int
     suggested_run: SuggestedRun
+    by_category: dict[str, int] = {}
 
 
 class DayRead(BaseModel):

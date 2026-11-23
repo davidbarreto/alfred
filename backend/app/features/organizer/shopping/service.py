@@ -65,6 +65,9 @@ class ShoppingService:
             raise ValueError(f"Default shopping category {_DEFAULT_CATEGORY_NAME!r} is missing")
         return default_category.id
 
+    async def category_names(self) -> dict[int, str]:
+        return {category.id: category.name for category in await self._categories.list()}
+
     # --- Shopping items ---
 
     async def get_item(self, item_id: int) -> ShoppingItemRead | None:

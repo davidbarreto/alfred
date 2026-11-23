@@ -57,6 +57,7 @@ def parts():
     shopping = AsyncMock()
     shopping.list_items.return_value = []
     shopping.list_due_recurrences.return_value = []
+    shopping.category_names.return_value = {1: "groceries", 2: "pharmacy"}
     settings = AsyncMock()
     settings.get.return_value = _settings()
     saved = AsyncMock()
@@ -67,6 +68,10 @@ def parts():
         events=events, routines=routines, tasks=tasks, study=study, language=language, shopping=shopping,
         settings=settings, saved=saved, activities=activities,
     )
+
+
+def _shopping_item(category_id):
+    return SimpleNamespace(category_id=category_id)
 
 
 @pytest.fixture
@@ -390,12 +395,29 @@ class TestOtherSections:
         assert plan["study"]["language"] == [{"track": "es", "daily_quota": 20, "done_today": 8, "quota_met": False}]
 
     async def test_shopping_section_summarises_pending_and_due(self, service, parts):
-        parts.shopping.list_items.return_value = [object()] * 12
+        parts.shopping.list_items.return_value = [_shopping_item(1)] * 10 + [_shopping_item(2)] * 2
         parts.shopping.list_due_recurrences.return_value = [object()] * 3
         plan = _dump(await service.get_plan(date(2026, 10, 21)))
         assert plan["shopping"] == {
             "pending_items": 12, "due_recurring": 3, "suggested_run": {"estimate_minutes": 45, "context": "out"},
+            "by_category": {"groceries": 10, "pharmacy": 2},
         }
+
+    async def test_shopping_counts_list_the_largest_category_first(self, service, parts):
+        parts.shopping.list_items.return_value = [_shopping_item(2)] + [_shopping_item(1)] * 3
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert list(plan["shopping"]["by_category"]) == ["groceries", "pharmacy"]
+
+    async def test_shopping_items_without_a_known_category_count_as_other(self, service, parts):
+        parts.shopping.list_items.return_value = [_shopping_item(None), _shopping_item(99)]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert plan["shopping"]["by_category"] == {"other": 2}
+
+    async def test_only_due_recurrences_skip_the_category_lookup(self, service, parts):
+        parts.shopping.list_due_recurrences.return_value = [object()]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert plan["shopping"]["by_category"] == {}
+        parts.shopping.category_names.assert_not_awaited()
 
     async def test_shopping_section_omitted_when_nothing_to_buy(self, service):
         assert "shopping" not in _dump(await service.get_plan(date(2026, 10, 21)))

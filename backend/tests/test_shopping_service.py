@@ -123,6 +123,14 @@ def service():
 
 # --- Category resolution ---
 
+
+class TestCategoryNames:
+    async def test_maps_category_ids_to_names(self, service):
+        service._categories.list.return_value = [
+            _make_category_orm(id=_GROCERY_ID, name="grocery"), _make_category_orm(id=_OTHER_ID, name="other"),
+        ]
+        assert await service.category_names() == {_GROCERY_ID: "grocery", _OTHER_ID: "other"}
+
 class TestResolveCategoryId:
     async def test_returns_matching_category_id_when_found(self, service):
         service._categories.get_by_name.return_value = _make_category_orm(id=_GROCERY_ID, name="grocery")

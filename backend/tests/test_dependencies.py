@@ -11,6 +11,7 @@ from app.dependencies import (
     get_extraction_llm_provider,
     get_exchange_rate_provider,
     get_holiday_provider,
+    get_planning_holiday_provider,
     get_llm_provider,
     get_note_provider,
     get_null_calendar_provider,
@@ -100,6 +101,29 @@ class TestDisableIntegrations:
 
         assert isinstance(get_weather_provider(), NullWeatherProvider)
         assert isinstance(get_holiday_provider(), NullHolidayProvider)
+
+    def test_planning_holiday_provider_is_null_when_integrations_disabled(self, monkeypatch):
+        monkeypatch.setenv("DISABLE_INTEGRATIONS", "true")
+
+        assert isinstance(get_planning_holiday_provider(), NullHolidayProvider)
+
+    def test_planning_holiday_provider_uses_only_the_first_calendar(self, monkeypatch):
+        monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")
+        monkeypatch.setenv("GCP_API_KEY", "test-key")
+        monkeypatch.setenv("HOLIDAY_CALENDARS", "PT=pt-cal,BR=br-cal")
+        get_settings.cache_clear()
+
+        provider = get_planning_holiday_provider()
+
+        assert provider._calendars == {"PT": "pt-cal"}
+        assert get_holiday_provider()._calendars == {"PT": "pt-cal", "BR": "br-cal"}
+
+    def test_planning_holiday_provider_is_none_without_an_api_key(self, monkeypatch):
+        monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")
+        monkeypatch.setenv("GCP_API_KEY", "")
+        get_settings.cache_clear()
+
+        assert get_planning_holiday_provider() is None
 
     def test_audio_providers_are_null_when_integrations_disabled(self, monkeypatch):
         monkeypatch.setenv("DISABLE_INTEGRATIONS", "true")

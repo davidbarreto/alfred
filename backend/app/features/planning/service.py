@@ -33,12 +33,12 @@ from app.features.planning.schemas import (
     SuggestedRun,
     TaskItem,
     TripDay,
-    WEEKDAYS,
     WorkSummary,
 )
 from app.features.planning.saved_plans.schemas import SavedDayPlanRead
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.study.plans.service import StudyPlanService
+from app.shared.clock import weekday_key
 from app.shared.holiday import HolidayProvider
 from app.shared.timezone import local_now, local_timezone, local_timezone_name, local_today
 
@@ -186,7 +186,7 @@ class DayPlanService:
                 blocks.extend(timeline.routine_blocks_for(routine.name, windows, note_titles))
         if work_minutes is not None:
             target = work_minutes
-        elif WEEKDAYS[day.weekday()] in settings.workdays:
+        elif weekday_key(day) in settings.workdays:
             target = settings.work_target_minutes
         else:
             target = 0

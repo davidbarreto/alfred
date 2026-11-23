@@ -20,6 +20,7 @@ from app.features.planning.settings_service import PlanningSettingsService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.organizer.shopping_products.service import ShoppingProductService
+from app.features.organizer.locations.service import LocationService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.tags.service import TagService
@@ -223,6 +224,9 @@ def get_shopping_category_service(session: AsyncSession = Depends(get_session)) 
 def get_shopping_product_service(session: AsyncSession = Depends(get_session)) -> ShoppingProductService:
     return ShoppingProductService(session)
 
+def get_location_service(session: AsyncSession = Depends(get_session)) -> LocationService:
+    return LocationService(session, get_planning_holiday_provider())
+
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)
 
@@ -387,6 +391,16 @@ def get_holiday_provider() -> HolidayProvider | None:
     if client is None:
         return None
     return GooglePublicHolidayProvider(client, get_settings().holiday_calendar_map)
+
+def get_planning_holiday_provider() -> HolidayProvider | None:
+    """Only the first HOLIDAY_CALENDARS entry: the country whose holidays close the user's shops and plans."""
+    if get_settings().disable_integrations:
+        return NullHolidayProvider()
+    client = get_holiday_client()
+    if client is None:
+        return None
+    code, calendar_id = next(iter(get_settings().holiday_calendar_map.items()))
+    return GooglePublicHolidayProvider(client, {code: calendar_id})
 
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()
@@ -753,6 +767,7 @@ TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 ShoppingServiceDep = Annotated[ShoppingService, Depends(get_shopping_service)]
 ShoppingCategoryServiceDep = Annotated[ShoppingCategoryService, Depends(get_shopping_category_service)]
 ShoppingProductServiceDep = Annotated[ShoppingProductService, Depends(get_shopping_product_service)]
+LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]

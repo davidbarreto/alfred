@@ -1,0 +1,886 @@
+{
+ "info": {
+  "name": "Alfred - Locations API",
+  "_postman_id": "alfred-locations-v1",
+  "description": "Run in order: create a shop with text hours and a seeded category → name clash, bad hours and unknown category → get, list filters → update hours as an object → archive → categories → command lookup by name → home uniqueness → cleanup. Names carry a per-run suffix, so reruns against the same database pass; the run leaves nothing behind.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "auth": {
+  "type": "bearer",
+  "bearer": [
+   {
+    "key": "token",
+    "value": "{{api_token}}",
+    "type": "string"
+   }
+  ]
+ },
+ "item": [
+  {
+   "name": "01 - Health Check",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/health",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "health"
+     ]
+    },
+    "auth": {
+     "type": "noauth"
+    }
+   }
+  },
+  {
+   "name": "02 - Look Up Seeded Grocery Category",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "// Names are unique case-insensitively: a per-run suffix keeps reruns against the same database green.",
+       "pm.environment.set('location_run', String(Date.now()));",
+       "pm.environment.set('location_home_id', '0');"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('grocery category exists', () => {",
+       "    const grocery = pm.response.json().find((c) => c.name === 'grocery');",
+       "    pm.expect(grocery, 'grocery category').to.exist;",
+       "    pm.environment.set('location_category_id', grocery.id);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/shopping-categories",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "shopping-categories"
+     ]
+    }
+   }
+  },
+  {
+   "name": "03 - Create Location (text hours, sells grocery)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.test('Hours parsed, categories linked, today computed', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect(json.name).to.eql('Postman market ' + pm.environment.get('location_run'));",
+       "    pm.expect(json.kind).to.eql('supermarket');",
+       "    pm.expect(json.opening_hours.mon).to.eql([['08:00', '20:00']]);",
+       "    pm.expect(json.opening_hours.sat).to.eql([['09:00', '13:00'], ['15:00', '19:00']]);",
+       "    pm.expect(json.opening_hours.sun).to.eql([]);",
+       "    pm.expect(json.opening_hours.hol).to.eql([]);",
+       "    pm.expect(json.opening_hours_text).to.eql('mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed');",
+       "    pm.expect(json.categories.map((c) => c.name)).to.eql(['grocery']);",
+       "    pm.expect(json.active).to.be.true;",
+       "    pm.expect(json.today).to.have.property('date');",
+       "    pm.expect(json.today).to.have.property('open_now');",
+       "    pm.environment.set('location_id', json.id);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"  Postman   market {{location_run}} \",\n  \"kind\": \" Supermarket \",\n  \"address\": \"Rua Exemplo 1\",\n  \"opening_hours\": \"mon-fri 8-20; sat 9-13, 15:00-19:00; sun closed; holidays closed\",\n  \"category_ids\": [\n    {{location_category_id}}\n  ]\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "04 - Create Same Name, Different Case (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says the name is taken', () => pm.expect(pm.response.json().detail).to.include('already exists'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"POSTMAN MARKET {{location_run}}\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "05 - Create With Bad Hours (422, readable detail)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Detail names the bad day', () => pm.expect(pm.response.json().detail).to.include(\"'funday' is not a day\"));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman bad hours {{location_run}}\",\n  \"opening_hours\": \"funday 9-17\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "06 - Create With Unknown Category (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Detail names the id', () => pm.expect(pm.response.json().detail).to.include('999999'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman bad category {{location_run}}\",\n  \"category_ids\": [\n    999999\n  ]\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "07 - Get Location",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Same location', () => pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('location_id'))));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "08 - List By Category",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Includes the market', () => {",
+       "    const ids = pm.response.json().map((l) => l.id);",
+       "    pm.expect(ids).to.include(Number(pm.environment.get('location_id')));",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations?category_id={{location_category_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ],
+     "query": [
+      {
+       "key": "category_id",
+       "value": "{{location_category_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "09 - List By Kind",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Only supermarkets', () => pm.response.json().forEach((l) => pm.expect(l.kind).to.eql('supermarket')));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations?kind=SUPERMARKET",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ],
+     "query": [
+      {
+       "key": "kind",
+       "value": "SUPERMARKET"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "10 - Update Hours As Object And Notes",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Hours replaced and formatted', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect(json.opening_hours).to.eql({ mon: [['09:00', '17:00']], hol: [['09:00', '13:00']] });",
+       "    pm.expect(json.opening_hours_text).to.eql('mon 09:00-17:00; holidays 09:00-13:00');",
+       "    pm.expect(json.notes).to.eql('Cash only');",
+       "    pm.expect(json.categories.map((c) => c.name)).to.eql(['grocery']);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"opening_hours\": {\n    \"hol\": [\n      [\n        \"9:00\",\n        \"13:00\"\n      ]\n    ],\n    \"mon\": [\n      [\n        \"09:00\",\n        \"17:00\"\n      ]\n    ]\n  },\n  \"notes\": \"Cash only\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "11 - Clearing The Kind Is Refused (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"kind\": null\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "12 - Archive Location",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Archived', () => pm.expect(pm.response.json().active).to.be.false);"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"active\": false\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "13 - Active List Hides Archived",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Not listed', () => pm.expect(pm.response.json().map((l) => l.id)).to.not.include(Number(pm.environment.get('location_id'))));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations?active=true",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ],
+     "query": [
+      {
+       "key": "active",
+       "value": "true"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "14 - Archived List Shows It",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Listed', () => pm.expect(pm.response.json().map((l) => l.id)).to.include(Number(pm.environment.get('location_id'))));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations?active=false",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ],
+     "query": [
+      {
+       "key": "active",
+       "value": "false"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "15 - Get Categories",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('grocery', () => pm.expect(pm.response.json().map((c) => c.name)).to.eql(['grocery']));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}/categories",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}",
+      "categories"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16 - Replace Categories With None",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Empty', () => pm.expect(pm.response.json()).to.eql([]));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}/categories",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}",
+      "categories"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"category_ids\": []\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17 - Command: Show Location By Name",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Command found the location by name', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect(json.status).to.eql('success');",
+       "    pm.expect(json.result.id).to.eql(Number(pm.environment.get('location_id')));",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/commands/execute",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "commands",
+      "execute"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"type\": \"location\",\n  \"command\": \"show\",\n  \"args\": {\n    \"location\": \"postman market {{location_run}}\"\n  },\n  \"source\": \"postman\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "18 - Create Home (201, or 409 when a home already exists)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Created or already set', () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+       "if (pm.response.code === 201) { pm.environment.set('location_home_id', pm.response.json().id); }"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman home {{location_run}}\",\n  \"kind\": \"home\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "19 - Second Home (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says home is set', () => pm.expect(pm.response.json().detail).to.include('Home is already set'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman second home {{location_run}}\",\n  \"kind\": \"home\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "20 - Delete Postman Home (cleanup; 404 when none was created)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Deleted or never created', () => pm.expect(pm.response.code).to.be.oneOf([204, 404]));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_home_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_home_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "21 - Delete Location",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "22 - Get Deleted Location (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    }
+   }
+  }
+ ]
+}

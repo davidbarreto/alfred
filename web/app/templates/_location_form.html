@@ -1,0 +1,51 @@
+{# Location form, shared by the list page (new) and the detail page (edit). Vars: form_id, form_url, form_method, loc (or none), categories, selected_ids, kinds, hours_help. #}
+<form id="{{ form_id }}" class="space-y-3" data-location-form data-url="{{ form_url }}" data-method="{{ form_method }}">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Name</span>
+      <input name="name" required maxlength="100" value="{{ loc.name if loc else '' }}" placeholder="Supermarket by school"
+             class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Kind</span>
+      <input name="kind" maxlength="30" list="{{ form_id }}-kinds" value="{{ loc.kind if loc else '' }}" placeholder="other"
+             class="input input-sm input-bordered w-full">
+      <datalist id="{{ form_id }}-kinds">{% for k in kinds %}<option value="{{ k }}">{% endfor %}</datalist>
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Address</span>
+      <input name="address" value="{{ loc.address or '' if loc else '' }}" class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Maps link</span>
+      <input name="maps_url" type="url" value="{{ loc.maps_url or '' if loc else '' }}" placeholder="https://maps.app.goo.gl/..."
+             class="input input-sm input-bordered w-full">
+    </label>
+  </div>
+  <label class="space-y-1 block">
+    <span class="block text-xs text-gray-500">Opening hours <span class="text-gray-400">(one line per group of days; empty or a missing day means unknown)</span></span>
+    <textarea name="opening_hours" rows="4" placeholder="{{ hours_help | replace('; ', '\n') }}"
+              class="textarea textarea-sm textarea-bordered w-full font-mono text-xs">{{ loc.opening_hours_text | replace('; ', '\n') if loc else '' }}</textarea>
+  </label>
+  {% if categories %}
+  <fieldset class="space-y-1">
+    <legend class="block text-xs text-gray-500">Sells</legend>
+    <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+      {% for c in categories %}
+      <label class="inline-flex items-center gap-1.5 text-xs text-gray-700">
+        <input type="checkbox" name="category_ids" value="{{ c.id }}" class="checkbox checkbox-xs"
+               {% if c.id in selected_ids %}checked{% endif %}>{{ c.name }}
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+  <label class="space-y-1 block">
+    <span class="block text-xs text-gray-500">Notes</span>
+    <textarea name="notes" rows="2" class="textarea textarea-sm textarea-bordered w-full">{{ loc.notes or '' if loc else '' }}</textarea>
+  </label>
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="submit" class="btn btn-sm btn-outline">{{ 'Save' if loc else 'Add' }}</button>
+    <span class="text-xs text-red-600" data-form-error></span>
+  </div>
+</form>

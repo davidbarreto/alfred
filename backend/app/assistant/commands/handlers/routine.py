@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.assistant.commands.handlers._utils import build_model, parse_int
+from app.assistant.commands.handlers._utils import build_model, parse_bool, parse_int
 from app.features.organizer.routines.schemas import (
     RoutineCreate,
     RoutineStepCreate,
@@ -14,8 +14,6 @@ from app.features.organizer.routines.service import RoutineConflictError, Routin
 
 logger = logging.getLogger(__name__)
 
-_TRUE_VALUES = {"true", "1", "yes", "y"}
-_FALSE_VALUES = {"false", "0", "no", "n"}
 # Step fields copied as plain strings; an empty value clears them.
 _STEP_TEXT_FIELDS = ("title", "anchor", "window_start", "window_end", "context", "location")
 
@@ -27,15 +25,6 @@ def _required_id(arguments: dict[str, Any], key: str) -> int:
     return value
 
 
-def _parse_bool(raw: Any, name: str) -> bool:
-    value = str(raw).strip().lower()
-    if value in _TRUE_VALUES:
-        return True
-    if value in _FALSE_VALUES:
-        return False
-    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{name} must be true or false, got {raw!r}")
-
-
 def _routine_fields(arguments: dict[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     if "name" in arguments:
@@ -43,7 +32,7 @@ def _routine_fields(arguments: dict[str, Any]) -> dict[str, Any]:
     if "description" in arguments:
         fields["description"] = arguments["description"] or None
     if "active" in arguments:
-        fields["active"] = _parse_bool(arguments["active"], "active")
+        fields["active"] = parse_bool(arguments["active"], "active")
     if "recurrence_rule" in arguments:
         fields["recurrence_rule"] = str(arguments["recurrence_rule"] or "").strip() or None
     if "starts_on" in arguments:
@@ -83,7 +72,7 @@ async def _dispatch(command: str, arguments: dict[str, Any], service: RoutineSer
         return result.model_dump(mode="json")
 
     if command == "list":
-        active = _parse_bool(arguments["active"], "active") if "active" in arguments else None
+        active = parse_bool(arguments["active"], "active") if "active" in arguments else None
         results = await service.get_routines(active)
         return [r.model_dump(mode="json") for r in results]
 

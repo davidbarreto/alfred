@@ -162,6 +162,27 @@ class TravelTripGetArgs(BaseModel):
     )
 
 
+class LocationAddArgs(BaseModel):
+    name: str = Field(
+        description="Short name for the place as the user would say it, e.g. 'Pharmacy by school', 'Office', 'Market'"
+    )
+    kind: str | None = Field(
+        default=None,
+        description="One lowercase word: home, work, school, gym, supermarket, pharmacy, bakery, market or other",
+    )
+    address: str | None = Field(default=None, description="Street address only if the user gave one. Omit otherwise.")
+    opening_hours: str | None = Field(
+        default=None,
+        description=(
+            "Opening hours only if stated, as 'mon-fri 08:00-20:00; sat 09:00-13:00; sun closed'. "
+            "Omit when not mentioned; never guess."
+        ),
+    )
+    sells: str | None = Field(
+        default=None, description="Comma-separated shopping categories it is used for, if stated, e.g. 'groceries,bakery'"
+    )
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
@@ -182,6 +203,7 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "metric.stop": MetricStopArgs,
     "metric.log": MetricLogArgs,
     "travel_trip.get": TravelTripGetArgs,
+    "location.add": LocationAddArgs,
 }
 
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}

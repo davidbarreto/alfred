@@ -418,6 +418,22 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=330, text="When do I need to leave for the airport on my next trip?", intent="travel_trip.get"),
     IntentExample(id=331, text="What's the itinerary for my holiday?", intent="travel_trip.get"),
 
+    # --- location.add ---
+    IntentExample(id=332, text="Add the pharmacy near school", intent="location.add"),
+    IntentExample(id=333, text="Save the supermarket next to the office as a location", intent="location.add"),
+    IntentExample(id=334, text="Add a new place: the bakery on my street", intent="location.add"),
+    IntentExample(id=335, text="Remember the gym I go to, it opens at 7", intent="location.add"),
+    IntentExample(id=336, text="Add the market near home, open Saturdays 8 to 13", intent="location.add"),
+    IntentExample(id=337, text="New location: the hardware store by the station", intent="location.add"),
+
+    # --- location.list ---
+    IntentExample(id=338, text="Which shops do I have saved?", intent="location.list"),
+    IntentExample(id=339, text="Show my locations", intent="location.list"),
+    IntentExample(id=340, text="Where can I buy groceries near me?", intent="location.list"),
+    IntentExample(id=341, text="Is the pharmacy open today?", intent="location.list"),
+    IntentExample(id=342, text="List my frequent places", intent="location.list"),
+    IntentExample(id=343, text="Which supermarkets are open now?", intent="location.list"),
+
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="weather.current"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),

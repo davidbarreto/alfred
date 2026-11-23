@@ -38,6 +38,7 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "metric.open",
     "travel_trip.list",
     "travel_trip.get",
+    "location.list",
 })
 
 

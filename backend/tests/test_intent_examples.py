@@ -45,6 +45,8 @@ _KNOWN_INTENTS = {
     "metric.open",
     "travel_trip.list",
     "travel_trip.get",
+    "location.add",
+    "location.list",
     "unknown",
 }
 

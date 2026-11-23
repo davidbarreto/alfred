@@ -167,6 +167,21 @@ _ACTIVITY_DETAILS = (
     "target_per_week is a soft wish such as 3 for the gym that only shapes suggestions and is never enforced; "
     "categories are tags (comma-separated plain names). Use a recurring task instead when skipping it counts as a miss."
 )
+LOCATION_FIELD_FLAGS = {
+    "--kind": "kind", "--address": "address", "--maps": "maps_url", "--hours": "opening_hours",
+    "--sells": "sells", "--notes": "notes", "--active": "active",
+}
+_LOCATION_DETAILS = (
+    "Locations are the user's frequent everyday places: home, work, school, gym and the shops they use "
+    "(not trip sights: those are travel places). kind is free text, lowercase (home, work, school, gym, supermarket, "
+    "pharmacy, bakery, market, other); only one location can be home. sells is a comma-separated list of shopping "
+    "category names (what the shop is good for). hours is text such as 'mon-fri 08:00-20:00; sat 09:00-13:00, "
+    "15:00-19:00; sun closed; holidays closed': days are mon..sun, ranges (mon-fri), lists (mon,wed), daily or "
+    "holidays; a missing day means unknown. maps is a Maps link for the user. An empty value clears an optional field. "
+    "When the user adds or edits a shop you may search the web for its opening hours: show what you found with the "
+    "source and save them only after the user confirms. Alfred itself never searches. Never estimate travel minutes "
+    "from addresses: ask the user."
+)
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
     "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
@@ -1581,6 +1596,44 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"],
+        },
+    },
+    "location": {
+        "add": {
+            "description": "Add a frequent place (home, office, school, a shop): name, then --kind, --address, --hours, --sells, --maps, --notes",
+            "details": _LOCATION_DETAILS,
+            "aliases": ["/locationadd"],
+            "flags": LOCATION_FIELD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "list": {
+            "description": "List frequent places with today's hours; filter by --kind or --sells (a shopping category), --all includes archived",
+            "details": _LOCATION_DETAILS,
+            "aliases": ["/locations", "/locationlist"],
+            "flags": {"--kind": "kind", "--sells": "sells", "--all": "all", **FLAG_LIMIT},
+        },
+        "show": {
+            "description": "Show a location (id or name) with its hours, today's status and what it sells",
+            "aliases": ["/location", "/locationshow"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["location"],
+        },
+        "update": {
+            "description": "Update a location (id or name): --name, --kind, --address, --hours, --sells (replaces the list), --active",
+            "details": _LOCATION_DETAILS + " --active false archives it.",
+            "aliases": ["/locationupdate"],
+            "flags": {**LOCATION_FIELD_FLAGS, "--name": "name"},
+            "requires_args": True,
+            "arg_keys": ["location"],
+        },
+        "delete": {
+            "description": "Delete a location by id or name",
+            "aliases": ["/locationdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["location"],
         },
     },
     "day_plan": {

@@ -23,6 +23,7 @@ from app.assistant.commands.handlers.interview_story import handle_interview_sto
 from app.assistant.commands.handlers.interview_prep import handle_interview_prep
 from app.assistant.commands.handlers.interview_candidate import handle_interview_candidate
 from app.assistant.commands.handlers.language import handle_language
+from app.assistant.commands.handlers.location import handle_location
 from app.assistant.commands.handlers.metric import handle_metric
 from app.assistant.commands.handlers.travel import TravelServices, handle_travel
 from app.assistant.commands.handlers.memory import handle_memory
@@ -64,6 +65,7 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.activities.service import ActivityService
+from app.features.organizer.locations.service import LocationService
 from app.features.organizer.routines.service import RoutineService
 from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
@@ -112,6 +114,7 @@ async def execute(
     planning_settings_service: PlanningSettingsService | None = None,
     saved_plan_service: SavedPlanService | None = None,
     activity_service: ActivityService | None = None,
+    location_service: LocationService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -355,6 +358,14 @@ async def execute(
                 detail="Activity service not available",
             )
         return await handle_activity(command, arguments, activity_service)
+
+    if cmd_type == "location":
+        if location_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Location service not available",
+            )
+        return await handle_location(command, arguments, location_service)
 
     if cmd_type == "day_plan":
         if day_plan_service is None or planning_settings_service is None or saved_plan_service is None:

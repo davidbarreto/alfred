@@ -61,6 +61,15 @@ Shopping list with a product catalog, wishlist, and recurring items. Full rules:
 - **Portal:** `/shopping` (list, wishlist, recurring, products, categories) and `/shopping/insights`.
 - **Commands:** `shopping` add / list / complete / delete / update; `wishlist` add / list / delete / promote. **API:** `/organizer/shopping`, `/wishlist`, `/recurrence`, `/shopping-products`, `/shopping-categories`.
 
+## Locations
+
+Frequent everyday places (home, work, school, the shops near them) with address, Maps link, opening hours (including public holidays) and the shopping categories each one sells. Full rules: [modules/locations.md](modules/locations.md).
+
+- Opening hours typed as text (`mon-fri 08:00-20:00; sun closed; holidays closed`); today's hours and "open now" on every location, using the first `HOLIDAY_CALENDARS` calendar for holidays.
+- One home; archive instead of delete; no maps provider (hours and travel are entered by hand or by Claude after the user confirms).
+- **Portal:** `/locations` and `/locations/{id}`.
+- **Commands:** `location` add / list / show / update / delete. **API:** `/organizer/locations`.
+
 ## Memories, working memory and recall
 
 Alfred's long-term knowledge about you and the short-term context it carries.

@@ -100,4 +100,4 @@ Every card heading carries a Tabler icon. The morning briefing page keeps only t
 
 ## Pages
 
-dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities. Feature-specific portal behaviour is documented in the module docs.
+dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities, locations (`/locations`, `/locations/{id}`). Feature-specific portal behaviour is documented in the module docs.

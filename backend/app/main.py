@@ -43,6 +43,8 @@ from app.api.routes.organizer.contact_birthday_notifications import router as co
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
 from app.api.routes.organizer.shopping_products import router as shopping_products_router
+from app.api.routes.organizer.locations import router as locations_router
+from app.features.organizer.locations.errors import LocationConflictError, LocationValidationError
 from app.features.organizer.shopping.errors import (
     ShoppingItemAlreadyPendingError,
     ShoppingProductBlockedError,
@@ -188,6 +190,7 @@ app.include_router(wishlist_router)
 app.include_router(recurrence_router)
 app.include_router(shopping_categories_router)
 app.include_router(shopping_products_router)
+app.include_router(locations_router)
 app.include_router(interview_companies_router)
 app.include_router(interview_processes_router)
 app.include_router(interview_stages_router)
@@ -316,3 +319,14 @@ async def health():
 async def _shopping_conflict_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.info("Shopping conflict: %s", exc)
     return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(LocationConflictError)
+async def _location_conflict_handler(request: Request, exc: LocationConflictError) -> JSONResponse:
+    logger.info("Location conflict: %s", exc)
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(LocationValidationError)
+async def _location_validation_handler(request: Request, exc: LocationValidationError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})

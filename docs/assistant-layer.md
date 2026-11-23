@@ -45,6 +45,10 @@ Typed text and Telegram voice go through intent detection (`app/assistant/intent
 
 `travel_link` (`add`, `list`, `update`, `delete`, `suggest`) takes its owner as one of `--trip`, `--place`, `--city`, `--country` (id or name; an ambiguous city name is refused with its countries). `suggest` only reports where to look and what is saved; the web search is done by the MCP client, never by the backend. It is not in the Telegram menu (`_MENU_COMMANDS`). Restart the MCP container after a deploy that adds or changes commands.
 
+## Locations
+
+`location` (`add`, `list`, `show`, `update`, `delete`) resolves a location by id or name and takes shopping category names in `--sells`. Like `travel_link suggest`, the web search for opening hours is done by the MCP client and saved only after the user confirms; Alfred never searches. Not in the Telegram menu. Details: [modules/locations.md](modules/locations.md).
+
 ## Recall sources
 
 `recall search` embeds-searches the `memory`, `note`, `note_title` and `task` sources plus the travel notes sources (`trip_note`, `leg_note`, `stay_note`, `visit_note`, `place_note`). A module that wants its free text recallable embeds it under its own source type and adds that type to `_SOURCE_TYPES` in `handlers/recall.py`.

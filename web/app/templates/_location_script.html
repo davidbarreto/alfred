@@ -1,0 +1,38 @@
+<script>
+async function locationSend(url, method, body) {
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data && data.error) || 'Something went wrong.');
+  return data;
+}
+
+function locationBody(form) {
+  const data = new FormData(form);
+  const body = {
+    name: data.get('name'),
+    address: data.get('address') || null,
+    maps_url: data.get('maps_url') || null,
+    opening_hours: data.get('opening_hours') || null,
+    notes: data.get('notes') || null,
+  };
+  const kind = (data.get('kind') || '').trim();
+  if (kind) body.kind = kind;
+  if (form.querySelector('[name="category_ids"]')) body.category_ids = data.getAll('category_ids').map(Number);
+  return body;
+}
+
+// A form submits to its data-url with its data-method; on success the page opens the saved location.
+document.querySelectorAll('[data-location-form]').forEach((form) => {
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const error = form.querySelector('[data-form-error]');
+    error.textContent = '';
+    try {
+      const saved = await locationSend(form.dataset.url, form.dataset.method, locationBody(form));
+      window.location.href = `/locations/${saved.id}`;
+    } catch (e) { error.textContent = e.message; }
+  });
+});
+</script>

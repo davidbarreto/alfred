@@ -672,7 +672,7 @@
        "pm.test('Status is 200', () => pm.response.to.have.status(200));",
        "pm.test('Command found the location by name', () => {",
        "    const json = pm.response.json();",
-       "    pm.expect(json.status).to.eql('success');",
+       "    pm.expect(json.status).to.eql('ok');",
        "    pm.expect(json.result.id).to.eql(Number(pm.environment.get('location_id')));",
        "});"
       ],

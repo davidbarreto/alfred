@@ -14,6 +14,9 @@ from app.features.organizer.shopping.schemas import ShoppingItemFilters
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.schemas import TaskFilters, TaskRead
 from app.features.organizer.tasks.service import TaskService
+from app.features.travel.briefing import build_agenda
+from app.features.travel.trips.schemas import TripFilters
+from app.features.travel.trips.service import TripService
 from app.features.planning import timeline
 from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.schemas import (
@@ -29,13 +32,15 @@ from app.features.planning.schemas import (
     StudySection,
     SuggestedRun,
     TaskItem,
+    TripDay,
     WEEKDAYS,
     WorkSummary,
 )
 from app.features.planning.saved_plans.schemas import SavedDayPlanRead
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.study.plans.service import StudyPlanService
-from app.shared.timezone import local_now, local_timezone_name, local_today
+from app.shared.holiday import HolidayProvider
+from app.shared.timezone import local_now, local_timezone, local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +70,8 @@ class DayPlanService:
         settings_service: PlanningSettingsService,
         saved_plan_service: SavedPlanService,
         activity_service: ActivityService,
+        trip_service: TripService,
+        holiday_provider: HolidayProvider | None,
     ) -> None:
         self._events = event_service
         self._routines = routine_service
@@ -75,6 +82,8 @@ class DayPlanService:
         self._settings = settings_service
         self._saved = saved_plan_service
         self._activities = activity_service
+        self._trips = trip_service
+        self._holidays = holiday_provider
 
     async def get_plan(
         self, start: date | None = None, days: int = 1, work_minutes: int | None = None
@@ -95,6 +104,11 @@ class DayPlanService:
             )
             for d in dates
         ]
+        holidays = await self._holidays_by_day(dates, warnings)
+        trip_days = await self._trip_days(dates)
+        for day in day_reads:
+            day.holidays = holidays.get(day.date)
+            day.trips = trip_days.get(day.date)
         office = await self._office_summary(first, settings)
         tasks = await self._task_sections(dates, warnings)
 
@@ -115,8 +129,8 @@ class DayPlanService:
         )
         if days == 1:
             day = day_reads[0]
-            plan.work, plan.timeline, plan.routine_blocks, plan.all_day = (
-                day.work, day.timeline, day.routine_blocks, day.all_day,
+            plan.work, plan.timeline, plan.routine_blocks, plan.all_day, plan.holidays, plan.trips = (
+                day.work, day.timeline, day.routine_blocks, day.all_day, day.holidays, day.trips,
             )
         else:
             plan.days = day_reads
@@ -189,6 +203,50 @@ class DayPlanService:
                 preferred_windows=settings.preferred_work_windows or None,
             ),
         )
+
+    async def _holidays_by_day(self, dates: list[date], warnings: list[str]) -> dict[str, list[str]]:
+        """Public holidays per ISO date, one line per name with every country that has it."""
+        if self._holidays is None:
+            return {}
+        try:
+            # No session: the plan is a read-only request that never commits, so the provider call is not logged.
+            found = await self._holidays.get_holidays(dates[0], dates[-1])
+        except Exception:
+            logger.warning("Failed to fetch holidays for the day plan", exc_info=True)
+            warnings.append("Public holidays could not be loaded; check the calendar for holidays this week")
+            return {}
+        countries: dict[str, dict[str, list[str]]] = {}
+        for holiday in found:
+            names = countries.setdefault(holiday.date.isoformat(), {})
+            codes = names.setdefault(holiday.name, [])
+            if holiday.country not in codes:
+                codes.append(holiday.country)
+        return {
+            day: [f"{name} ({', '.join(codes)})" for name, codes in names.items()]
+            for day, names in countries.items()
+        }
+
+    async def _trip_days(self, dates: list[date]) -> dict[str, list[TripDay]]:
+        """For each plan date inside a trip: which day of the trip it is, its agenda and the leave-home time."""
+        trips = await self._trips.get_trips(TripFilters(status="all", date_from=dates[0], date_to=dates[-1]))
+        result: dict[str, list[TripDay]] = {}
+        for listed in trips:
+            trip = await self._trips.get_trip_detail(listed.id, include_all_visits=True)
+            if trip is None:
+                continue
+            leave = trip.leave_home_at.astimezone(local_timezone()) if trip.leave_home_at else None
+            for day in dates:
+                if not trip.start_date <= day <= trip.end_date:
+                    continue
+                result.setdefault(day.isoformat(), []).append(TripDay(
+                    trip_id=trip.id,
+                    name=trip.name,
+                    day=(day - trip.start_date).days + 1,
+                    days=(trip.end_date - trip.start_date).days + 1,
+                    agenda=build_agenda(trip, day),
+                    leave_home_at=timeline.iso_local(leave) if leave and leave.date() == day else None,
+                ))
+        return result
 
     async def _office_summary(self, first: date, settings: Any) -> OfficeSummary | None:
         if settings.office_days_per_week is None:

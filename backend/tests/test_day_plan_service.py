@@ -9,6 +9,7 @@ from app.features.organizer.calendar_events.schemas import EventRead
 from app.features.organizer.routines.schemas import RoutineRead, RoutineStepRead
 from app.features.organizer.tasks.schemas import TaskRead
 from app.features.planning.schemas import PlanningSettingsRead
+from app.features.briefing.schemas import HolidayItem
 from app.features.planning.service import DayPlanService
 
 _NOW = datetime(2026, 10, 1, 9, 0, tzinfo=timezone.utc)
@@ -64,9 +65,13 @@ def parts():
     saved.get_saved.return_value = []
     activities = AsyncMock()
     activities.get_suggestions.return_value = []
+    trips = AsyncMock()
+    trips.get_trips.return_value = []
+    holidays = AsyncMock()
+    holidays.get_holidays.return_value = []
     return SimpleNamespace(
         events=events, routines=routines, tasks=tasks, study=study, language=language, shopping=shopping,
-        settings=settings, saved=saved, activities=activities,
+        settings=settings, saved=saved, activities=activities, trips=trips, holidays=holidays,
     )
 
 
@@ -80,6 +85,7 @@ def service(parts):
         event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
         study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
         settings_service=parts.settings, saved_plan_service=parts.saved, activity_service=parts.activities,
+        trip_service=parts.trips, holiday_provider=parts.holidays,
     )
 
 
@@ -587,3 +593,107 @@ class TestActivitySuggestionsSection:
 
     async def test_section_omitted_without_activities(self, service):
         assert "activity_suggestions" not in _dump(await service.get_plan(date(2026, 10, 21)))
+
+
+def _holiday(name, day, country="PT") -> HolidayItem:
+    return HolidayItem(name=name, local_name=name, country=country, days_until=0, date=day)
+
+
+@freeze_time("2026-12-20 10:00:00")
+class TestHolidays:
+    async def test_holidays_are_listed_on_their_day(self, service, parts):
+        parts.holidays.get_holidays.return_value = [_holiday("Natal", date(2026, 12, 25))]
+        plan = _dump(await service.get_plan(date(2026, 12, 21), days=7))
+        by_date = {d["date"]: d for d in plan["days"]}
+        assert by_date["2026-12-25"]["holidays"] == ["Natal (PT)"]
+        assert "holidays" not in by_date["2026-12-24"]
+        parts.holidays.get_holidays.assert_awaited_once_with(date(2026, 12, 21), date(2026, 12, 27))
+
+    async def test_same_name_in_two_countries_is_one_line(self, service, parts):
+        parts.holidays.get_holidays.return_value = [
+            _holiday("Christmas Day", date(2026, 12, 25), "PT"), _holiday("Christmas Day", date(2026, 12, 25), "BR"),
+            _holiday("Christmas Day", date(2026, 12, 25), "BR"),
+        ]
+        plan = _dump(await service.get_plan(date(2026, 12, 25)))
+        assert plan["holidays"] == ["Christmas Day (PT, BR)"]
+
+    async def test_single_day_without_holidays_omits_the_field(self, service):
+        assert "holidays" not in _dump(await service.get_plan(date(2026, 12, 22)))
+
+    async def test_provider_failure_becomes_a_warning(self, service, parts):
+        parts.holidays.get_holidays.side_effect = RuntimeError("calendar down")
+        plan = _dump(await service.get_plan(date(2026, 12, 22)))
+        assert "holidays" not in plan
+        assert any("holidays could not be loaded" in w for w in plan["warnings"])
+
+    async def test_no_provider_means_no_holidays(self, parts):
+        service = DayPlanService(
+            event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
+            study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
+            settings_service=parts.settings, saved_plan_service=parts.saved, activity_service=parts.activities,
+            trip_service=parts.trips, holiday_provider=None,
+        )
+        plan = _dump(await service.get_plan(date(2026, 12, 25)))
+        assert "holidays" not in plan and plan["warnings"] == []
+
+
+def _trip_detail(**kw):
+    defaults = dict(
+        id=7, name="Christmas", start_date=date(2026, 12, 17), end_date=date(2026, 12, 29),
+        leave_home_at=datetime(2026, 12, 17, 7, 30, tzinfo=timezone.utc), timeline=[], visits=[],
+    )
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
+
+
+def _leg_row(title, local):
+    return SimpleNamespace(kind="leg", title=title, local=local)
+
+
+@freeze_time("2026-12-14 10:00:00")
+class TestTrips:
+    async def test_trip_days_carry_day_number_agenda_and_leave_home(self, service, parts):
+        parts.trips.get_trips.return_value = [SimpleNamespace(id=7)]
+        parts.trips.get_trip_detail.return_value = _trip_detail(
+            timeline=[_leg_row("Flight LIS → FCO", datetime(2026, 12, 17, 10, 5))],
+        )
+        plan = _dump(await service.get_plan(date(2026, 12, 14), days=7))
+        by_date = {d["date"]: d for d in plan["days"]}
+
+        assert "trips" not in by_date["2026-12-16"]
+        assert by_date["2026-12-17"]["trips"] == [{
+            "trip_id": 7, "name": "Christmas", "day": 1, "days": 13,
+            "agenda": ["10:05 Flight LIS → FCO"], "leave_home_at": "2026-12-17T07:30:00+00:00",
+        }]
+        assert by_date["2026-12-18"]["trips"] == [
+            {"trip_id": 7, "name": "Christmas", "day": 2, "days": 13, "agenda": []},
+        ]
+        parts.trips.get_trip_detail.assert_awaited_once_with(7, include_all_visits=True)
+
+    async def test_trips_are_looked_up_for_the_whole_range_in_any_status(self, service, parts):
+        await service.get_plan(date(2026, 12, 14), days=3)
+        filters = parts.trips.get_trips.call_args.args[0]
+        assert (filters.status, filters.date_from, filters.date_to) == ("all", date(2026, 12, 14), date(2026, 12, 16))
+
+    async def test_leave_home_is_compared_on_the_local_date(self, service, parts):
+        # 23:30 UTC on 1 July is 00:30 on 2 July in Lisbon (summer time): it belongs to the 2nd.
+        parts.trips.get_trips.return_value = [SimpleNamespace(id=7)]
+        parts.trips.get_trip_detail.return_value = _trip_detail(
+            start_date=date(2027, 7, 1), end_date=date(2027, 7, 5),
+            leave_home_at=datetime(2027, 7, 1, 23, 30, tzinfo=timezone.utc),
+        )
+        plan = _dump(await service.get_plan(date(2027, 7, 1), days=2))
+        first, second = plan["days"]
+        assert "leave_home_at" not in first["trips"][0]
+        assert second["trips"][0]["leave_home_at"] == "2027-07-02T00:30:00+01:00"
+
+    async def test_single_day_puts_the_trip_at_the_top_level(self, service, parts):
+        parts.trips.get_trips.return_value = [SimpleNamespace(id=7)]
+        parts.trips.get_trip_detail.return_value = _trip_detail()
+        plan = _dump(await service.get_plan(date(2026, 12, 20)))
+        assert plan["trips"][0]["day"] == 4
+
+    async def test_a_trip_that_vanished_is_skipped(self, service, parts):
+        parts.trips.get_trips.return_value = [SimpleNamespace(id=7)]
+        parts.trips.get_trip_detail.return_value = None
+        assert "trips" not in _dump(await service.get_plan(date(2026, 12, 20)))

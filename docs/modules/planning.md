@@ -55,9 +55,11 @@ Rule of thumb: if skipping it counts as a miss it is a recurring task, otherwise
 
 ## Day plan (`GET /planning/day`)
 
-`DayPlanService`, MCP `alfred_day_plan get`, 1-7 days. Aggregates events, event-routine steps, derived travel blocks, scheduled-routine windows, work and office totals, overdue/due/recurring/backlog tasks, study, language quota, shopping, activity suggestions and the saved plan.
+`DayPlanService`, MCP `alfred_day_plan get`, 1-7 days. Aggregates events, event-routine steps, derived travel blocks, scheduled-routine windows, work and office totals, overdue/due/recurring/backlog tasks, study, language quota, shopping, public holidays, trip days, activity suggestions and the saved plan.
 
 - Free slots are intentionally not returned.
+- `holidays` (per day, or top level for one day; omitted when none): public holidays from the `HOLIDAY_CALENDARS` Google calendars (the briefing's `HolidayProvider`), one line per name with every country that has it, `"Christmas Day (PT, BR)"`. These calls are not logged in `provider_calls` (the request never commits). A provider failure adds one warning and never fails the plan; with integrations disabled the list is empty. Alfred does not decide which holidays are days off (no change to the work target): that is a `conventions` rule.
+- `trips` (per day, or top level for one day; omitted when none): every trip (any status) whose dates include that day, as `{trip_id, name, day, days, agenda, leave_home_at}`. `agenda` is the briefing's `build_agenda` (legs, check-ins/outs and visits that day, times in the zone where they happen); `leave_home_at` (local ISO with offset) only on the local date of the trip's leave-home time. Each trip's detail is loaded once per request.
 - `shopping` (omitted when nothing is pending or due) gives counts only: `pending_items`, `due_recurring`, a `suggested_run` and `by_category` (pending items per category name, largest first, unknown as `other`). Enough to tell a pharmacy stop from a supermarket run; the planner fetches item names with `alfred_shopping` only when it places a stop.
 - Overlaps are reported in `warnings`, never resolved. Anything entirely inside an in-person event tagged with the office tag (a standup during an office day) is not an overlap.
 - Tasks missing an estimate/context are named in one warning line each, or only counted when there are more than 5.

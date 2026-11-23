@@ -136,7 +136,7 @@ Trips with their legs (flights, trains, ...), stays (hotels), an itinerary of pl
 
 Claude plans a day or week from Alfred's data; Alfred stores what was agreed. See [modules/planning.md](modules/planning.md).
 
-- **Day plan:** one call returns events, routine steps, travel, tasks, study, language quota, shopping, work totals and the saved plan. Plans are versioned; blocks can be marked done or missed; a weekly review counts what was planned versus done.
+- **Day plan:** one call returns events, routine steps, travel, tasks, study, language quota, shopping (counts per category), public holidays, trip days (agenda and leave-home time), work totals and the saved plan. Plans are versioned; blocks can be marked done or missed; a weekly review counts what was planned versus done.
 - **Routines:** daily-life rhythms, event-based or scheduled, with timed steps. **Activities:** optional gap fillers with a weekly wish and a log.
 - **Portal:** `/plan`, `/routines`, `/activities`. **Commands:** `day_plan`, `routine`, `activity`. **API:** `/planning/*`, `/organizer/routines`, `/organizer/activities`.
 

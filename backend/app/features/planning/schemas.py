@@ -260,12 +260,28 @@ class ShoppingSection(BaseModel):
     by_category: dict[str, int] = {}
 
 
+class TripDay(BaseModel):
+    """One day of a trip that overlaps the plan: the user is away (or leaving/coming back) that day."""
+
+    trip_id: int
+    name: str
+    day: int
+    days: int
+    # Legs, check-ins/outs and visits of that day as ready-to-read lines, times in the zone of where they happen.
+    agenda: list[str] = []
+    # Only on the day the user leaves home for the trip's first flight.
+    leave_home_at: str | None = None
+
+
 class DayRead(BaseModel):
     date: str
     timeline: list[TimelineItem] = []
     routine_blocks: list[RoutineBlock] = []
     all_day: list[AllDayItem] = []
     work: WorkSummary
+    # Public holidays as "Name (PT)" or "Name (PT, BR)"; omitted when none.
+    holidays: list[str] | None = None
+    trips: list[TripDay] | None = None
 
 
 class DayPlanRead(BaseModel):
@@ -279,6 +295,8 @@ class DayPlanRead(BaseModel):
     timeline: list[TimelineItem] | None = None
     routine_blocks: list[RoutineBlock] | None = None
     all_day: list[AllDayItem] | None = None
+    holidays: list[str] | None = None
+    trips: list[TripDay] | None = None
     days: list[DayRead] | None = None
     overdue_tasks: list[TaskItem] = []
     due_tasks: list[TaskItem] = []

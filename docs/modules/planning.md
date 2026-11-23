@@ -91,7 +91,7 @@ Saving a date archives its active version (`archived_at`) and inserts the next; 
 ### Preferences returned with every day plan
 
 - **Conventions:** `planning.conventions` is free text (max 2000 chars, form on `/plan`) returned in the `preferences` of every `GET /planning/day`, so each client applies the user's standing rules without being told again.
-- **Travel times:** `planning.travel_times` is a list of `{origin, place, mode, minutes}`: door-to-door minutes between two places (`origin` defaults to `home`, `place` is the destination; e.g. home to office by metro 50 / car 20, office to school by car 20).
+- **Travel times:** `travel_times` in the planning settings and `preferences` is a list of `{origin, place, mode, minutes}`: door-to-door minutes between two places (`origin` defaults to `home`, `place` is the destination; e.g. home to office by metro 50 / car 20, office to school by car 20). Since migration 096 they are rows between locations (`organizer.location_travel_times`, [locations.md](locations.md#travel-times)) and no longer a setting: the list shape, the `/plan` form and the `--travel` syntax are unchanged, a list sent to `PUT /planning/settings` replaces every travel time, and a name that is not a location yet becomes one. Home is always `home`; other names are location names in lowercase. Up to 60.
   - Origin, place and mode are lowercased, one entry per (origin, place, mode), a place cannot be its own origin, max 20.
   - A trip counts both ways unless the reverse is listed too.
   - Entries stored before origins existed read back as from home.

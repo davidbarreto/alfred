@@ -29,10 +29,29 @@ def store():
     return _FakeStore()
 
 
+class _FakeTravelTimes:
+    """Stands in for LocationTravelTimeService: keeps the routes the way the rows would."""
+
+    def __init__(self):
+        self.routes = []
+
+    async def as_preferences(self):
+        return [{"origin": o, "place": p, "mode": m, "minutes": n} for o, p, m, n in self.routes]
+
+    async def replace_from_preferences(self, entries):
+        self.routes = list(entries)
+
+
 @pytest.fixture
-def service(store):
+def travel_times():
+    return _FakeTravelTimes()
+
+
+@pytest.fixture
+def service(store, travel_times):
     svc = PlanningSettingsService(session=AsyncMock())
     svc._settings = store
+    svc._travel_times = travel_times
     return svc
 
 
@@ -140,36 +159,34 @@ class TestTravelTimes:
     async def test_empty_by_default(self, service):
         assert (await service.get()).travel_times == []
 
-    async def test_stored_as_json_and_read_back(self, service, store):
+    async def test_saved_as_location_routes_and_read_back_in_the_old_shape(self, service, store, travel_times):
         result = await service.update(PlanningSettingsUpdate(travel_times=[
             {"place": " Office ", "mode": "Metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
         ]))
-        assert json.loads(store.values["planning.travel_times"]) == [
+        assert travel_times.routes == [("home", "office", "metro", 50), ("home", "office", "car", 20)]
+        assert "planning.travel_times" not in store.values
+        assert [t.model_dump() for t in result.travel_times] == [
             {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
             {"origin": "home", "place": "office", "mode": "car", "minutes": 20},
         ]
-        assert [(t.origin, t.place, t.mode, t.minutes) for t in result.travel_times] == [
-            ("home", "office", "metro", 50), ("home", "office", "car", 20),
-        ]
 
-    async def test_trips_between_other_places_keep_their_origin(self, service, store):
+    async def test_trips_between_other_places_keep_their_origin(self, service, travel_times):
         result = await service.update(PlanningSettingsUpdate(travel_times=[
             {"origin": " Office ", "place": "School", "mode": "car", "minutes": 20},
         ]))
-        assert json.loads(store.values["planning.travel_times"]) == [
-            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
-        ]
+        assert travel_times.routes == [("office", "school", "car", 20)]
         assert result.travel_times[0].origin == "office"
 
-    async def test_entries_stored_before_origins_existed_start_at_home(self, service, store):
-        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
-        assert (await service.get()).travel_times[0].origin == "home"
-
-    async def test_empty_list_or_null_resets(self, service, store):
-        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
+    async def test_empty_list_or_null_clears_them(self, service, travel_times):
+        travel_times.routes = [("home", "office", "car", 20)]
         assert (await service.update(PlanningSettingsUpdate(travel_times=[]))).travel_times == []
-        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
+        travel_times.routes = [("home", "office", "car", 20)]
         assert (await service.update(PlanningSettingsUpdate(travel_times=None))).travel_times == []
+
+    async def test_other_updates_leave_them_alone(self, service, travel_times):
+        travel_times.routes = [("home", "office", "car", 20)]
+        await service.update(PlanningSettingsUpdate(wake_time="07:00"))
+        assert travel_times.routes == [("home", "office", "car", 20)]
 
     @pytest.mark.parametrize("entry", [
         {"place": "", "mode": "car", "minutes": 20}, {"place": "office", "mode": "  ", "minutes": 20},
@@ -196,7 +213,8 @@ class TestTravelTimes:
 
     def test_the_list_is_capped(self):
         with pytest.raises(ValidationError):
-            PlanningSettingsUpdate(travel_times=[{"place": f"p{i}", "mode": "car", "minutes": 5} for i in range(21)])
+            PlanningSettingsUpdate(travel_times=[{"place": f"p{i}", "mode": "car", "minutes": 5} for i in range(61)])
+        PlanningSettingsUpdate(travel_times=[{"place": f"p{i}", "mode": "car", "minutes": 5} for i in range(60)])
 
 
 class TestParseTravelTimes:

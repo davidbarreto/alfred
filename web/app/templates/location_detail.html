@@ -38,7 +38,7 @@
     <div class="card-body p-4 space-y-1">
       <p class="text-sm font-semibold text-gray-900"><i class="ti ti-truck"></i> Home moved</p>
       <p class="text-xs text-gray-600">Trips that have already started keep the address they were planned with; upcoming trips start from the new one.
-        Travel times from Home are not changed automatically: check them on <a href="/plan" class="text-[#378ADD] hover:underline">Plan</a>.</p>
+        Travel times from Home are not changed automatically: check them below.</p>
     </div>
   </div>
   {% endif %}
@@ -78,6 +78,24 @@
     </div>
 
     <div class="card-stack">
+      <div class="card bg-white" id="location-travel-times">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Travel times</h2>
+            {% if travel_times_total > travel_times | length %}<a href="/locations/{{ location.id }}/travel-times" class="text-xs text-[#378ADD] hover:underline">See all {{ travel_times_total }}</a>{% endif %}
+          </div>
+          {% if travel_times %}
+          <ul class="divide-y divide-gray-100">
+            {% for t in travel_times %}{% include "_location_travel_time_row.html" %}{% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-sm text-gray-400">No travel times yet.</p>
+          {% endif %}
+          <p class="text-xs text-red-600 empty:hidden" id="travel-time-error"></p>
+          {% include "_location_travel_time_form.html" %}
+        </div>
+      </div>
+
       <div class="card bg-white" id="location-address">
         <div class="card-body p-5 space-y-2">
           <h2 class="text-sm font-semibold text-gray-900">Address</h2>
@@ -118,6 +136,7 @@
 </div>
 {% if location %}
 {% include "_location_script.html" %}
+{% include "_location_travel_time_script.html" %}
 <script>
 document.getElementById('toggle-active').addEventListener('click', async (event) => {
   const error = document.getElementById('action-error');

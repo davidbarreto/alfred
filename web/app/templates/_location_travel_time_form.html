@@ -1,0 +1,19 @@
+{# Add or update a travel time from this location. Vars: location, others (locations to go to), modes. #}
+{% if others %}
+<form id="travel-time-form" class="flex flex-wrap items-end gap-2 pt-2" data-location-id="{{ location.id }}">
+  <label class="space-y-1"><span class="block text-xs text-gray-500">To</span>
+    <select name="destination_id" required class="select select-sm select-bordered">
+      {% for other in others %}<option value="{{ other.id }}">{{ other.name }}</option>{% endfor %}
+    </select></label>
+  <label class="space-y-1"><span class="block text-xs text-gray-500">By</span>
+    <input name="mode" required maxlength="40" list="travel-modes" placeholder="metro" class="input input-sm input-bordered w-28">
+    <datalist id="travel-modes">{% for m in modes %}<option value="{{ m }}">{% endfor %}</datalist></label>
+  <label class="space-y-1"><span class="block text-xs text-gray-500">Minutes</span>
+    <input name="minutes" type="number" min="1" max="600" required class="input input-sm input-bordered w-20"></label>
+  <button type="submit" class="btn btn-sm btn-outline">Save</button>
+  <span class="text-xs text-red-600" data-form-error></span>
+</form>
+<p class="text-xs text-gray-400">Door to door, typed by you (Alfred never estimates them). Two-way unless the reverse is saved too; saving the same place and mode again updates the minutes.</p>
+{% else %}
+<p class="text-xs text-gray-400">Add another location to save travel times to it.</p>
+{% endif %}

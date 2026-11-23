@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.features.organizer.locations.errors import LocationConflictError, LocationValidationError
 from app.features.organizer.locations.schemas import (
+    LocationRef,
+    LocationTravelTimeRead,
     LocationCategory,
     LocationFilters,
     LocationRead,
@@ -41,11 +43,30 @@ def mock_service():
     return svc
 
 
+def _route(**kwargs):
+    defaults = dict(
+        id=5, origin=LocationRef(id=1, name="Home", kind="home"), destination=LocationRef(id=2, name="Market", kind="supermarket"),
+        mode="foot", minutes=12, created_at=_NOW, updated_at=_NOW,
+    )
+    defaults.update(kwargs)
+    return LocationTravelTimeRead(**defaults)
+
+
 @pytest.fixture
-def client(mock_service):
+def mock_travel_times():
+    svc = AsyncMock()
+    svc.list_for.return_value = [_route()]
+    svc.set.return_value = _route(minutes=10)
+    svc.delete.return_value = True
+    return svc
+
+
+@pytest.fixture
+def client(mock_service, mock_travel_times):
     from app.main import app
-    from app.dependencies import get_location_service
+    from app.dependencies import get_location_service, get_location_travel_time_service
     app.dependency_overrides[get_location_service] = lambda: mock_service
+    app.dependency_overrides[get_location_travel_time_service] = lambda: mock_travel_times
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -138,3 +159,46 @@ class TestCategories:
 
         assert client.get("/organizer/locations/9/categories", headers=AUTH).status_code == 404
         assert client.put("/organizer/locations/9/categories", headers=AUTH, json={"category_ids": []}).status_code == 404
+
+
+class TestTravelTimes:
+    def test_list(self, client, mock_travel_times):
+        response = client.get("/organizer/locations/2/travel-times", headers=AUTH)
+
+        assert response.status_code == 200
+        body = response.json()[0]
+        assert (body["origin"]["name"], body["destination"]["name"], body["mode"], body["minutes"]) == ("Home", "Market", "foot", 12)
+        mock_travel_times.list_for.assert_awaited_once_with(2)
+
+    def test_put_sets_the_route(self, client, mock_travel_times):
+        response = client.put(
+            "/organizer/locations/1/travel-times", headers=AUTH, json={"destination_id": 2, "mode": "Foot", "minutes": 10}
+        )
+
+        assert response.status_code == 200 and response.json()["minutes"] == 10
+        origin_id, payload = mock_travel_times.set.call_args.args
+        assert (origin_id, payload.destination_id, payload.mode, payload.minutes) == (1, 2, "foot", 10)
+
+    def test_put_bad_minutes_is_422(self, client):
+        response = client.put("/organizer/locations/1/travel-times", headers=AUTH, json={"destination_id": 2, "mode": "foot", "minutes": 0})
+        assert response.status_code == 422
+
+    def test_validation_error_from_the_service_is_422_text(self, client, mock_travel_times):
+        mock_travel_times.set.side_effect = LocationValidationError("Unknown location id 9")
+
+        response = client.put("/organizer/locations/1/travel-times", headers=AUTH, json={"destination_id": 9, "mode": "foot", "minutes": 5})
+
+        assert response.status_code == 422 and response.json()["detail"] == "Unknown location id 9"
+
+    def test_unknown_location_is_404(self, client, mock_travel_times):
+        mock_travel_times.list_for.return_value = None
+        mock_travel_times.set.return_value = None
+
+        assert client.get("/organizer/locations/9/travel-times", headers=AUTH).status_code == 404
+        assert client.put("/organizer/locations/9/travel-times", headers=AUTH, json={"destination_id": 2, "mode": "foot", "minutes": 5}).status_code == 404
+
+    def test_delete(self, client, mock_travel_times):
+        assert client.delete("/organizer/locations/travel-times/5", headers=AUTH).status_code == 204
+        mock_travel_times.delete.assert_awaited_once_with(5)
+        mock_travel_times.delete.return_value = False
+        assert client.delete("/organizer/locations/travel-times/5", headers=AUTH).status_code == 404

@@ -169,7 +169,7 @@ _ACTIVITY_DETAILS = (
 )
 LOCATION_FIELD_FLAGS = {
     "--kind": "kind", "--address": "address", "--maps": "maps_url", "--hours": "opening_hours",
-    "--sells": "sells", "--notes": "notes", "--active": "active",
+    "--sells": "sells", "--notes": "notes", "--active": "active", "--from": "travel_from",
 }
 _LOCATION_DETAILS = (
     "Locations are the user's frequent everyday places: home, work, school, gym and the shops they use "
@@ -180,7 +180,10 @@ _LOCATION_DETAILS = (
     "holidays; a missing day means unknown. maps is a Maps link for the user. An empty value clears an optional field. "
     "When the user adds or edits a shop you may search the web for its opening hours: show what you found with the "
     "source and save them only after the user confirms. Alfred itself never searches. Never estimate travel minutes "
-    "from addresses: ask the user."
+    "from addresses: ask the user. from sets door-to-door minutes to this location as origin:mode=minutes[,mode=minutes][;...], "
+    "e.g. home:metro=20,foot=35;office:car=10 (home is the home location; each origin must already be a location; two-way "
+    "unless the reverse is saved too; saving the same origin and mode again updates the minutes). show lists the travel "
+    "times from and to the location."
 )
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
@@ -196,7 +199,7 @@ _PLANNING_SETTINGS_DETAILS = (
     "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
     "office day; conventions is free text (max 2000 characters) with the user's standing planning rules, returned in "
     "the preferences of every day plan get so each client applies them without being told again; travel_times lists door-to-door minutes between two places by each mode, written [origin>]place:mode=minutes[,mode=minutes];... "
-    "where the origin defaults to home (e.g. office:metro=50,car=20;office>school:car=20,walk=10; up to 20 entries, empty resets). "
+    "where the origin defaults to home (e.g. office:metro=50,car=20;office>school:car=20,walk=10; up to 60 entries, empty resets; the list replaces every travel time). Places are locations: a name that is not one yet becomes a new location. "
     "A trip counts both ways unless the reverse is listed too. They come back in the preferences as [{origin, place, mode, minutes}] so clients "
     "derive leave-home times and transport blocks without asking. "
     "Unset values switch the related section off."
@@ -1600,7 +1603,7 @@ COMMAND_DEFINITIONS = {
     },
     "location": {
         "add": {
-            "description": "Add a frequent place (home, office, school, a shop): name, then --kind, --address, --hours, --sells, --maps, --notes",
+            "description": "Add a frequent place (home, office, school, a shop): name, then --kind, --address, --hours, --sells, --from (travel minutes), --notes",
             "details": _LOCATION_DETAILS,
             "aliases": ["/locationadd"],
             "flags": LOCATION_FIELD_FLAGS,
@@ -1614,14 +1617,14 @@ COMMAND_DEFINITIONS = {
             "flags": {"--kind": "kind", "--sells": "sells", "--all": "all", **FLAG_LIMIT},
         },
         "show": {
-            "description": "Show a location (id or name) with its hours, today's status and what it sells",
+            "description": "Show a location (id or name) with its hours, today's status, what it sells and its travel times",
             "aliases": ["/location", "/locationshow"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["location"],
         },
         "update": {
-            "description": "Update a location (id or name): --name, --kind, --address, --hours, --sells (replaces the list), --active",
+            "description": "Update a location (id or name): --name, --kind, --address, --hours, --sells (replaces the list), --from, --active",
             "details": _LOCATION_DETAILS + " --active false archives it.",
             "aliases": ["/locationupdate"],
             "flags": {**LOCATION_FIELD_FLAGS, "--name": "name"},

@@ -22,6 +22,7 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.organizer.shopping_products.service import ShoppingProductService
 from app.features.organizer.locations.service import LocationService
+from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.tags.service import TagService
@@ -234,6 +235,9 @@ def get_location_service(session: AsyncSession = Depends(get_session)) -> Locati
         return await trips.snapshot_home_value("home_address", old, today)
 
     return LocationService(session, get_planning_holiday_provider(), keep_old_home_address)
+
+def get_location_travel_time_service(session: AsyncSession = Depends(get_session)) -> LocationTravelTimeService:
+    return LocationTravelTimeService(session)
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)
@@ -779,6 +783,7 @@ ShoppingServiceDep = Annotated[ShoppingService, Depends(get_shopping_service)]
 ShoppingCategoryServiceDep = Annotated[ShoppingCategoryService, Depends(get_shopping_category_service)]
 ShoppingProductServiceDep = Annotated[ShoppingProductService, Depends(get_shopping_product_service)]
 LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
+LocationTravelTimeServiceDep = Annotated[LocationTravelTimeService, Depends(get_location_travel_time_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]

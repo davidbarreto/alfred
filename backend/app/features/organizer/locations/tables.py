@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, List, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, func, text
+from sqlalchemy import (
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint, func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -54,3 +57,34 @@ class Location(Base):
 Index("uq_locations_name", func.lower(Location.name), unique=True)
 # At most one home.
 Index("uq_locations_home", Location.kind, unique=True, postgresql_where=Location.kind == HOME_KIND)
+
+
+class LocationTravelTime(Base):
+    """Door-to-door minutes from one location to another by one mode; two-way unless the reverse is stored too."""
+
+    __tablename__ = "location_travel_times"
+    __table_args__ = (
+        CheckConstraint("origin_id <> destination_id", name="ck_location_travel_times_distinct"),
+        CheckConstraint("minutes BETWEEN 1 AND 600", name="ck_location_travel_times_minutes"),
+        UniqueConstraint("origin_id", "destination_id", "mode", name="uq_location_travel_times_route"),
+        {"schema": "organizer"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    # RESTRICT: a location with travel times is not deleted silently (409 listing them; archive it instead).
+    origin_id: Mapped[int] = mapped_column(
+        ForeignKey("organizer.locations.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    destination_id: Mapped[int] = mapped_column(
+        ForeignKey("organizer.locations.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    # Free text, lowercase (metro, foot, car, bus...).
+    mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    origin: Mapped[Location] = relationship(Location, foreign_keys=[origin_id], lazy="joined")
+    destination: Mapped[Location] = relationship(Location, foreign_keys=[destination_id], lazy="joined")

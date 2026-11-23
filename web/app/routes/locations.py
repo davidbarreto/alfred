@@ -14,6 +14,9 @@ _KINDS = ("home", "work", "school", "gym", "supermarket", "pharmacy", "bakery", 
 _DAYS = (("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"),
          ("sat", "Saturday"), ("sun", "Sunday"))
 _HOURS_HELP = "mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed"
+_MODES = ("foot", "metro", "bus", "train", "tram", "car", "taxi", "bike")
+# Rows of a list card on the detail page; the rest are on their own page.
+_CARD_LIMIT = 5
 
 
 def _ranges_text(ranges: list | None) -> str:
@@ -74,6 +77,8 @@ async def location_detail(request: Request, location_id: int):
             request, "location_detail.html", {"location": None}, status_code=404,
         )
     categories = await safe_get("/organizer/shopping-categories", default=[])
+    travel_times = await safe_get(f"/organizer/locations/{location_id}/travel-times", default=[])
+    others = await _other_locations(location_id)
     today_key = _DAYS[local_today().weekday()][0]
     return templates.TemplateResponse(request, "location_detail.html", {
         "location": location,
@@ -82,9 +87,30 @@ async def location_detail(request: Request, location_id: int):
         "categories": categories,
         "selected_ids": {c["id"] for c in location["categories"]},
         "home_moved": location["kind"] == "home" and request.query_params.get("moved") == "1",
+        "travel_times": travel_times[:_CARD_LIMIT],
+        "travel_times_total": len(travel_times),
+        "others": others,
+        "modes": _MODES,
         "kinds": _KINDS,
         "hours_help": _HOURS_HELP,
     })
+
+
+@router.get("/{location_id}/travel-times", response_class=HTMLResponse)
+async def location_travel_times(request: Request, location_id: int):
+    location = await safe_get(f"/organizer/locations/{location_id}")
+    if location is None:
+        return templates.TemplateResponse(request, "location_detail.html", {"location": None}, status_code=404)
+    travel_times = await safe_get(f"/organizer/locations/{location_id}/travel-times", default=[])
+    return templates.TemplateResponse(request, "location_travel_times.html", {
+        "location": location, "travel_times": travel_times, "others": await _other_locations(location_id), "modes": _MODES,
+    })
+
+
+async def _other_locations(location_id: int) -> list[dict]:
+    """Active locations a travel time from this one can go to."""
+    locations = await safe_get("/organizer/locations", params={"active": "true"}, default=[])
+    return [loc for loc in locations or [] if loc["id"] != location_id]
 
 
 @router.post("")
@@ -102,3 +128,18 @@ async def update_location(location_id: int, request: Request):
 @router.delete("/{location_id}")
 async def delete_location(location_id: int):
     return await forward(api.delete(f"/organizer/locations/{location_id}"), "Could not delete the location.")
+
+
+@router.put("/{location_id}/travel-times")
+async def set_travel_time(location_id: int, request: Request):
+    return await forward(
+        api.put(f"/organizer/locations/{location_id}/travel-times", json=await request.json()),
+        "Could not save the travel time.",
+    )
+
+
+@router.delete("/travel-times/{travel_time_id}")
+async def delete_travel_time(travel_time_id: int):
+    return await forward(
+        api.delete(f"/organizer/locations/travel-times/{travel_time_id}"), "Could not delete the travel time."
+    )

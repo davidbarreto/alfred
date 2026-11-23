@@ -4,6 +4,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
+from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.planning.schemas import DEFAULT_WORKDAYS, PlanningSettingsRead, PlanningSettingsUpdate
 
 logger = logging.getLogger(__name__)
@@ -24,9 +25,14 @@ class PlanningSettingsService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._settings = SettingService(session)
+        # Travel times are rows between locations, not a setting; the old list shape is kept for clients.
+        self._travel_times = LocationTravelTimeService(session)
 
     async def get(self) -> PlanningSettingsRead:
-        raw = {field: await self._settings.get_value(_key(field)) for field in PlanningSettingsRead.model_fields}
+        raw = {
+            field: await self._settings.get_value(_key(field))
+            for field in PlanningSettingsRead.model_fields if field != "travel_times"
+        }
         return PlanningSettingsRead(
             wake_time=raw["wake_time"] or None,
             sleep_time=raw["sleep_time"] or None,
@@ -38,18 +44,22 @@ class PlanningSettingsService:
             office_days_per_week=int(raw["office_days_per_week"]) if raw["office_days_per_week"] else None,
             office_min_minutes=int(raw["office_min_minutes"]) if raw["office_min_minutes"] else None,
             conventions=raw["conventions"] or None,
-            travel_times=json.loads(raw["travel_times"]) if raw["travel_times"] else [],
+            travel_times=await self._travel_times.as_preferences(),
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:
         changes = data.model_dump(exclude_unset=True)
-        if changes.get("travel_times"):
-            # exclude_unset would drop an origin left at its default; store it explicitly.
-            changes["travel_times"] = [entry.model_dump() for entry in data.travel_times]
+        if "travel_times" in changes:
+            # The whole list replaces every travel time; null or empty clears them. Unknown names become locations.
+            await self._travel_times.replace_from_preferences(
+                (t.origin, t.place, t.mode, t.minutes) for t in data.travel_times or []
+            )
         for field, value in changes.items():
+            if field == "travel_times":
+                continue
             if value is None:
                 stored = ""
-            elif field in ("preferred_work_windows", "workdays", "travel_times"):
+            elif field in ("preferred_work_windows", "workdays"):
                 stored = json.dumps(value) if value else ""
             else:
                 stored = str(value)

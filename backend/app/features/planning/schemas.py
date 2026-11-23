@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.organizer.activities.schemas import ActivitySuggestion
+from app.features.organizer.locations.schemas import MAX_TRAVEL_TIMES
 from app.shared.utils.time_text import WEEKDAYS
 
 _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -12,7 +13,6 @@ _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 
 DEFAULT_WORKDAYS = WEEKDAYS[:5]
 CONVENTIONS_MAX_LENGTH = 2000
-MAX_TRAVEL_TIMES = 20
 
 
 HOME = "home"
@@ -22,7 +22,8 @@ class TravelTime(BaseModel):
     """Minutes door to door between two places by one mode, e.g. home to office by metro: 50.
 
     Two-way: the same minutes apply the other way round unless the reverse trip is listed too.
-    `origin` defaults to home; `place` is the destination.
+    `origin` defaults to home; `place` is the destination. Stored as rows between locations
+    (`organizer.location_travel_times`): "home" is the Home location, other names are location names in lowercase.
     """
 
     origin: str = Field(default=HOME, min_length=1, max_length=60)

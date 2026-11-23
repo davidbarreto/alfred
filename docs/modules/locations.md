@@ -25,6 +25,15 @@ mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed
 
 Segments are separated by `;` or new lines. Days are names (`mon`, `monday`), ranges (`mon-fri`, `fri-mon` wraps), lists (`mon,wed`), `daily` or `holidays`. Times are `H`, `H:MM` or `HH:MM`. A day given twice, overlapping ranges or an end before the start are refused with a message that names the part (422 with a plain-text `detail`, which the portal shows as is). The API also accepts the JSON object. Responses carry both forms: `opening_hours` and `opening_hours_text` (canonical text: consecutive days with the same hours are grouped).
 
+## Travel times
+
+`organizer.location_travel_times` (migration 096): door-to-door minutes from one location to another by one `mode` (free text, lowercase: foot, metro, car...), 1-600, unique per (origin, destination, mode), `origin <> destination`. A route counts both ways unless the reverse is saved too. Both FKs are RESTRICT: deleting a location that has travel times is a 409 naming them (delete them first, or archive the location). At most 60 in total. Alfred never estimates them: they are typed by the user (portal, command, `/plan`) or by Claude after asking.
+
+- `GET /organizer/locations/{id}/travel-times` lists the routes that start or end there; `PUT` the same path with `{destination_id, mode, minutes}` saves a route from that location (the same route again updates the minutes); `DELETE /organizer/locations/travel-times/{id}`.
+- The planning settings still read and write them as `travel_times` (`LocationTravelTimeService.as_preferences` / `replace_from_preferences`): see [planning.md](planning.md). Migration 096 turned the old `planning.travel_times` setting into rows, creating a location for each name that was not one (office as `work`, school, gym, else `other`); its downgrade writes the setting back.
+- Portal: a Travel times card on each location (5 rows, "See all N" opens `/locations/{id}/travel-times`) with a form to add or update a route from that location, and delete buttons.
+- Command: `location add/update ... --from home:metro=20,foot=35;office:car=10` saves routes from existing locations to this one; `location show` lists its travel times.
+
 ## Today and holidays
 
 Every location response has `today`: the local date, today's `hours` ("08:00-20:00", "closed" or null when unknown), `holiday` (names), a `note` and `open_now` (null when unknown).
@@ -45,4 +54,4 @@ The command details tell Claude it may search the web for a shop's opening hours
 
 ## Planned
 
-Phases 3-5 of the locations plan: `planning.travel_times` becomes rows between locations, events get a location (derived travel blocks), and the day plan proposes concrete shopping stops.
+Phases 4-5 of the locations plan: events get a location (derived travel blocks), and the day plan proposes concrete shopping stops.

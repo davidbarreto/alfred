@@ -911,6 +911,276 @@
    }
   },
   {
+   "name": "17f - Set Travel Time From Home",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Saved with a lowercase mode', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect(json.origin.kind).to.eql('home');",
+       "    pm.expect(json.destination.id).to.eql(Number(pm.environment.get('location_id')));",
+       "    pm.expect([json.mode, json.minutes]).to.eql(['foot', 12]);",
+       "    pm.environment.set('location_travel_time_id', json.id);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}/travel-times",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_real_home_id}}",
+      "travel-times"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"destination_id\": {{location_id}},\n  \"mode\": \" Foot \",\n  \"minutes\": 12\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17g - Same Route Again Updates The Minutes",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Same row, new minutes', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect(json.id).to.eql(Number(pm.environment.get('location_travel_time_id')));",
+       "    pm.expect(json.minutes).to.eql(10);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}/travel-times",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_real_home_id}}",
+      "travel-times"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"destination_id\": {{location_id}},\n  \"mode\": \"foot\",\n  \"minutes\": 10\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17h - Travel Time To Itself (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}/travel-times",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}",
+      "travel-times"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"destination_id\": {{location_id}},\n  \"mode\": \"foot\",\n  \"minutes\": 5\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "17i - List Travel Times Of The Market",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Lists the route from home', () => {",
+       "    const ids = pm.response.json().map((t) => t.id);",
+       "    pm.expect(ids).to.include(Number(pm.environment.get('location_travel_time_id')));",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}/travel-times",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}",
+      "travel-times"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17j - Planning Settings Show It In The Old Shape",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('home -> market by foot, names lowercase', () => {",
+       "    const place = 'postman market ' + pm.environment.get('location_run');",
+       "    pm.expect(pm.response.json().travel_times).to.deep.include({ origin: 'home', place: place, mode: 'foot', minutes: 10 });",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/planning/settings",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "planning",
+      "settings"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17k - Delete Location With Travel Times (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Names the travel time', () => pm.expect(pm.response.json().detail).to.include('by foot (10 min)'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17l - Delete The Travel Time",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/travel-times/{{location_travel_time_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "travel-times",
+      "{{location_travel_time_id}}"
+     ]
+    }
+   }
+  },
+  {
    "name": "18 - Create Home (201, or 409 when a home already exists)",
    "event": [
     {

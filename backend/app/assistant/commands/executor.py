@@ -66,6 +66,7 @@ from app.features.organizer.interviews.candidate_questions.service import Interv
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.activities.service import ActivityService
 from app.features.organizer.locations.service import LocationService
+from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.organizer.routines.service import RoutineService
 from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
@@ -115,6 +116,7 @@ async def execute(
     saved_plan_service: SavedPlanService | None = None,
     activity_service: ActivityService | None = None,
     location_service: LocationService | None = None,
+    location_travel_time_service: LocationTravelTimeService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -360,12 +362,12 @@ async def execute(
         return await handle_activity(command, arguments, activity_service)
 
     if cmd_type == "location":
-        if location_service is None:
+        if location_service is None or location_travel_time_service is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Location service not available",
             )
-        return await handle_location(command, arguments, location_service)
+        return await handle_location(command, arguments, location_service, location_travel_time_service)
 
     if cmd_type == "day_plan":
         if day_plan_service is None or planning_settings_service is None or saved_plan_service is None:

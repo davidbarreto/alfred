@@ -18,6 +18,8 @@ from app.features.organizer.locations.schemas import (
     LocationUpdate,
 )
 from app.features.organizer.locations.tables import HOME_KIND, Location
+from app.features.organizer.locations.travel_time_repository import LocationTravelTimeRepository
+from app.features.organizer.locations.travel_time_service import route_label
 from app.features.organizer.shopping_categories.tables import ShoppingCategory
 from app.shared.protocols.holiday import HolidayProvider
 from app.shared.utils.timezone import local_now, local_today
@@ -84,21 +86,18 @@ class LocationService:
         home_snapshot: HomeAddressSnapshot | None = None,
     ) -> None:
         self._repo = LocationRepository(session)
+        self._travel_times = LocationTravelTimeRepository(session)
         # Only the planning holiday calendar (the first of HOLIDAY_CALENDARS) decides holiday hours.
         self._holidays = holiday_provider
         self._home_snapshot = home_snapshot
 
-    async def _keep_old_home(self, old: str | None, new: str | None) -> bool:
-        """Before the home address changes, started trips with no home of their own keep the old one.
-
-        Returns whether the snapshot ran: it commits, which expires the ORM objects loaded before it.
-        """
+    async def _keep_old_home(self, old: str | None, new: str | None) -> None:
+        """Before the home address changes, started trips with no home of their own keep the old one."""
         if self._home_snapshot is None or old is None or old == new:
-            return False
+            return
         count = await self._home_snapshot(old, local_today())
         # Never the address itself: it is personal.
         logger.info("Home address changed: trips_keeping_old_address=%d", count)
-        return True
 
     async def _holiday_today(self, today: date) -> str | None:
         if self._holidays is None:
@@ -209,8 +208,15 @@ class LocationService:
             logger.debug("Location delete: id=%d not found", location_id)
             return False
         name, kind = location.name, location.kind
-        if await self._keep_old_home(_home_address(kind, location.address), None):
-            location = await self._repo.get(location_id) or location
+        travel_times = await self._travel_times.list_for(location_id)
+        if travel_times:
+            routes = "; ".join(route_label(t) for t in travel_times[:5])
+            more = f" and {len(travel_times) - 5} more" if len(travel_times) > 5 else ""
+            raise LocationConflictError(
+                f"{name!r} has {len(travel_times)} travel time(s): {routes}{more}. Delete them first, "
+                "or archive the location instead"
+            )
+        await self._keep_old_home(_home_address(kind, location.address), None)
         await self._repo.delete(location)
         logger.info("Location deleted: id=%d name=%r kind=%s", location_id, name, kind)
         return True

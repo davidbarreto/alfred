@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from zoneinfo import ZoneInfo
 
@@ -69,6 +70,8 @@ def service(holidays, home_snapshot):
     svc._repo.get_by_name.return_value = None
     svc._repo.get_home.return_value = None
     svc._repo.get_categories.return_value = []
+    svc._travel_times = AsyncMock()
+    svc._travel_times.list_for.return_value = []
     return svc
 
 
@@ -268,6 +271,17 @@ class TestCategoryIdsFor:
 
 
 class TestDelete:
+    async def test_a_location_with_travel_times_is_kept_and_named(self, service):
+        service._repo.get.return_value = _location(name="Office")
+        office, home = SimpleNamespace(name="Office"), SimpleNamespace(name="Home")
+        service._travel_times.list_for.return_value = [
+            SimpleNamespace(origin=home, destination=office, mode="metro", minutes=50),
+        ]
+
+        with pytest.raises(LocationConflictError, match="Home → Office by metro \\(50 min\\).*archive"):
+            await service.delete(1)
+        service._repo.delete.assert_not_awaited()
+
     async def test_deletes(self, service):
         location = _location()
         service._repo.get.return_value = location
@@ -345,14 +359,11 @@ class TestHomeAddressSnapshot:
 
         home_snapshot.assert_not_awaited()
 
-    async def test_deleting_home_snapshots_and_reloads_before_deleting(self, service, home, home_snapshot):
-        reloaded = _location(id=2, kind="home", address="Rua Antiga 2")
-        service._repo.get.side_effect = [home, reloaded]
-
+    async def test_deleting_home_snapshots_its_address_first(self, service, home, home_snapshot):
         assert await service.delete(2) is True
 
         home_snapshot.assert_awaited_once_with("Rua Antiga 2", _TODAY)
-        service._repo.delete.assert_awaited_once_with(reloaded)
+        service._repo.delete.assert_awaited_once_with(home)
 
     async def test_without_a_snapshot_hook_nothing_breaks(self, service, home):
         service._home_snapshot = None

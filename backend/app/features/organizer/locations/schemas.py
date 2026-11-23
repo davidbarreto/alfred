@@ -133,3 +133,43 @@ class LocationFilters:
             f"LocationFilters(kind={self.kind!r}, active={self.active!r}, category_id={self.category_id!r}, "
             f"limit={self.limit}, offset={self.offset})"
         )
+
+
+# Total travel times across all locations; each one is ~10 tokens in a day plan.
+MAX_TRAVEL_TIMES = 60
+
+
+class LocationRef(BaseModel):
+    id: int
+    name: str
+    kind: str
+
+    model_config = {"from_attributes": True}
+
+
+class LocationTravelTimeSet(BaseModel):
+    """Minutes from the location in the path to `destination_id` by `mode`; saving the same route again updates it."""
+
+    destination_id: int
+    mode: str = Field(min_length=1, max_length=40)
+    minutes: int = Field(ge=1, le=600)
+
+    @field_validator("mode")
+    @classmethod
+    def _mode(cls, value: str) -> str:
+        cleaned = " ".join(value.split()).lower()
+        if not cleaned:
+            raise ValueError("mode must not be blank")
+        return cleaned
+
+
+class LocationTravelTimeRead(BaseModel):
+    id: int
+    origin: LocationRef
+    destination: LocationRef
+    mode: str
+    minutes: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

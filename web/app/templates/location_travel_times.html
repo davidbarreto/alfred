@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active_page = "locations" %}
+{% block title %}{{ location.name }}: travel times{% endblock %}
+
+{% block content %}
+<div class="page max-w-3xl space-y-4">
+  <a href="/locations/{{ location.id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ location.name }}</a>
+  <div class="card bg-white" id="all-travel-times">
+    <div class="card-body p-5 space-y-2">
+      <h1 class="text-base font-semibold text-gray-900">Travel times from and to {{ location.name }} <span class="text-gray-400 font-normal">{{ travel_times | length }}</span></h1>
+      {% if travel_times %}
+      <ul class="divide-y divide-gray-100">
+        {% for t in travel_times %}{% include "_location_travel_time_row.html" %}{% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-gray-400">No travel times yet.</p>
+      {% endif %}
+      <p class="text-xs text-red-600 empty:hidden" id="travel-time-error"></p>
+      {% include "_location_travel_time_form.html" %}
+    </div>
+  </div>
+</div>
+{% include "_location_script.html" %}
+{% include "_location_travel_time_script.html" %}
+{% endblock %}

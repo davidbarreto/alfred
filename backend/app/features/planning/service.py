@@ -157,15 +157,11 @@ class DayPlanService:
 
     async def _travel_graph(self, settings: Any) -> timeline.TravelGraph:
         network = await self._travel_times.network()
-        routes: dict[tuple[int, int], dict[str, int]] = {}
-        for origin, destination, mode, minutes in network.routes:
-            routes.setdefault((origin, destination), {})[mode] = minutes
         return timeline.TravelGraph(
             names=network.names,
             home_id=network.home_id,
-            routes=routes,
+            routes=frozenset((origin, destination) for origin, destination, _mode, _minutes in network.routes),
             default_minutes=settings.default_travel_minutes,
-            walk_tolerance=settings.walk_tolerance_minutes,
         )
 
     async def _load_routines(

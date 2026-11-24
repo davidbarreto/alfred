@@ -711,23 +711,28 @@ class TestTrips:
 
 
 @freeze_time("2026-10-21 08:00:00")
-class TestDerivedTravel:
-    async def test_travel_comes_from_the_locations_and_settings(self, service, parts):
+class TestTravel:
+    async def test_located_events_get_no_travel_and_the_routes_are_the_preferences_map(self, service, parts):
         parts.travel_times.network.return_value = TravelNetwork(
             names={1: "Casa", 2: "Office"}, home_id=1, routes=[(1, 2, "metro", 50), (1, 2, "foot", 56)],
         )
-        parts.settings.get.return_value = _settings(walk_tolerance_minutes=5)
+        parts.settings.get.return_value = _settings(travel_times=[
+            {"place": "office", "mode": "metro", "minutes": 50}, {"place": "office", "mode": "foot", "minutes": 56},
+        ])
         parts.events.get_events.return_value = [
             _event(1, "Office", datetime(2026, 10, 21, 9, 0), datetime(2026, 10, 21, 17, 0), location_id=2),
+            _event(1, "Office", datetime(2026, 10, 22, 9, 0), datetime(2026, 10, 22, 17, 0), location_id=2),
         ]
 
-        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))
 
-        travel = [i for i in plan["timeline"] if i["kind"] == "travel"]
-        assert [t["title"] for t in travel] == ["Casa → Office (metro, 50)", "Office → Casa (metro, 50)"]
-        assert travel[0]["options"] == [{"mode": "metro", "minutes": 50}, {"mode": "foot", "minutes": 56}]
-        event = next(i for i in plan["timeline"] if i["kind"] == "event")
+        assert all(i["kind"] != "travel" for d in plan["days"] for i in d["timeline"])
+        event = plan["days"][0]["timeline"][0]
         assert (event["location"], event["location_id"]) == ("Office", 2)
+        assert plan["preferences"]["travel_times"] == [  # once per request, however many days
+            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
+            {"origin": "home", "place": "office", "mode": "foot", "minutes": 56},
+        ]
         assert plan["warnings"] == []
 
     async def test_assumed_travel_is_one_warning_line_for_the_whole_plan(self, service, parts):
@@ -744,7 +749,7 @@ class TestDerivedTravel:
             "Rehearsal (7), Party (8). Ask the user: link a location, set the travel minutes, or mark it remote or free",
         ]
 
-    async def test_pair_warnings_are_not_repeated_on_each_day(self, service, parts):
+    async def test_missing_route_warnings_are_not_repeated_on_each_day(self, service, parts):
         parts.travel_times.network.return_value = TravelNetwork(names={1: "Casa", 3: "School"}, home_id=1, routes=[])
         parts.events.get_events.return_value = [
             _event(5, "Pickup", datetime(2026, 10, 21, 17, 0), datetime(2026, 10, 21, 17, 30), location_id=3),
@@ -753,4 +758,6 @@ class TestDerivedTravel:
 
         plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))
 
-        assert plan["warnings"] == ["Assumed 30 min from Casa to School: no travel time saved"]
+        assert plan["warnings"] == [
+            "No travel time saved between Casa and School: ask the user and offer to save it"
+        ]

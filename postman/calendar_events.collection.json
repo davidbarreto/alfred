@@ -2025,24 +2025,23 @@
       }
     },
     {
-      "name": "29d - Day Plan Derives Travel Between The Locations",
+      "name": "29d - Day Plan Leaves Travel Between Locations To The Client",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('One travel block from A to B with both modes; walking is within the tolerance', () => {",
+              "pm.test('Located events get no travel blocks; the route between them is in the preferences map', () => {",
               "    const json = pm.response.json();",
               "    const run = pm.environment.get('event_location_run');",
-              "    const title = `Postman event place A ${run} → Postman event place B ${run} (foot, 25)`;",
-              "    const block = json.timeline.find((i) => i.kind === 'travel' && i.title === title);",
-              "    pm.expect(block, title).to.exist;",
-              "    pm.expect(block.options).to.eql([{mode: 'metro', minutes: 20}, {mode: 'foot', minutes: 25}]);",
-              "    pm.expect(block.start).to.include('T10:35:00');",
-              "    const event = json.timeline.find((i) => i.kind === 'event' && i.event_id === Number(pm.environment.get('located_event_b_id')));",
+              "    const ids = [Number(pm.environment.get('located_event_a_id')), Number(pm.environment.get('located_event_b_id'))];",
+              "    pm.expect(json.timeline.filter((i) => i.kind === 'travel' && ids.includes(i.event_id))).to.eql([]);",
+              "    const event = json.timeline.find((i) => i.kind === 'event' && i.event_id === ids[1]);",
               "    pm.expect(event.location).to.eql(`Postman event place B ${run}`);",
               "    pm.expect(event.location_id).to.eql(Number(pm.environment.get('event_location_b_id')));",
+              "    const routes = (json.preferences.travel_times || []).filter((t) => t.origin === `postman event place a ${run}` && t.place === `postman event place b ${run}`);",
+              "    pm.expect(routes.map((t) => [t.mode, t.minutes]).sort()).to.eql([['foot', 25], ['metro', 20]]);",
               "});"
             ],
             "type": "text/javascript"

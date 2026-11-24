@@ -164,13 +164,6 @@ class PlanningSettingsUpdate(BaseModel):
         return value.strip() if value is not None else None
 
 
-class TravelOption(BaseModel):
-    """One way to make a derived trip: a mode and its door-to-door minutes from the travel times."""
-
-    mode: str
-    minutes: int
-
-
 class TimelineItem(BaseModel):
     kind: str
     title: str
@@ -183,9 +176,7 @@ class TimelineItem(BaseModel):
     # Events: the linked location's name (else the calendar's location text); routine steps: the step's location.
     location: str | None = None
     location_id: int | None = None
-    # Travel blocks between two locations: every mode saved for the pair; the block's length follows one of them.
-    options: list[TravelOption] | None = None
-    # Travel with no saved time or event minutes: the default was assumed (ask the user, offer to save it).
+    # Travel of an event with no location and no travel minutes: the default was assumed (ask the user).
     assumed: bool | None = None
     tags: list[str] | None = None
     notification_profile: str | None = None

@@ -86,7 +86,7 @@ class LocationTravelTimeService:
         return True
 
     async def network(self) -> TravelNetwork:
-        """What the day plan needs to derive travel between events' locations, in two queries."""
+        """What the day plan needs to name events' places and tell which have a travel time, in two queries."""
         locations = await self._locations.list(LocationFilters(limit=500))
         home = next((loc.id for loc in locations if loc.kind == HOME_KIND), None)
         return TravelNetwork(

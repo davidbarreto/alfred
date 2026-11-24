@@ -17,7 +17,7 @@ from app.features.organizer.routines.expansion import (
     shift_minutes,
 )
 from app.features.organizer.tasks.recurrence import is_due_today, parse_byday
-from app.features.planning.schemas import AllDayItem, RoutineBlock, TimelineItem, TravelOption
+from app.features.planning.schemas import AllDayItem, RoutineBlock, TimelineItem
 from app.shared.utils.timezone import local_timezone
 
 _UTC = timezone.utc
@@ -74,7 +74,7 @@ def build_timeline(
     office_tag: str | None = None,
     graph: "TravelGraph | None" = None,
 ) -> "DayTimeline":
-    """Timeline for one day: events, routine steps around them and derived travel blocks, sorted by start.
+    """Timeline for one day: events, routine steps around them and travel of unlocated events, sorted by start.
 
     Also returns warnings for overlaps between things that occupy time (blocked events, travel and routine
     steps with a duration) and for assumed travel. Overlaps are only reported, never resolved. Something that
@@ -128,42 +128,17 @@ def _is_office_event(event: EventRead, office_tag: str | None) -> bool:
 
 # --- derived travel ------------------------------------------------------------------------
 
-_WALKING_MODES = frozenset({"foot", "walk", "walking"})
-_CAR_MODES = frozenset({"car", "taxi"})
-
-
-def mode_class(mode: str) -> str:
-    """walking, car or public: every mode name that is not walking or a car (metro, bus, train...) is public."""
-    if mode in _WALKING_MODES:
-        return "walking"
-    if mode in _CAR_MODES:
-        return "car"
-    return "public"
-
-
-def choose_option(options: Sequence[TravelOption], walk_tolerance: int) -> TravelOption:
-    """The fastest public transport, unless walking takes at most `walk_tolerance` minutes more; car only alone."""
-    def fastest(kind: str) -> TravelOption | None:
-        matching = [o for o in options if mode_class(o.mode) == kind]
-        return min(matching, key=lambda o: o.minutes) if matching else None
-
-    public, walking = fastest("public"), fastest("walking")
-    if public is not None:
-        return walking if walking is not None and walking.minutes <= public.minutes + walk_tolerance else public
-    return walking or fastest("car")  # type: ignore[return-value]
-
 
 @dataclass(frozen=True)
 class TravelGraph:
-    """The user's locations and the travel times between them, plus the planning defaults for travel."""
+    """The user's locations, which pairs have a saved travel time, and the minutes assumed when nothing is known."""
 
     names: dict[int, str] = field(default_factory=dict)
     home_id: int | None = None
-    # (origin id, destination id) -> {mode: minutes}; a route counts both ways unless the reverse is saved too.
-    routes: dict[tuple[int, int], dict[str, int]] = field(default_factory=dict)
+    # (origin id, destination id) of every saved travel time; a route counts both ways.
+    routes: frozenset[tuple[int, int]] = frozenset()
     # One-way minutes assumed when nothing is known; 0 switches the assumption off.
     default_minutes: int = 0
-    walk_tolerance: int = 10
 
     def name(self, location_id: int | None) -> str:
         """None stands for home when there is no Home location."""
@@ -171,13 +146,8 @@ class TravelGraph:
             return "Home"
         return self.names.get(location_id, "Home" if location_id == self.home_id else f"Location {location_id}")
 
-    def options(self, origin: int | None, destination: int | None) -> list[TravelOption]:
-        if origin is None or destination is None:
-            return []
-        forward = self.routes.get((origin, destination), {})
-        backward = self.routes.get((destination, origin), {})
-        merged = {**backward, **forward}
-        return sorted((TravelOption(mode=m, minutes=n) for m, n in merged.items()), key=lambda o: (o.minutes, o.mode))
+    def connected(self, origin: int, destination: int) -> bool:
+        return (origin, destination) in self.routes or (destination, origin) in self.routes
 
 
 @dataclass(frozen=True)
@@ -208,30 +178,22 @@ def _travel_blocks(
 ) -> tuple[list[_Block], list[str], list[tuple[int, str]]]:
     """Travel for one day's events (sorted by start).
 
-    In-person events at a location form a chain: Home -> first place -> next place ... -> Home, one block per
-    change of place (two events at the same place need none). An event inside another located event (a lunch
-    out during an office day) goes there and back from that event's place. Events without a location keep their
-    own travel minutes to and from home; with none, the default is assumed for in-person events unless they are
-    all-day, free, or inside an office or located in-person event. Minutes come from the pair's travel times,
-    else the event's travel minutes, else the default (marked assumed, with one warning per pair).
+    Events at a location get no blocks: the route between places (and the stops between them) is the client's to
+    decide from the travel times in the preferences. Each place an in-person event goes to with no saved travel time
+    from Home gets a warning. Events without a location keep their own travel minutes to and from home; with none,
+    the default is assumed for in-person events unless they are all-day, free, or inside an office or located event.
     """
     spans = [_Span(e, *event_start_end(e)) for e in day_events]
-    located = [s for s in spans if _is_located(s.event)]
-    outer = [s for i, s in enumerate(located) if _container_of(s, i, located) is None]
-    legs = _Legs(graph)
-
-    current: int | None = graph.home_id
-    for span in outer:
-        legs.add(current, span.event.location_id, span, arrive=True)
-        current = span.event.location_id
-    if outer:
-        legs.add(current, graph.home_id, outer[-1], arrive=False)
-
-    for index, span in enumerate(located):
-        container = _container_of(span, index, located)
-        if container is not None:
-            legs.add(container.event.location_id, span.event.location_id, span, arrive=True)
-            legs.add(span.event.location_id, container.event.location_id, span, arrive=False)
+    blocks: list[_Block] = []
+    warnings: list[str] = []
+    for place in dict.fromkeys(s.event.location_id for s in spans if _is_located(s.event)):
+        if graph.home_id is None:
+            warnings.append(f"No Home location saved: travel from home to {graph.name(place)} is unknown")
+        elif place != graph.home_id and not graph.connected(graph.home_id, place):
+            warnings.append(
+                f"No travel time saved between {graph.name(graph.home_id)} and {graph.name(place)}: "
+                "ask the user and offer to save it"
+            )
 
     assumed: list[tuple[int, str]] = []
     containers = [s for s in spans if _is_office_event(s.event, office_tag) or _is_located(s.event)]
@@ -240,11 +202,11 @@ def _travel_blocks(
         if event.location_id is not None:
             continue
         if event.travel_minutes > 0:
-            legs.home_trip(span, event.travel_minutes, assumed=False)
+            blocks.extend(_home_trip(span, event.travel_minutes, assumed=False))
         elif graph.default_minutes > 0 and _needs_assumed_travel(span, containers):
-            legs.home_trip(span, graph.default_minutes, assumed=True)
+            blocks.extend(_home_trip(span, graph.default_minutes, assumed=True))
             assumed.append((event.id, event.title))
-    return legs.blocks, legs.warnings, assumed
+    return blocks, warnings, assumed
 
 
 def _is_located(event: EventRead) -> bool:
@@ -266,75 +228,25 @@ def _needs_assumed_travel(span: _Span, containers: Sequence[_Span]) -> bool:
     )
 
 
-def _container_of(span: _Span, index: int, located: Sequence[_Span]) -> _Span | None:
-    """The first located event that holds `span` entirely (of two identical spans, the earlier holds the later)."""
-    for other_index, other in enumerate(located):
-        if other_index == index:
-            continue
-        if other.start_utc <= span.start_utc and span.end_utc <= other.end_utc:
-            same = other.start_utc == span.start_utc and other.end_utc == span.end_utc
-            if not same or other_index < index:
-                return other
-    return None
+def _home_trip(span: _Span, minutes: int, assumed: bool) -> list[_Block]:
+    """To an event with no location and back home, `minutes` each way."""
+    title = span.event.title
+    return [
+        _travel_block(f"Travel to {title}", shift_minutes(span.start, -minutes), span.start, span.event.id, assumed),
+        _travel_block(f"Travel home from {title}", span.end, shift_minutes(span.end, minutes), span.event.id, assumed),
+    ]
 
 
-class _Legs:
-    """Collects travel blocks and the assumed-travel warnings (one per pair of places and day)."""
-
-    def __init__(self, graph: TravelGraph) -> None:
-        self._graph = graph
-        self.blocks: list[_Block] = []
-        self.warnings: list[str] = []
-        self._warned: set[frozenset] = set()
-
-    def add(self, origin: int | None, destination: int | None, span: _Span, arrive: bool) -> None:
-        """A trip between two places that ends when `span` starts (arrive) or starts when it ends."""
-        if origin == destination:
-            return
-        graph = self._graph
-        names = f"{graph.name(origin)} → {graph.name(destination)}"
-        options = graph.options(origin, destination)
-        assumed = False
-        if options:
-            chosen = choose_option(options, graph.walk_tolerance)
-            minutes, title = chosen.minutes, f"{names} ({chosen.mode}, {chosen.minutes})"
-        elif span.event.travel_minutes > 0:
-            minutes, title = span.event.travel_minutes, f"{names} ({span.event.travel_minutes})"
-        elif graph.default_minutes > 0:
-            minutes, title, assumed = graph.default_minutes, f"{names} (assumed {graph.default_minutes})", True
-            pair = frozenset((origin, destination))
-            if pair not in self._warned:
-                self._warned.add(pair)
-                self.warnings.append(
-                    f"Assumed {minutes} min from {graph.name(origin)} to {graph.name(destination)}: "
-                    "no travel time saved"
-                )
-        else:
-            return
-        start, end = (shift_minutes(span.start, -minutes), span.start) if arrive else (span.end, shift_minutes(span.end, minutes))
-        self._append(title, start, end, span.event.id, options or None, assumed)
-
-    def home_trip(self, span: _Span, minutes: int, assumed: bool) -> None:
-        """To an event with no location and back home, `minutes` each way."""
-        title = span.event.title
-        self._append(f"Travel to {title}", shift_minutes(span.start, -minutes), span.start, span.event.id, None, assumed)
-        self._append(f"Travel home from {title}", span.end, shift_minutes(span.end, minutes), span.event.id, None, assumed)
-
-    def _append(
-        self, title: str, start: datetime, end: datetime, event_id: int,
-        options: list[TravelOption] | None, assumed: bool,
-    ) -> None:
-        self.blocks.append(
-            _Block(
-                item=TimelineItem(
-                    kind="travel", title=title, start=iso_local(start), end=iso_local(end), event_id=event_id,
-                    options=options, assumed=True if assumed else None,
-                ),
-                start=start.astimezone(_UTC),
-                end=end.astimezone(_UTC),
-                blocking=True,
-            )
-        )
+def _travel_block(title: str, start: datetime, end: datetime, event_id: int, assumed: bool) -> _Block:
+    return _Block(
+        item=TimelineItem(
+            kind="travel", title=title, start=iso_local(start), end=iso_local(end), event_id=event_id,
+            assumed=True if assumed else None,
+        ),
+        start=start.astimezone(_UTC),
+        end=end.astimezone(_UTC),
+        blocking=True,
+    )
 
 
 def _step_blocks(

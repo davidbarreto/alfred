@@ -191,7 +191,9 @@ class DayPlanService:
         graph: timeline.TravelGraph,
         assumed_events: list[tuple[int, str]],
     ) -> DayRead:
-        day_timeline = timeline.build_timeline(events, routines_by_id, note_titles, day, settings.office_tag, graph)
+        day_timeline = timeline.build_timeline(
+            events, routines_by_id, note_titles, day, settings.office_tag, graph, settings.work_tag
+        )
         items = day_timeline.items
         warnings.extend(day_timeline.warnings)
         assumed_events.extend(day_timeline.assumed_events)

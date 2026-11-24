@@ -29,7 +29,8 @@ class _Block:
     start: datetime  # UTC instant
     end: datetime  # UTC instant
     blocking: bool
-    container: bool = False  # an in-person office event: meetings inside it are not overlaps
+    container: bool = False  # an in-person office event: work inside it is not an overlap
+    work: bool = False  # a work-tagged event or one of its routine steps
 
 
 def iso_local(moment: datetime) -> str:
@@ -73,12 +74,14 @@ def build_timeline(
     day: date,
     office_tag: str | None = None,
     graph: "TravelGraph | None" = None,
+    work_tag: str | None = None,
 ) -> "DayTimeline":
     """Timeline for one day: events, routine steps around them and travel of unlocated events, sorted by start.
 
     Also returns warnings for overlaps between things that occupy time (blocked events, travel and routine
-    steps with a duration) and for assumed travel. Overlaps are only reported, never resolved. Something that
-    sits entirely inside an in-person event tagged `office_tag` (a standup during an office day) is not one.
+    steps with a duration) and for assumed travel. Overlaps are only reported, never resolved. A work-tagged event
+    (or one of its steps) entirely inside an in-person event tagged `office_tag` (a standup during an office day) is
+    not one; anything else inside it (a personal appointment) is.
     Travel comes from `graph` (see `_travel_blocks`); without one only events' own travel minutes count.
     """
     graph = graph or TravelGraph()
@@ -87,6 +90,7 @@ def build_timeline(
     for event in day_events:
         start, end = event_start_end(event)
         availability = effective_availability(event.availability, event.all_day)
+        work = bool(work_tag) and has_tag(event, work_tag)
         blocks.append(
             _Block(
                 item=TimelineItem(
@@ -106,11 +110,12 @@ def build_timeline(
                 end=end.astimezone(_UTC),
                 blocking=availability == "blocked",
                 container=_is_office_event(event, office_tag),
+                work=work,
             )
         )
         routine = routines_by_id.get(event.routine_id) if event.routine_id else None
         if routine is not None:
-            blocks.extend(_step_blocks(event, routine, start, end, note_titles))
+            blocks.extend(_step_blocks(event, routine, start, end, note_titles, work))
 
     travel, travel_warnings, assumed = _travel_blocks(day_events, graph, office_tag)
     blocks.extend(travel)
@@ -250,7 +255,7 @@ def _travel_block(title: str, start: datetime, end: datetime, event_id: int, ass
 
 
 def _step_blocks(
-    event: EventRead, routine: Any, start: datetime, end: datetime, note_titles: dict[int, str]
+    event: EventRead, routine: Any, start: datetime, end: datetime, note_titles: dict[int, str], work: bool
 ) -> list[_Block]:
     blocks = []
     for occurrence in expand_event_steps(routine.steps, start, end):
@@ -273,6 +278,7 @@ def _step_blocks(
                 start=occurrence.start.astimezone(_UTC),
                 end=occurrence.end.astimezone(_UTC),
                 blocking=occurrence.duration_minutes > 0,
+                work=work,
             )
         )
     return blocks
@@ -296,7 +302,13 @@ def _overlap_warnings(blocks: Sequence[_Block], day: date) -> list[str]:
 
 
 def _inside_container(inner: _Block, outer: _Block) -> bool:
-    return outer.container and not inner.container and outer.start <= inner.start and inner.end <= outer.end
+    return (
+        outer.container
+        and inner.work
+        and not inner.container
+        and outer.start <= inner.start
+        and inner.end <= outer.end
+    )
 
 
 def _hh_mm(iso: str) -> str:

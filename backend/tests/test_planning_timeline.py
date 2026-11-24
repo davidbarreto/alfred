@@ -153,19 +153,35 @@ class TestOverlapWarnings:
         _, warnings = _build(events, {3: routine}, {}, WED)
         assert len(warnings) == 1 and "Reminder" not in warnings[0]
 
-    def test_meeting_inside_an_office_event_is_not_an_overlap(self):
+    def test_work_meeting_inside_an_office_event_is_not_an_overlap(self):
         events = [
             _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
-            _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30)),
+            _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30), tags=["Work"]),
         ]
-        assert _build(events, {}, {}, WED, "office")[1] == []
+        assert _build(events, {}, {}, WED, "office", work_tag="work")[1] == []
+
+    def test_personal_event_inside_an_office_event_is_reported(self):
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
+            _event(2, "Rehearsal", (2026, 10, 21, 10, 0), (2026, 10, 21, 11, 0), tags=["music"]),
+        ]
+        warnings = _build(events, {}, {}, WED, "office", work_tag="work")[1]
+        assert len(warnings) == 1 and "Rehearsal" in warnings[0]
+
+    def test_steps_of_a_work_meeting_inside_an_office_event_are_not_overlaps(self):
+        routine = SimpleNamespace(steps=[_step(1, "Prep", "start", -15, 15)])
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
+            _event(2, "Review", (2026, 10, 21, 10, 0), (2026, 10, 21, 11, 0), tags=["work"], routine_id=3),
+        ]
+        assert _build(events, {3: routine}, {}, WED, "office", work_tag="work")[1] == []
 
     def test_meeting_sticking_out_of_an_office_event_is_reported(self):
         events = [
             _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
-            _event(2, "Late call", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 30)),
+            _event(2, "Late call", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 30), tags=["work"]),
         ]
-        assert len(_build(events, {}, {}, WED, "office")[1]) == 1
+        assert len(_build(events, {}, {}, WED, "office", work_tag="work")[1]) == 1
 
     def test_containment_in_an_untagged_event_is_still_an_overlap(self):
         events = [

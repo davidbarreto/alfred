@@ -311,6 +311,37 @@ class TestTaskSections:
         parts.tasks.get_tasks.return_value = [_task(i) for i in range(1, 41)]
         plan = _dump(await service.get_plan(date(2026, 10, 21)))
         assert [t["id"] for t in plan["backlog_tasks"]] == list(range(1, 31))
+        assert "Backlog: showing 30 of 40 tasks (by urgency, priority, newest first)." in plan["warnings"]
+
+    async def test_backlog_under_the_cap_has_no_truncation_warning(self, service, parts):
+        parts.tasks.get_tasks.return_value = [_task(i) for i in range(1, 31)]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert not [w for w in plan["warnings"] if w.startswith("Backlog: showing")]
+
+    async def test_old_backlog_tasks_are_named_oldest_first(self, service, parts):
+        parts.tasks.get_tasks.return_value = [
+            _task(1, "Fresh", created_at=datetime(2026, 9, 1, 9, 0, tzinfo=timezone.utc)),
+            _task(2, "Old", created_at=datetime(2026, 8, 10, 9, 0, tzinfo=timezone.utc)),
+            _task(3, "Oldest", created_at=datetime(2026, 7, 14, 9, 0, tzinfo=timezone.utc)),
+            _task(4, "Old but dated", deadline=datetime(2026, 10, 22, 18, 0),
+                  created_at=datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc)),
+        ]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert (
+            "Tasks 3, 2 have been in the backlog over 60 days (oldest: task 3, 98 days): "
+            "plan it, give it a deadline or cancel it."
+        ) in plan["warnings"]
+
+    async def test_old_backlog_beyond_the_cap_is_still_counted(self, service, parts):
+        old = datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc)
+        parts.tasks.get_tasks.return_value = [_task(i) for i in range(1, 31)] + [
+            _task(i, created_at=old) for i in range(31, 41)
+        ]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert (
+            "10 tasks have been in the backlog over 60 days (oldest: task 31, 111 days): "
+            "plan it, give it a deadline or cancel it."
+        ) in plan["warnings"]
 
     async def test_weekly_byday_task_only_on_its_days(self, service, parts):
         parts.tasks.get_tasks.return_value = [

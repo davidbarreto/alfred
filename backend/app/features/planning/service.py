@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 MAX_DAYS = 7
 _TASK_CAP = 30
+_BACKLOG_STALE_DAYS = 60
 _STUDY_ITEMS_PER_PLAN = 5
 _DUE_LOOKAHEAD_DAYS = 3
 _EVENT_LIMIT = 500
@@ -331,6 +332,7 @@ class DayPlanService:
         backlog_items = [_task_item(t) for t in backlog[:_TASK_CAP]]
         recurring = recurring[:_TASK_CAP]
         warnings.extend(_assumption_warnings([*overdue_items, *due_items, *recurring, *backlog_items]))
+        warnings.extend(_backlog_warnings(backlog))
         return {"overdue": overdue_items, "due": due_items, "recurring": recurring, "backlog": backlog_items}
 
     # --- study, language, shopping ---------------------------------------------------------
@@ -486,6 +488,24 @@ def _assumption_warnings(items: list[TaskItem]) -> list[str]:
         warnings.append(f"{_ids(only_estimate)} no estimate; assumed {_ASSUMED_ESTIMATE_MINUTES} min.")
     if only_context:
         warnings.append(f"{_ids(only_context)} no context; assumed {_ASSUMED_CONTEXT}.")
+    return warnings
+
+
+def _backlog_warnings(backlog: list[TaskRead]) -> list[str]:
+    """A backlog cut at the cap, and tasks sitting in it past `_BACKLOG_STALE_DAYS`, counted over the whole backlog."""
+    warnings = []
+    if len(backlog) > _TASK_CAP:
+        warnings.append(f"Backlog: showing {_TASK_CAP} of {len(backlog)} tasks (by urgency, priority, newest first).")
+    now = local_now()
+    cutoff = now - timedelta(days=_BACKLOG_STALE_DAYS)
+    stale = sorted((t for t in backlog if localize(t.created_at) < cutoff), key=lambda t: localize(t.created_at))
+    if stale:
+        oldest = stale[0]
+        age = (now - localize(oldest.created_at)).days
+        warnings.append(
+            f"{_ids([t.id for t in stale])} been in the backlog over {_BACKLOG_STALE_DAYS} days "
+            f"(oldest: task {oldest.id}, {age} days): plan it, give it a deadline or cancel it."
+        )
     return warnings
 
 

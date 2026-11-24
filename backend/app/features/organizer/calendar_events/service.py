@@ -38,6 +38,16 @@ def _for_google(record: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in record.items() if k not in _ALFRED_ONLY_FIELDS}
 
 
+def _location_text(location: Any) -> str:
+    """What the calendar shows for an event at a location: its address on one line, else its name."""
+    lines = [line.strip() for line in (location.address or "").splitlines() if line.strip()]
+    return ", ".join(lines) or location.name
+
+
+def _same_text(a: str | None, b: str | None) -> bool:
+    return bool(a and b) and " ".join(a.split()).lower() == " ".join(b.split()).lower()
+
+
 def _comparable(field: str, value: Any) -> Any:
     if field == "tags":
         return sorted(getattr(tag, "name", tag) for tag in value or [])
@@ -109,11 +119,34 @@ class CalendarEventService:
             )
         return location.id
 
-    async def _check_location(self, location_id: int | None) -> None:
-        if location_id is not None and await self._locations.get(location_id) is None:
+    async def _require_location(self, location_id: int | None) -> Any:
+        if location_id is None:
+            return None
+        location = await self._locations.get(location_id)
+        if location is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown location id {location_id}"
             )
+        return location
+
+    async def _location_fill(self, event: Any, changed: dict[str, Any], location: Any) -> str | None:
+        """The calendar location text to write when the event is linked to `location`, or None to leave it.
+
+        Only when Google can be written, the text was not edited in the same update, the event has no invitees
+        (someone else's meeting would change for everyone) and the current text is empty or is the text of the
+        location it was linked to before (so re-linking moves it, and text the user typed is never replaced).
+        """
+        if self._provider is None or location is None or "location_id" not in changed or "location" in changed:
+            return None
+        invitees = changed.get("invitees", [getattr(i, "email", i) for i in event.invitees])
+        if invitees:
+            return None
+        current = (event.location or "").strip()
+        if current:
+            old = await self._locations.get(event.location_id) if event.location_id is not None else None
+            if old is None or not any(_same_text(current, text) for text in (_location_text(old), old.name, old.address)):
+                return None
+        return _location_text(location)
 
     async def get_event(self, event_id: int) -> EventRead | None:
         event_orm = await self._repo.get_event(event_id)
@@ -220,7 +253,10 @@ class CalendarEventService:
         if self._provider is None:
             logger.warning("CalendarEvent create: Google Calendar not authorized")
             raise _OAUTH_REQUIRED
-        await self._check_location(event_create.location_id)
+        location = await self._require_location(event_create.location_id)
+        if location is not None and not (event_create.location or "").strip() and not event_create.invitees:
+            event_create = event_create.model_copy(update={"location": _location_text(location)})
+            logger.info("CalendarEvent location text filled from its location: location_id=%d", location.id)
         event_record = await self._provider.create(_for_google(event_create.model_dump()), self._session)
         # The provider converts start/end into the user's local timezone before returning;
         # persist that converted value instead of the caller's raw payload so the naive
@@ -235,11 +271,19 @@ class CalendarEventService:
         return EventRead.model_validate(event_orm)
 
     async def update_event(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
-        if "location_id" in event_update.model_fields_set:
-            await self._check_location(event_update.location_id)
+        location = (
+            await self._require_location(event_update.location_id)
+            if "location_id" in event_update.model_fields_set else None
+        )
         event = await self._repo.get_event(event_id) if event_update.model_fields_set else None
         if event is not None:
             changed = _changed_fields(event, event_update)
+            fill = await self._location_fill(event, changed, location)
+            if fill is not None:
+                # The calendar location follows the linked location, so this update now goes to Google too.
+                event_update = EventUpdate(**{**event_update.model_dump(exclude_unset=True), "location": fill})
+                changed["location"] = fill
+                logger.info("CalendarEvent location text filled from its location: id=%d location_id=%d", event_id, location.id)
             if set(changed) <= _ALFRED_ONLY_FIELDS:
                 return await self._update_alfred_only(event_id, EventUpdate(**changed))
         if self._provider is None:

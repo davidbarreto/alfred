@@ -8,7 +8,7 @@ The design notes live in `docs/plans/day-planning.md` (gitignored: it names real
 
 Tasks gain `estimate_minutes`, `context`, `available_from` (not before); calendar events gain `availability`, `presence`, `travel_minutes`, `routine_id`, `location_id` ([locations.md](locations.md#events-at-a-location)).
 
-`NotionStorageProvider` forwards every non-null record key to Notion, so `TaskService` strips `_ALFRED_ONLY_FIELDS` before every provider call and skips the call entirely when an update touches only those fields. `CalendarEventService` does the same for Google (`_for_google` strips them from every create and update payload) and `sync()` never writes them. Event `tags` are Alfred-only too (the Google provider never reads or returns them), so a tags-only update skips Google and works without OAuth.
+`NotionStorageProvider` forwards every non-null record key to Notion, so `TaskService` strips `_ALFRED_ONLY_FIELDS` before every provider call and skips the call entirely when an update touches only those fields. `CalendarEventService` does the same for Google (`_for_google` strips them from every create and update payload) and `sync()` never writes them. One exception goes through Google on purpose: linking an event to a location may fill its empty calendar `location` text with the location's address ([locations.md](locations.md#events-at-a-location)). Event `tags` are Alfred-only too (the Google provider never reads or returns them), so a tags-only update skips Google and works without OAuth.
 
 Enum value sets are defined once (`TASK_CONTEXTS`, `EVENT_AVAILABILITIES`, `EVENT_PRESENCES`) and feed the Pydantic types, the CHECK constraints and the MCP descriptions.
 

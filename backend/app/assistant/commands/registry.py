@@ -67,7 +67,8 @@ _EVENT_PLANNING_DETAILS = (
     "= one-way travel in minutes, used when no travel time is saved for the trip (default 0; with neither, in-person events "
     "get the assumed planning default); routine_id = an event-attached routine whose steps run around this event. "
     "Pass an empty availability, routine_id or location_id to clear it. location (free text) is the calendar's own "
-    "location and is sent to Google; location_id never is. Locations are for frequent places only: for a one-off "
+    "location and is sent to Google; location_id never is, but when an event without invitees is linked and its location "
+    "is empty (or still the previous location's), Alfred fills location with the location's address (else its name). Locations are for frequent places only: for a one-off "
     "appointment set travel_minutes (ask the user), and mark online events remote. When the user says it is a place they "
     "go to often, create it first with alfred_location add (with --from travel times the user gives) and pass its id."
 )

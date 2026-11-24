@@ -1806,6 +1806,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json.location_id).to.eql(Number(pm.environment.get('event_location_a_id')));",
               "    pm.environment.set('located_event_a_id', json.id);",
+              "    pm.expect(json.location, 'calendar text filled from the location (no address: its name)').to.eql('Postman event place A ' + pm.environment.get('event_location_run'));",
               "});"
             ],
             "type": "text/javascript"
@@ -1896,6 +1897,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json.location_id).to.eql(Number(pm.environment.get('event_location_b_id')));",
               "    pm.expect(json.title).to.eql('Postman located event B');",
+              "    pm.expect(json.location).to.eql('Postman event place B ' + pm.environment.get('event_location_run'));",
               "});"
             ],
             "type": "text/javascript"

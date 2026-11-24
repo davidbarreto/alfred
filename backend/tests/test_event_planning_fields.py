@@ -24,6 +24,13 @@ _START = datetime(2026, 10, 21, 20, 0)
 _END = datetime(2026, 10, 21, 21, 0)
 
 
+_LOCATIONS = {
+    5: SimpleNamespace(id=5, name="Office", address="Rua Nova 10\n4000-001 Porto"),
+    6: SimpleNamespace(id=6, name="School", address=None),
+}
+_GOOGLE_RECORD = {"start_datetime": _START, "end_datetime": _END, "timezone": "Europe/Lisbon", "id": "g-1"}
+
+
 def _orm(**overrides) -> SimpleNamespace:
     defaults = dict(
         id=1, provider_id="g-1", title="Class", description=None, location=None, start_datetime=_START,
@@ -47,7 +54,7 @@ def service(provider):
     svc._repo.get_event.return_value = _orm()
     svc._repo.update_event.return_value = _orm(availability="blocked", travel_minutes=25)
     svc._locations = AsyncMock()
-    svc._locations.get.return_value = SimpleNamespace(id=5, name="Office")
+    svc._locations.get.side_effect = lambda location_id: _LOCATIONS.get(location_id)
     return svc
 
 
@@ -197,29 +204,39 @@ class TestUpdateKeepsPlanningFieldsLocal:
 
 
 class TestLocation:
-    async def test_location_only_update_makes_no_google_call(self, service, provider):
-        service._repo.update_event.return_value = _orm(location_id=5)
+    async def test_linking_keeps_text_the_user_typed_and_skips_google(self, service, provider):
+        service._repo.get_event.return_value = _orm(location="Meeting room 3")
+        service._repo.update_event.return_value = _orm(location_id=5, location="Meeting room 3")
         result = await service.update_event(1, EventUpdate(location_id=5))
         provider.update.assert_not_called()
         assert result.location_id == 5
         assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": 5}
 
+    async def test_linking_without_google_still_works_and_fills_nothing(self):
+        svc = CalendarEventService(provider=None, session=AsyncMock())
+        svc._repo = AsyncMock()
+        svc._repo.get_event.return_value = _orm()
+        svc._repo.update_event.return_value = _orm(location_id=5)
+        svc._locations = AsyncMock()
+        svc._locations.get.side_effect = lambda location_id: _LOCATIONS.get(location_id)
+        await svc.update_event(1, EventUpdate(location_id=5))
+        assert svc._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": 5}
+
     async def test_location_can_be_cleared(self, service, provider):
-        service._repo.get_event.return_value = _orm(location_id=5)
+        service._repo.get_event.return_value = _orm(location_id=5, location="Rua Nova 10, 4000-001 Porto")
         await service.update_event(1, EventUpdate(location_id=None))
         provider.update.assert_not_called()
         assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": None}
 
     async def test_google_never_receives_the_location_id(self, service, provider):
-        record = {"start_datetime": _START, "end_datetime": _END, "timezone": "Europe/Lisbon", "id": "g-1"}
-        provider.update.return_value = record
-        provider.create.return_value = record
+        provider.update.return_value = _GOOGLE_RECORD
+        provider.create.return_value = _GOOGLE_RECORD
         service._repo.create_event.return_value = _orm(location_id=5)
 
         await service.update_event(1, EventUpdate(title="Renamed", location_id=5, travel_minutes=10))
         await service.create_event(EventCreate(title="x", start_datetime=_START, end_datetime=_END, location_id=5))
 
-        assert set(provider.update.call_args.args[1]) == {"title"}
+        assert set(provider.update.call_args.args[1]) == {"title", "location"}
         sent = provider.create.call_args.args[0]
         assert not {"location_id", "travel_minutes", "availability", "presence", "routine_id", "tags"} & set(sent)
         assert service._repo.create_event.call_args.args[0].location_id == 5
@@ -252,6 +269,68 @@ class TestLocation:
 
         assert len(occurrences) == 3 and {o.location_id for o in occurrences} == {5}
         assert service._repo.get_events.call_args.args[0].location_id == 5
+
+
+class TestCalendarTextFollowsTheLocation:
+    async def test_create_fills_the_address_on_one_line(self, service, provider):
+        provider.create.return_value = _GOOGLE_RECORD
+        service._repo.create_event.return_value = _orm(location_id=5)
+
+        await service.create_event(EventCreate(title="Office", start_datetime=_START, end_datetime=_END, location_id=5))
+
+        assert provider.create.call_args.args[0]["location"] == "Rua Nova 10, 4000-001 Porto"
+        assert service._repo.create_event.call_args.args[0].location == "Rua Nova 10, 4000-001 Porto"
+
+    async def test_create_uses_the_name_without_an_address(self, service, provider):
+        provider.create.return_value = _GOOGLE_RECORD
+        service._repo.create_event.return_value = _orm(location_id=6)
+        await service.create_event(EventCreate(title="Pickup", start_datetime=_START, end_datetime=_END, location_id=6))
+        assert provider.create.call_args.args[0]["location"] == "School"
+
+    @pytest.mark.parametrize("extra", [{"location": "Gate B"}, {"invitees": ["someone@example.com"]}])
+    async def test_create_keeps_typed_text_and_meetings_with_invitees(self, service, provider, extra):
+        provider.create.return_value = _GOOGLE_RECORD
+        service._repo.create_event.return_value = _orm(location_id=5)
+        await service.create_event(
+            EventCreate(title="x", start_datetime=_START, end_datetime=_END, location_id=5, **extra)
+        )
+        assert provider.create.call_args.args[0].get("location") == extra.get("location")
+
+    async def test_linking_an_event_with_no_text_writes_it_to_google(self, service, provider):
+        provider.update.return_value = _GOOGLE_RECORD
+
+        await service.update_event(1, EventUpdate(location_id=6))
+
+        assert provider.update.call_args.args[1] == {"location": "School"}
+        persisted = service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True)
+        assert persisted["location_id"] == 6 and persisted["location"] == "School"
+
+    async def test_relinking_replaces_the_previous_locations_text(self, service, provider):
+        provider.update.return_value = _GOOGLE_RECORD
+        service._repo.get_event.return_value = _orm(location_id=5, location="rua nova 10,  4000-001 porto")
+
+        await service.update_event(1, EventUpdate(location_id=6))
+
+        assert provider.update.call_args.args[1] == {"location": "School"}
+
+    async def test_full_form_post_that_only_relinks_fills_the_text(self, service, provider):
+        """The portal posts the unchanged old text with the new link: the text still follows the location."""
+        provider.update.return_value = _GOOGLE_RECORD
+        service._repo.get_event.return_value = _orm(location_id=6, location="School")
+
+        await service.update_event(1, EventUpdate(title="Class", location="School", location_id=5))
+
+        assert provider.update.call_args.args[1]["location"] == "Rua Nova 10, 4000-001 Porto"
+
+    async def test_text_edited_in_the_same_update_wins(self, service, provider):
+        provider.update.return_value = _GOOGLE_RECORD
+        await service.update_event(1, EventUpdate(location="Back entrance", location_id=5))
+        assert provider.update.call_args.args[1] == {"location": "Back entrance"}
+
+    async def test_events_with_invitees_keep_their_text(self, service, provider):
+        service._repo.get_event.return_value = _orm(invitees=[SimpleNamespace(email="someone@example.com")])
+        await service.update_event(1, EventUpdate(location_id=5))
+        provider.update.assert_not_called()
 
 
 class TestSyncLeavesPlanningFieldsAlone:

@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 import app.client as api
 from app.config import get_settings
-from app.routes.locations import KINDS
 from app.shared.forward import error_detail, safe_get
+from app.shared.location_kinds import KINDS
 from app.templates_config import templates
 from app.shared.timezone import local_today
 

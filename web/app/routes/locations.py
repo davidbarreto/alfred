@@ -6,16 +6,12 @@ from fastapi.responses import HTMLResponse
 
 import app.client as api
 from app.shared.forward import forward, safe_get
+from app.shared.location_kinds import KINDS
 from app.shared.timezone import local_today
 from app.templates_config import templates
 
 router = APIRouter(prefix="/locations")
 
-# The backend's fixed location kinds (LOCATION_KINDS); the API refuses any other value.
-KINDS = (
-    "home", "work", "school", "gym", "sports", "supermarket", "pharmacy", "bakery", "market", "mall", "variety_store",
-    "hardware_store", "shop", "restaurant", "cafe", "health", "park", "playground", "venue", "other",
-)
 _DAYS = (("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"),
          ("sat", "Saturday"), ("sun", "Sunday"))
 _HOURS_HELP = "mon-fri 08:00-20:00; sat 09:00-13:00, 15:00-19:00; sun closed; holidays closed"

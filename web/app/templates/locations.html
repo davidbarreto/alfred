@@ -48,7 +48,7 @@
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <a href="/locations/{{ loc.id }}" class="text-sm font-semibold text-gray-900 hover:underline after:absolute after:inset-0">
-                {% if loc.kind == 'home' %}<i class="ti ti-home text-sm"></i> {% endif %}{{ loc.name }}</a>
+                <i class="ti {{ loc.kind | location_icon }} text-sm" title="{{ loc.kind }}"></i> {{ loc.name }}</a>
               <p class="text-xs text-gray-400">{{ loc.kind }}</p>
             </div>
             {% if loc.today and loc.today.open_now is true %}

@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from app.routes.locations import group_locations, maps_link, week_rows
+from app.shared.location_kinds import KIND_ICONS, KINDS, location_icon
 
 
 def _location(id=1, name="Market", kind="supermarket", **kw):
@@ -73,6 +74,14 @@ class TestHelpers:
             ("Places", ["Home"]), ("Shops", ["Market"]), ("Archived", ["Old gym"]),
         ]
 
+    def test_every_kind_has_its_own_icon(self):
+        assert len(set(KIND_ICONS.values())) == len(KINDS)
+        assert location_icon("work") == "ti-briefcase"
+
+    def test_unknown_kind_falls_back_to_the_pin(self):
+        assert location_icon("office") == "ti-map-pin"
+        assert location_icon(None) == "ti-map-pin"
+
     def test_empty_groups_are_dropped(self):
         assert [title for title, _ in group_locations([_location(categories=[_GROCERIES])])] == ["Shops"]
 
@@ -94,6 +103,14 @@ class TestListPage:
         assert "Today 08:00-13:00, 14:00-20:00" in resp.text
         assert 'id="group-places"' in resp.text and 'id="group-shops"' in resp.text
         assert 'href="/locations/2"' in resp.text
+
+    def test_each_card_shows_its_kind_icon(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(locations=[_location(1, "Home", "home"), _location(2, "Pharmacy", "pharmacy")])
+
+        text = client.get("/locations").text
+
+        assert '<i class="ti ti-home text-sm" title="home"></i> Home' in text
+        assert '<i class="ti ti-pill text-sm" title="pharmacy"></i> Pharmacy' in text
 
     def test_holiday_note_and_closed(self, client, mock_api):
         mock_api["get"].side_effect = _routes(locations=[_location(
@@ -152,6 +169,10 @@ class TestDetailPage:
 
         assert '<option value="work" selected>work</option>' in text
         assert '<option value="other">other</option>' in text
+
+    def test_title_shows_the_kind_icon(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(kind="cafe", name="Corner cafe"))
+        assert '<i class="ti ti-coffee"></i> Corner cafe' in client.get("/locations/1").text
 
     def test_holiday_banner(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location(

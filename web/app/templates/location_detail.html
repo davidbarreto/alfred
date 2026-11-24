@@ -15,7 +15,7 @@
     <div class="card-body p-5 space-y-3">
       <div class="page-head">
         <div class="min-w-0">
-          <h1 class="text-base font-semibold text-gray-900">{% if location.kind == 'home' %}<i class="ti ti-home"></i> {% endif %}{{ location.name }}</h1>
+          <h1 class="text-base font-semibold text-gray-900"><i class="ti {{ location.kind | location_icon }}"></i> {{ location.name }}</h1>
           <p class="text-xs text-gray-500">{{ location.kind }}{% if not location.active %} · archived{% endif %}</p>
         </div>
         <div class="page-actions flex flex-wrap items-center gap-1.5">

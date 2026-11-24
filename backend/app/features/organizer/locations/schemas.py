@@ -1,12 +1,10 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Optional
 
-from fastapi import Query
+from fastapi import HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
-# Suggested in the portal; kind stays free text.
-SUGGESTED_KINDS = ("home", "work", "school", "gym", "supermarket", "pharmacy", "bakery", "market", "other")
-DEFAULT_KIND = "other"
+from app.features.organizer.locations.constants import DEFAULT_KIND, LOCATION_KINDS, LocationKind
 
 
 def _clean_name(value: Optional[str]) -> Optional[str]:
@@ -20,15 +18,9 @@ def _clean_name(value: Optional[str]) -> Optional[str]:
     return cleaned
 
 
-def _clean_kind(value: Optional[str]) -> Optional[str]:
-    if value is None:
-        return None
-    cleaned = " ".join(value.split()).lower()
-    if not cleaned:
-        raise ValueError("kind must not be blank")
-    if len(cleaned) > 30:
-        raise ValueError("kind must be at most 30 characters")
-    return cleaned
+def _clean_kind(value: Any) -> Any:
+    """Trim and lowercase before the Literal check, so "Work " is work."""
+    return value.strip().lower() if isinstance(value, str) else value
 
 
 def _blank_to_none(value: Optional[str]) -> Optional[str]:
@@ -39,7 +31,7 @@ def _blank_to_none(value: Optional[str]) -> Optional[str]:
 
 class LocationCreate(BaseModel):
     name: str
-    kind: str = DEFAULT_KIND
+    kind: LocationKind = DEFAULT_KIND
     address: Optional[str] = None
     maps_url: Optional[str] = None
     # Text ("mon-fri 08:00-20:00; sun closed; holidays closed") or the stored object; the service parses it.
@@ -49,13 +41,13 @@ class LocationCreate(BaseModel):
     category_ids: list[int] = Field(default_factory=list)
 
     _name = field_validator("name")(_clean_name)
-    _kind = field_validator("kind")(_clean_kind)
+    _kind = field_validator("kind", mode="before")(_clean_kind)
     _text = field_validator("address", "maps_url", "notes")(_blank_to_none)
 
 
 class LocationUpdate(BaseModel):
     name: Optional[str] = None
-    kind: Optional[str] = None
+    kind: Optional[LocationKind] = None
     address: Optional[str] = None
     maps_url: Optional[str] = None
     # A blank text or null clears the hours (unknown again).
@@ -66,7 +58,7 @@ class LocationUpdate(BaseModel):
     category_ids: Optional[list[int]] = None
 
     _name = field_validator("name")(_clean_name)
-    _kind = field_validator("kind")(_clean_kind)
+    _kind = field_validator("kind", mode="before")(_clean_kind)
     _text = field_validator("address", "maps_url", "notes")(_blank_to_none)
 
 
@@ -119,7 +111,12 @@ class LocationFilters:
         limit: Annotated[int, Query(ge=1, le=500)] = 200,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
-        self.kind = kind.strip().lower() if kind else None
+        self.kind = kind.strip().lower() if kind and kind.strip() else None
+        if self.kind is not None and self.kind not in LOCATION_KINDS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"kind must be one of {', '.join(LOCATION_KINDS)}",
+            )
         self.active = active
         self.category_id = category_id
         self.limit = limit

@@ -8,9 +8,10 @@
     </label>
     <label class="space-y-1">
       <span class="block text-xs text-gray-500">Kind</span>
-      <input name="kind" maxlength="30" list="{{ form_id }}-kinds" value="{{ loc.kind if loc else '' }}" placeholder="other"
-             class="input input-sm input-bordered w-full">
-      <datalist id="{{ form_id }}-kinds">{% for k in kinds %}<option value="{{ k }}">{% endfor %}</datalist>
+      {% set current_kind = loc.kind if loc else 'other' %}
+      <select name="kind" class="select select-sm select-bordered w-full">
+        {% for k in kinds %}<option value="{{ k }}"{% if k == current_kind %} selected{% endif %}>{{ k }}</option>{% endfor %}
+      </select>
     </label>
     <label class="space-y-1">
       <span class="block text-xs text-gray-500">Address</span>

@@ -11,9 +11,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.features.organizer.locations.constants import HOME_KIND, LOCATION_KINDS
 from app.features.organizer.shopping_categories.tables import ShoppingCategory
-
-HOME_KIND = "home"
 
 # What a location sells: the shopping categories the day plan matches pending items against.
 locations_shopping_categories = Table(
@@ -31,11 +30,16 @@ class Location(Base):
     """A frequent everyday place: home, the office, school, the supermarket near school."""
 
     __tablename__ = "locations"
-    __table_args__ = {"schema": "organizer"}
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ({})".format(", ".join(f"'{v}'" for v in LOCATION_KINDS)), name="ck_locations_kind"
+        ),
+        {"schema": "organizer"},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # Free text, trimmed and lowercase; only "home" has a meaning in code.
+    # One of LOCATION_KINDS; "home" is unique, "work" is where office days happen.
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     maps_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

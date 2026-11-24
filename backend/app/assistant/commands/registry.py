@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 from app.assistant.commands.schemas import CommandMetadata
 from app.features.organizer.calendar_events.constants import EVENT_AVAILABILITIES, EVENT_PRESENCES
+from app.features.organizer.locations.constants import DEFAULT_KIND, LOCATION_KINDS
 from app.features.organizer.tasks.schemas import TASK_CONTEXTS
 
 # --- Shared Flag Constants ---
@@ -183,8 +184,12 @@ LOCATION_FIELD_FLAGS = {
 }
 _LOCATION_DETAILS = (
     "Locations are the user's frequent everyday places: home, work, school, gym and the shops they use "
-    "(not trip sights: those are travel places). kind is free text, lowercase (home, work, school, gym, supermarket, "
-    "pharmacy, bakery, market, other); only one location can be home. sells is a comma-separated list of shopping "
+    "(not trip sights: those are travel places). kind is one of "
+    f"{', '.join(LOCATION_KINDS)} (default {DEFAULT_KIND}; school also covers classes and courses, sports a pool, pitch "
+    "or club, mall a shopping centre, variety_store a bazaar-style shop with household goods, tools and gear, "
+    "hardware_store DIY, health a doctor, dentist or clinic, playground also an indoor play centre, venue concerts, "
+    "theatre or cinema). Only one location can be home, and the office or workplace is kind work, so find it with "
+    "list --kind work instead of guessing its name. sells is a comma-separated list of shopping "
     "category names (what the shop is good for). hours is text such as 'mon-fri 08:00-20:00; sat 09:00-13:00, "
     "15:00-19:00; sun closed; holidays closed': days are mon..sun, ranges (mon-fri), lists (mon,wed), daily or "
     "holidays; a missing day means unknown. maps is a Maps link for the user. An empty value clears an optional field. "

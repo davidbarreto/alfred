@@ -114,13 +114,15 @@ class TestListPage:
         mock_api["get"].side_effect = failing
         assert "unavailable right now" in client.get("/locations").text
 
-    def test_new_form_lists_categories_and_kind_suggestions(self, client, mock_api):
+    def test_new_form_lists_categories_and_offers_only_the_fixed_kinds(self, client, mock_api):
         mock_api["get"].side_effect = _routes(locations=[], categories=[_GROCERIES, {"id": 2, "name": "pharmacy"}])
 
         text = client.get("/locations").text
 
         assert 'name="category_ids" value="2"' in text
-        assert '<option value="pharmacy">' in text
+        assert '<select name="kind"' in text and "<datalist" not in text
+        assert '<option value="pharmacy">pharmacy</option>' in text
+        assert '<option value="other" selected>other</option>' in text
         assert 'data-url="/locations" data-method="POST"' in text
 
 
@@ -142,6 +144,14 @@ class TestDetailPage:
         assert 'name="category_ids" value="1" class="checkbox checkbox-xs"\n               checked' in resp.text
         assert "mon 08:00-13:00, 14:00-20:00\nsun closed</textarea>" in resp.text
         assert 'data-url="/locations/1" data-method="PATCH"' in resp.text
+
+    def test_edit_form_selects_the_location_kind(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(kind="work", name="Office"))
+
+        text = client.get("/locations/1").text
+
+        assert '<option value="work" selected>work</option>' in text
+        assert '<option value="other">other</option>' in text
 
     def test_holiday_banner(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location(

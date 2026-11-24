@@ -9,7 +9,8 @@ from sqlalchemy.orm import selectinload
 
 from app.features.organizer.locations.errors import LocationConflictError
 from app.features.organizer.locations.schemas import LocationFilters
-from app.features.organizer.locations.tables import HOME_KIND, Location
+from app.features.organizer.locations.constants import HOME_KIND
+from app.features.organizer.locations.tables import Location
 from app.features.organizer.shopping_categories.tables import ShoppingCategory
 
 

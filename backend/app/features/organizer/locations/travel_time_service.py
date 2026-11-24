@@ -14,7 +14,8 @@ from app.features.organizer.locations.schemas import (
     LocationTravelTimeRead,
     LocationTravelTimeSet,
 )
-from app.features.organizer.locations.tables import HOME_KIND, Location, LocationTravelTime
+from app.features.organizer.locations.constants import HOME_KIND
+from app.features.organizer.locations.tables import Location, LocationTravelTime
 from app.features.organizer.locations.travel_time_repository import LocationTravelTimeRepository
 
 logger = logging.getLogger(__name__)

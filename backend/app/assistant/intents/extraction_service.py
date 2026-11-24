@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_EXTRACTION_PROMPT_TEMPLATE
+from app.features.organizer.locations.constants import LocationKind
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.protocols.llm import LlmProvider
 from app.shared.utils.timezone import local_now
@@ -166,9 +167,13 @@ class LocationAddArgs(BaseModel):
     name: str = Field(
         description="Short name for the place as the user would say it, e.g. 'Pharmacy by school', 'Office', 'Market'"
     )
-    kind: str | None = Field(
+    kind: LocationKind | None = Field(
         default=None,
-        description="One lowercase word: home, work, school, gym, supermarket, pharmacy, bakery, market or other",
+        description=(
+            "What kind of place it is: an office or workplace is work, a shopping centre mall, a bazaar-style shop "
+            "with a bit of everything variety_store, a doctor or dentist health, concerts or cinema venue; other "
+            "when none fits"
+        ),
     )
     address: str | None = Field(default=None, description="Street address only if the user gave one. Omit otherwise.")
     opening_hours: str | None = Field(

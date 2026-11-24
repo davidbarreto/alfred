@@ -60,6 +60,12 @@ class TestAdd:
 
         assert service.create.call_args.args[0].kind == "other"
 
+    async def test_unknown_kind_is_400_listing_the_kinds(self, service, travel_times):
+        with pytest.raises(HTTPException) as exc:
+            await handle_location("add", {"name": "Head office", "kind": "office"}, service, travel_times)
+        assert exc.value.status_code == 400 and "'work'" in exc.value.detail
+        service.create.assert_not_called()
+
     async def test_name_required(self, service, travel_times):
         with pytest.raises(HTTPException) as exc:
             await handle_location("add", {"name": " "}, service, travel_times)
@@ -92,6 +98,13 @@ class TestList:
         await handle_location("list", {"all": "yes", "kind": "Pharmacy", "sells": "pharmacy"}, service, travel_times)
 
         assert service.list.call_args.args[0] == LocationFilters(kind="pharmacy", active=None, category_id=4)
+
+
+    async def test_unknown_kind_filter_is_422(self, service, travel_times):
+        with pytest.raises(HTTPException) as exc:
+            await handle_location("list", {"kind": "office"}, service, travel_times)
+        assert exc.value.status_code == 422 and "work" in exc.value.detail
+        service.list.assert_not_called()
 
 
 class TestShowUpdateDelete:

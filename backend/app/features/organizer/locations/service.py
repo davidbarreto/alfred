@@ -17,7 +17,8 @@ from app.features.organizer.locations.schemas import (
     LocationToday,
     LocationUpdate,
 )
-from app.features.organizer.locations.tables import HOME_KIND, Location
+from app.features.organizer.locations.constants import HOME_KIND
+from app.features.organizer.locations.tables import Location
 from app.features.organizer.locations.travel_time_repository import LocationTravelTimeRepository
 from app.features.organizer.locations.travel_time_service import route_label
 from app.features.organizer.shopping_categories.tables import ShoppingCategory

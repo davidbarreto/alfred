@@ -100,6 +100,16 @@ async def _locations() -> list[dict]:
     return sorted(locations, key=lambda loc: (not loc.get("active", True), loc.get("kind") != "home", loc.get("name", "")))
 
 
+async def _holidays_by_date(start: date, end: date) -> dict[str, list[str]]:
+    """Names of the primary calendar's public holidays per ISO date; none when the backend can't say."""
+    holidays = await safe_get("/organizer/holidays", params={"from": start.isoformat(), "to": end.isoformat()}, default=[])
+    by_date: dict[str, list[str]] = {}
+    for holiday in holidays or []:
+        if holiday.get("date") and holiday.get("name"):
+            by_date.setdefault(holiday["date"], []).append(holiday["name"])
+    return by_date
+
+
 def suggest_location_id(event: dict, locations: list[dict]) -> int | None:
     """For an event with no location yet: the active location whose name or address equals its calendar location text."""
     if event.get("location_id") is not None:
@@ -166,9 +176,11 @@ async def calendar_page(request: Request):
     next_year = year if month < 12 else year + 1
 
     routines = await _event_routines()
+    holidays = await _holidays_by_date(date(year, month, 1), date(year, month, cal_lib.monthrange(year, month)[1]))
 
     return templates.TemplateResponse(request, "calendar.html", {
         "api_error": api_error,
+        "holidays_by_date": holidays,
         "routines": routines,
         "locations": await _locations(),
         "location_kinds": KINDS,
@@ -238,10 +250,13 @@ async def calendar_day(date_str: str, request: Request):
     events = [e for e in events if _covers_day(e)]
     events.sort(key=lambda e: (not e["all_day"], e["display_start"]))
 
+    holidays = await _holidays_by_date(day, day)
+
     return templates.TemplateResponse(request, "_calendar_day.html", {
         "day": day,
         "day_str": date_str,
         "events": events,
+        "holidays": holidays.get(date_str, []),
     })
 
 

@@ -9,6 +9,13 @@
   </button>
 </div>
 
+{% for name in holidays %}
+<div class="cal-holiday flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-sm text-[#BA7517]">
+  <i class="ti ti-confetti" style="font-size:0.85rem"></i>
+  <span class="break-words">Public holiday: {{ name }}</span>
+</div>
+{% endfor %}
+
 {% if not events %}
 <p class="text-sm text-gray-400 text-center py-6">No events this day.</p>
 {% else %}

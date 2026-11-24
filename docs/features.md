@@ -39,8 +39,8 @@ Events mirrored from and written through to Google Calendar (OAuth, one-time con
 - Planning fields per event: `availability`, `presence`, `travel_minutes`, attached routine, and the location it happens at (one of the user's [locations](modules/locations.md#events-at-a-location): the day plan derives travel from the travel times between them).
 - **Notifications:** events notify at configurable offsets per profile (`/organizer/calendar-notification-settings`); the n8n workflow polls `/organizer/calendar-notifications/due`.
 - **Sync:** `POST /integration/google-calendar/sync` pulls changes from Google, including moved instances.
-- **Portal:** `/calendar` and `/calendar/day/{date}` (day view with skip/move/end actions).
-- **Commands:** `event` add / list / update / skip / unskip / reschedule / unreschedule / endseries / delete. **API:** `/organizer/calendar-events`.
+- **Portal:** `/calendar` and `/calendar/day/{date}` (day view with skip/move/end actions). Public holidays of the first `HOLIDAY_CALENDARS` calendar get an amber day cell with the holiday's name, and a banner in the day view.
+- **Commands:** `event` add / list / update / skip / unskip / reschedule / unreschedule / endseries / delete. **API:** `/organizer/calendar-events`; `/organizer/holidays?from=&to=` (the first calendar's holidays, at most 366 days).
 
 ## Contacts
 

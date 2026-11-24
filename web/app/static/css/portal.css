@@ -281,6 +281,11 @@ html[data-theme="dark"] {
   justify-content: flex-end;
 }
 
+/* ── Calendar ────────────────────────────────────────────────────────── */
+
+/* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */
+.cal-holiday { background-color: var(--tint-amber-bg); }
+
 /* ── Charts and tables ───────────────────────────────────────────────── */
 
 /* Fixed-height box for a Chart.js canvas (the chart needs maintainAspectRatio: false). */

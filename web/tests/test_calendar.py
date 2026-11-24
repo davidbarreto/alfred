@@ -15,6 +15,24 @@ def _event(id=1, title="Marriage Anniversary", start="2026-07-14T00:00:00", end=
     }
 
 
+def _get_by_path(events=(), holidays=(), holidays_error=None):
+    """api.get side effect: the events for the events path, the holidays for the holidays path."""
+    async def _get(path, params=None, **kwargs):
+        if path == "/organizer/holidays":
+            if holidays_error is not None:
+                raise holidays_error
+            return list(holidays)
+        if path == "/organizer/calendar-events":
+            return list(events)
+        return []
+    return _get
+
+
+def _cell_tag(html, day):
+    """The opening tag of a month-grid day cell (its classes come before its hx-get)."""
+    return html.split(f'hx-get="/calendar/day/{day}"')[0].rsplit("<div", 1)[1]
+
+
 class TestEditFormWallTimes:
     """The edit form posts wall times together with the event's timezone, so the times it
     is prefilled with must be wall times in that timezone, not in the app's local zone."""
@@ -89,6 +107,31 @@ class TestCalendarPage:
         assert 'hx-get="/calendar/day/2026-07-14"' in resp.text
         assert 'id="calendar-day-modal"' in resp.text
 
+    def test_holiday_day_is_tinted_and_named(self, client, mock_api):
+        mock_api["get"].side_effect = _get_by_path(holidays=[{"date": "2026-12-25", "name": "Christmas Day", "country": "PT"}])
+
+        resp = client.get("/calendar?year=2026&month=12")
+
+        assert resp.status_code == 200
+        christmas_tag = _cell_tag(resp.text, "2026-12-25")
+        assert "cal-holiday" in christmas_tag and 'title="Public holiday: Christmas Day"' in christmas_tag
+        assert "cal-holiday" not in _cell_tag(resp.text, "2026-12-24")
+        christmas_cell = resp.text.split('hx-get="/calendar/day/2026-12-25"')[1].split('hx-get="/calendar/day/')[0]
+        assert "Christmas Day" in christmas_cell
+        mock_api["get"].assert_any_await("/organizer/holidays", params={"from": "2026-12-01", "to": "2026-12-31"})
+
+    def test_page_renders_without_holidays_when_the_lookup_fails(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/organizer/holidays")
+        mock_api["get"].side_effect = _get_by_path(
+            events=[_event()], holidays_error=httpx.ConnectError("connection refused", request=request),
+        )
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert resp.status_code == 200
+        assert "Marriage Anniversary" in resp.text
+        assert 'class="min-h-[56px]' in resp.text and "Public holiday:" not in resp.text
+
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/calendar/", follow_redirects=False)
 
@@ -155,6 +198,20 @@ class TestCalendarDay:
 
         assert resp.status_code == 200
         assert "No events this day." in resp.text
+
+    def test_shows_a_holiday_banner(self, client, mock_api):
+        mock_api["get"].side_effect = _get_by_path(holidays=[{"date": "2026-12-25", "name": "Christmas Day", "country": "PT"}])
+
+        resp = client.get("/calendar/day/2026-12-25")
+
+        assert "Public holiday: Christmas Day" in resp.text
+        assert "No events this day." in resp.text
+        mock_api["get"].assert_any_await("/organizer/holidays", params={"from": "2026-12-25", "to": "2026-12-25"})
+
+    def test_no_banner_on_an_ordinary_day(self, client, mock_api):
+        mock_api["get"].side_effect = _get_by_path(events=[_event()])
+
+        assert "Public holiday:" not in client.get("/calendar/day/2026-07-14").text
 
     def test_rejects_invalid_date(self, client, mock_api):
         resp = client.get("/calendar/day/not-a-date")

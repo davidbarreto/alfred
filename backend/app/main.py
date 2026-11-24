@@ -44,6 +44,7 @@ from app.api.routes.organizer.shopping import shopping_router, wishlist_router, 
 from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
 from app.api.routes.organizer.shopping_products import router as shopping_products_router
 from app.api.routes.organizer.locations import router as locations_router
+from app.api.routes.organizer.holidays import router as holidays_router
 from app.features.organizer.locations.errors import LocationConflictError, LocationValidationError
 from app.features.organizer.shopping.errors import (
     ShoppingItemAlreadyPendingError,
@@ -192,6 +193,7 @@ app.include_router(recurrence_router)
 app.include_router(shopping_categories_router)
 app.include_router(shopping_products_router)
 app.include_router(locations_router)
+app.include_router(holidays_router)
 app.include_router(interview_companies_router)
 app.include_router(interview_processes_router)
 app.include_router(interview_stages_router)

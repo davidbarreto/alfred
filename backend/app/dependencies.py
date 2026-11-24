@@ -21,6 +21,7 @@ from app.features.planning.settings_service import PlanningSettingsService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.organizer.shopping_products.service import ShoppingProductService
+from app.features.organizer.holidays.service import HolidayService
 from app.features.organizer.locations.service import LocationService
 from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.finance.accounts.service import AccountService
@@ -414,6 +415,9 @@ def get_planning_holiday_provider() -> HolidayProvider | None:
     code, calendar_id = next(iter(get_settings().holiday_calendar_map.items()))
     return GooglePublicHolidayProvider(client, {code: calendar_id})
 
+def get_holiday_service() -> HolidayService:
+    return HolidayService(get_planning_holiday_provider())
+
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()
     token = await get_oauth_token(session, "google_contacts")
@@ -785,6 +789,7 @@ ShoppingCategoryServiceDep = Annotated[ShoppingCategoryService, Depends(get_shop
 ShoppingProductServiceDep = Annotated[ShoppingProductService, Depends(get_shopping_product_service)]
 LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
 LocationTravelTimeServiceDep = Annotated[LocationTravelTimeService, Depends(get_location_travel_time_service)]
+HolidayServiceDep = Annotated[HolidayService, Depends(get_holiday_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]

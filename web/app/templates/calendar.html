@@ -64,10 +64,12 @@
       {% for week in weeks %}
         {% for day in week %}
         {% set day_str = "%d-%02d-%02d"|format(year, month, day) if day else "" %}
+        {% set day_holidays = holidays_by_date.get(day_str, []) %}
         <div class="min-h-[56px] sm:min-h-[88px] min-w-0 border-b border-r border-gray-100 p-1
           {% if day == 0 %}bg-gray-50/60{% endif %}
-          {% if day_str == today %}bg-[#E6F1FB]/40{% endif %}
+          {% if day_holidays %}cal-holiday{% elif day_str == today %}bg-[#E6F1FB]/40{% endif %}
           {% if day %}cursor-pointer hover:bg-gray-50/80{% endif %}"
+          {% if day_holidays %}title="Public holiday: {{ day_holidays | join(', ') }}"{% endif %}
           {% if day %}
           hx-get="/calendar/day/{{ day_str }}"
           hx-target="#calendar-day-content"
@@ -76,9 +78,12 @@
           {% endif %}>
           {% if day %}
           <div class="text-xs font-medium mb-1 w-5 h-5 mx-auto sm:mx-0 flex items-center justify-center rounded-full
-            {% if day_str == today %}bg-[#378ADD] text-white{% else %}text-gray-400{% endif %}">
+            {% if day_str == today %}bg-[#378ADD] text-white{% elif day_holidays %}text-[#BA7517]{% else %}text-gray-400{% endif %}">
             {{ day }}
           </div>
+          {% for name in day_holidays %}
+          <div class="hidden sm:block text-[10px] font-medium text-[#BA7517] px-1 mb-0.5 truncate leading-tight">{{ name }}</div>
+          {% endfor %}
           {% set day_events = events_by_date.get(day_str, []) %}
           {# Phone: a cell is too narrow for titles, so one dot per event (3 at most) and the count; tap the day for the list. #}
           {% if day_events %}

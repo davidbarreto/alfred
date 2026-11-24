@@ -13,6 +13,7 @@ from app.dependencies import (
     get_day_plan_service,
     get_location_service,
     get_holiday_provider,
+    get_holiday_service,
     get_planning_holiday_provider,
     get_llm_provider,
     get_note_provider,
@@ -129,6 +130,14 @@ class TestDisableIntegrations:
         service = get_day_plan_service(session=AsyncMock())
 
         assert service._holidays._calendars == {"BR": "br-cal"}
+
+    def test_calendar_holidays_come_only_from_the_planning_calendar(self, monkeypatch):
+        monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")
+        monkeypatch.setenv("GCP_API_KEY", "test-key")
+        monkeypatch.setenv("HOLIDAY_CALENDARS", "BR=br-cal,PT=pt-cal")
+        get_settings.cache_clear()
+
+        assert get_holiday_service()._provider._calendars == {"BR": "br-cal"}
 
     @pytest.mark.asyncio
     async def test_location_service_keeps_the_old_home_address_on_started_trips(self, monkeypatch):

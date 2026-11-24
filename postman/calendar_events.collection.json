@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Calendar Events API",
     "_postman_id": "alfred-calendar-events-v1",
-    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Date Range → Filter by Tags → Get 404 → Create with Timezone → Delete with Timezone → Delete → Create Recurring Weekly Event → List Events (Recurring Series Expands Into Occurrences) → Delete Recurring Event",
+    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Date Range → Filter by Tags → Get 404 → Create with Timezone → Delete with Timezone → Delete → Create Recurring Weekly Event → List Events (Recurring Series Expands Into Occurrences) → Delete Recurring Event → Holidays (primary calendar; empty in CI, where integrations are disabled)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -2332,6 +2332,157 @@
             "organizer",
             "locations",
             "{{event_location_b_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "30 - Holidays In A Month",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A list of dated holidays inside the range', () => { const h = pm.response.json(); pm.expect(h).to.be.an('array'); h.forEach(x => { pm.expect(x).to.have.all.keys('date', 'name', 'country'); pm.expect(x.date >= '2026-12-01' && x.date <= '2026-12-31').to.be.true; }); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/holidays?from=2026-12-01&to=2026-12-31",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "holidays"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2026-12-01"
+            },
+            {
+              "key": "to",
+              "value": "2026-12-31"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "30a - Holidays With A Reversed Range (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Says why', () => pm.expect(pm.response.json().detail).to.include('before'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/holidays?from=2026-12-31&to=2026-12-01",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "holidays"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2026-12-31"
+            },
+            {
+              "key": "to",
+              "value": "2026-12-01"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "30b - Holidays Over More Than A Year (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Names the limit', () => pm.expect(pm.response.json().detail).to.include('366'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/holidays?from=2026-01-01&to=2027-01-02",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "holidays"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2026-01-01"
+            },
+            {
+              "key": "to",
+              "value": "2027-01-02"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "30c - Holidays Without An End Date (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/holidays?from=2026-12-01",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "holidays"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2026-12-01"
+            }
           ]
         }
       }

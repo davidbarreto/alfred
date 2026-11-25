@@ -3,9 +3,9 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.core.settings.service import SettingService
 from app.features.location.cities.tables import City
 from app.features.location.hooks import AfterDelete
+from app.features.location.places.repository import PlaceRepository
 from app.features.travel.cities.repository import TravelCityRepository
 from app.features.travel.cities.service import is_home_city
 from app.features.travel.links.repository import WebLinkRepository
@@ -22,7 +22,7 @@ class TravelLocationHooks:
         self._repo = TravelCityRepository(session)
         self._trip_repo = TripRepository(session)
         self._link_repo = WebLinkRepository(session)
-        self._settings = SettingService(session)
+        self._places = PlaceRepository(session)
         self._notes = TravelNoteIndex(embedding_service)
 
     async def city_created(self, city: City) -> None:
@@ -32,8 +32,8 @@ class TravelLocationHooks:
             logger.info("Leg ends attached to a new city: city_id=%d count=%d", city.id, attached)
 
     async def city_in_use(self, city: City) -> str | None:
-        if await is_home_city(self._settings, city.id):
-            return f"{city.name} is the home city in the travel settings"
+        if await is_home_city(self._places, city.id):
+            return f"{city.name} is the home city (the Home place is there)"
         places, leg_ends = await self._repo.count_places(city.id), await self._repo.count_leg_ends(city.id)
         home_trips = await self._trip_repo.count_home_city_trips(city.id)
         if places or leg_ends or home_trips:

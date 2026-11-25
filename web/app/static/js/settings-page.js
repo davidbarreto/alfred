@@ -116,10 +116,6 @@
         return { value: [...row.querySelectorAll("[data-day]:checked")].map((box) => box.dataset.day) };
       case "windows":
         return { value: [...row.querySelectorAll("[data-chip]")].map((chip) => chip.dataset.chip) };
-      case "city": {
-        const id = row.querySelector("[data-city-id]").value;
-        return { value: id ? Number(id) : null };
-      }
       case "json":
         return { value: state.get(row).json };
       case "checklist": {
@@ -199,8 +195,8 @@
     return Object.entries(value || {}).map(([entry, items]) => `${entry}: ${Array.isArray(items) ? items.join(", ") : items}`);
   }
 
-  /** Put a value (as the API returns it) back into the row's control. `extra` carries the city object. */
-  function setValue(row, value, extra) {
+  /** Put a value (as the API returns it) back into the row's control. */
+  function setValue(row, value) {
     const input = control(row);
     switch (row.dataset.widget) {
       case "number": input.value = value ?? ""; break;
@@ -225,7 +221,6 @@
         chips.replaceChildren(...(value || []).map(chip));
         break;
       }
-      case "city": state.get(row).picker?.reset(extra ?? null); break;
       case "place":
         input.value = value?.place_id != null ? `place:${value.place_id}` : value?.city_id != null ? `city:${value.city_id}` : "";
         break;
@@ -275,7 +270,7 @@
   }
 
   rows.forEach((row) => {
-    state.set(row, { loaded: loadedValue(row), json: parse(row.dataset.value), picker: null });
+    state.set(row, { loaded: loadedValue(row), json: parse(row.dataset.value) });
     row.addEventListener("input", () => { updateCounter(row); refresh(row); });
     row.addEventListener("change", () => refresh(row));
   });
@@ -342,27 +337,6 @@
       const li = event.target.closest("[data-item]");
       if (event.target.value !== "") li.querySelector("[data-item-hint]").textContent = itemHint(li.dataset.anchor, Number(event.target.value));
     });
-  });
-
-  // City: the travel page's picker; picking or clearing marks the row.
-  const cityDialog = document.getElementById("city-dialog");
-  async function send(method, url, body) {
-    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-    return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
-  }
-  rows.filter((row) => row.dataset.widget === "city").forEach((row) => {
-    const text = row.querySelector("[data-city-text]");
-    const picker = window.initCityPicker({
-      input: text, idInput: row.querySelector("[data-city-id]"), clearButton: row.querySelector("[data-city-clear]"),
-      terminalInput: text, newCity: window.initNewCityDialog({ dialog: cityDialog, send }),
-      onChange: () => refresh(row),
-    });
-    state.get(row).picker = picker;
-    picker.reset(parse(row.querySelector("[data-city]").textContent));
-  });
-  // The typed filter text is not the value either.
-  rows.filter((row) => row.dataset.widget === "city").forEach((row) => {
-    row.querySelector("[data-city-text]").addEventListener("input", (event) => event.stopPropagation());
   });
 
   // ── JSON editor ─────────────────────────────────────────────────────────
@@ -515,10 +489,6 @@
         return option ? option.textContent.trim() : "not set";
       };
       lines.push(`${labelOf(state.get(row).loaded)} → ${labelOf(readValue(row).value)}`);
-    } else if (row.dataset.widget === "city") {
-      const loaded = parse(row.querySelector("[data-city]").textContent);
-      const now = row.querySelector("[data-city-text]").value;
-      lines.push(`${loaded ? `${loaded.name}, ${loaded.country.name}` : "not set"} → ${now || "not set"}`);
     } else {
       lines.push(`${display(row, state.get(row).loaded)} → ${display(row, readValue(row).value)}`);
     }
@@ -591,8 +561,6 @@
       rows.filter((row) => row.dataset.namespace === namespace && row.hasAttribute("data-changed")).forEach((row) => {
         const field = row.dataset.field;
         const saved = field in result.values ? result.values[field] : readValue(row).value;
-        const extra = row.dataset.widget === "city" ? result.values[field.replace(/_id$/, "")] : undefined;
-        if (row.dataset.widget === "city") row.querySelector("[data-city]").textContent = JSON.stringify(extra ?? null);
         if (row.dataset.widget === "place") {
           const label = row.querySelector("[data-place-label]");
           label.textContent = result.values.place_label ? `In use: ${result.values.place_label}` : "No weather now: add coordinates to the Home location or pick a place.";
@@ -600,7 +568,7 @@
         }
         state.get(row).loaded = saved;
         row.dataset.value = JSON.stringify(saved);
-        setValue(row, saved, extra);
+        setValue(row, saved);
         refresh(row);
       });
     });
@@ -612,7 +580,7 @@
   document.getElementById("discard-changes").addEventListener("click", () => {
     changedRows().forEach((row) => {
       const loaded = state.get(row).loaded;
-      setValue(row, loaded, row.dataset.widget === "city" ? parse(row.querySelector("[data-city]").textContent) : undefined);
+      setValue(row, loaded);
       refresh(row);
     });
   });

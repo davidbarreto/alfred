@@ -37,7 +37,7 @@
   <div class="card bg-white border border-amber-300" id="home-moved">
     <div class="card-body p-4 space-y-1">
       <p class="text-sm font-semibold text-gray-900"><i class="ti ti-truck"></i> Home moved</p>
-      <p class="text-xs text-gray-600">Trips that have already started keep the address they were planned with; upcoming trips start from the new one.
+      <p class="text-xs text-gray-600">Trips that have already started keep the address and city they were planned with; upcoming trips start from the new ones.
         Travel times from Home are not changed automatically: check them below.</p>
     </div>
   </div>
@@ -151,6 +151,9 @@
 
 </div>
 {% if location %}
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
 {% include "_location_script.html" %}
 {% include "_location_travel_time_script.html" %}
 <script>

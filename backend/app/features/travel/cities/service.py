@@ -2,10 +2,10 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.core.settings.service import SettingService
 from app.features.location.cities.repository import CityRepository
 from app.features.location.cities.schemas import CityRead
 from app.features.location.countries.repository import CountryRepository
+from app.features.location.places.repository import PlaceRepository
 from app.features.location.countries.schemas import CountryRead
 from app.features.travel.cities.repository import TravelCityRepository
 from app.features.travel.cities.schemas import CityDetail, CityPlace, CountryCity, CountryDetail, LocationTrip
@@ -28,8 +28,10 @@ def _mean(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 2) if values else None
 
 
-async def is_home_city(settings: SettingService, city_id: int) -> bool:
-    return (await settings.get_value("travel.home_city_id")) == str(city_id)
+async def is_home_city(places: PlaceRepository, city_id: int) -> bool:
+    """The home city is the Home place's city."""
+    home = await places.get_home()
+    return home is not None and home.city_id == city_id
 
 
 class TravelCityService:
@@ -41,7 +43,7 @@ class TravelCityService:
         self._countries = CountryRepository(session)
         self._place_repo = TravelPlaceRepository(session)
         self._cost_repo = TransactionLinkRepository(session)
-        self._settings = SettingService(session)
+        self._places = PlaceRepository(session)
 
     async def _city_grades(self, city_ids: list[int]) -> tuple[dict[int, list[int]], dict[int, float]]:
         """Each city's place ids and the mean grade of its graded places (cities with no graded place are absent)."""
@@ -112,7 +114,7 @@ class TravelCityService:
         return CityDetail(
             **CityRead.model_validate(city).model_dump(), grade=means.get(city_id),
             grade_count=len([p for p in ids if p in grades]), place_count=len(ids), places=places, trips=trips,
-            home=await is_home_city(self._settings, city_id),
+            home=await is_home_city(self._places, city_id),
             costs=await self._costs(ids, [parse_default_tag_names(city.default_tag_names)]),
         )
 

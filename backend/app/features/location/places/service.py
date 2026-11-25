@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime
 
 from sqlalchemy.exc import IntegrityError
@@ -22,14 +23,23 @@ logger = logging.getLogger(__name__)
 
 _REQUIRED_FIELDS = ("name", "kind", "city_id", "active")
 
-# Called with the old home address and today before it changes, so trips that have already started keep the home
-# they were planned with (travel's TripRepository.snapshot_home_value, wired in dependencies.py). Returns the count.
-HomeAddressSnapshot = Callable[[str, date], Awaitable[int]]
 
 
-def _home_address(kind: str, address: str | None) -> str | None:
-    """The home address a place stands for: its address when it is the home, else none."""
-    return address if kind == HOME_KIND else None
+@dataclass(frozen=True)
+class HomeValues:
+    """The home address and home city a place stands for: its own when it is the Home place, else none."""
+    address: str | None = None
+    city_id: int | None = None
+
+
+# Called before Home's address or city changes with the old values that change (the others None) and today, so trips
+# that have already started keep the home they were planned with (travel's TripRepository.snapshot_home_value, wired
+# in dependencies.py). Returns the number of trips that kept an old value.
+HomeSnapshot = Callable[[HomeValues, date], Awaitable[int]]
+
+
+def _home_values(kind: str, address: str | None, city_id: int | None) -> HomeValues:
+    return HomeValues(address, city_id) if kind == HOME_KIND else HomeValues()
 
 
 def _hours(value: str | dict | None) -> dict | None:
@@ -71,7 +81,7 @@ class PlaceService:
         session: AsyncSession,
         hooks: Sequence[PlaceHooks] = (),
         holiday_provider: HolidayProvider | None = None,
-        home_snapshot: HomeAddressSnapshot | None = None,
+        home_snapshot: HomeSnapshot | None = None,
     ) -> None:
         self._repo = PlaceRepository(session)
         self._hooks = tuple(hooks)
@@ -79,13 +89,23 @@ class PlaceService:
         self._holidays = holiday_provider
         self._home_snapshot = home_snapshot
 
-    async def _keep_old_home(self, old: str | None, new: str | None) -> None:
-        """Before the home address changes, started trips with no home of their own keep the old one."""
-        if self._home_snapshot is None or old is None or old == new:
+    async def _keep_old_home(self, old: HomeValues, new: HomeValues) -> None:
+        """Before the home address or city changes, started trips with no home of their own keep the old one.
+
+        An old value that was never set is not copied.
+        """
+        changed = HomeValues(
+            address=old.address if old.address is not None and old.address != new.address else None,
+            city_id=old.city_id if old.city_id is not None and old.city_id != new.city_id else None,
+        )
+        if self._home_snapshot is None or changed == HomeValues():
             return
-        count = await self._home_snapshot(old, local_today())
+        count = await self._home_snapshot(changed, local_today())
         # Never the address itself: it is personal.
-        logger.info("Home address changed: trips_keeping_old_address=%d", count)
+        logger.info(
+            "Home changed: address=%s city=%s trips_keeping_old_home=%d",
+            changed.address is not None, changed.city_id is not None, count,
+        )
 
     async def _holiday_today(self, today: date) -> str | None:
         if self._holidays is None:
@@ -227,8 +247,11 @@ class PlaceService:
                 changes.get("name", current.name), changes.get("kind", current.kind),
                 changes.get("city_id", current.city_id), place_id,
             )
-        old_home = _home_address(current.kind, current.address)
-        new_home = _home_address(changes.get("kind", current.kind), changes.get("address", current.address))
+        old_home = _home_values(current.kind, current.address, current.city_id)
+        new_home = _home_values(
+            changes.get("kind", current.kind), changes.get("address", current.address),
+            changes.get("city_id", current.city_id),
+        )
         if "opening_hours" in changes:
             changes["opening_hours"] = _hours(changes["opening_hours"])
         if "coordinates" in changes:
@@ -249,9 +272,9 @@ class PlaceService:
         reasons = [reason for hook in self._hooks if (reason := await hook.place_in_use(place))]
         if reasons:
             raise LocationConflictError(f"{place.name!r} can't be deleted: {'; '.join(reasons)}. Archive it instead")
-        name, kind, address = place.name, place.kind, place.address
+        name, kind, old_home = place.name, place.kind, _home_values(place.kind, place.address, place.city_id)
         after = [await hook.before_place_delete(place_id) for hook in self._hooks]
-        await self._keep_old_home(_home_address(kind, address), None)
+        await self._keep_old_home(old_home, HomeValues())
         try:
             await self._repo.delete(place)
             await self._repo.commit()

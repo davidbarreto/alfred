@@ -140,17 +140,36 @@ class TestDisableIntegrations:
         assert get_holiday_service()._provider._calendars == {"BR": "br-cal"}
 
     @pytest.mark.asyncio
-    async def test_place_service_keeps_the_old_home_address_on_started_trips(self, monkeypatch):
+    async def test_place_service_keeps_the_old_home_address_and_city_on_started_trips(self, monkeypatch):
         from datetime import date
 
-        snapshot = AsyncMock(return_value=3)
+        from app.features.location.places.service import HomeValues
+
+        snapshot = AsyncMock(side_effect=[3, 2])
         monkeypatch.setattr("app.dependencies.TripRepository.snapshot_home_value", snapshot)
 
         service = get_place_service(session=AsyncMock())
 
         assert [type(h).__name__ for h in service._hooks] == ["OrganizerPlaceHooks", "TravelPlaceHooks"]
-        assert await service._home_snapshot("Rua Antiga 2", date(2026, 11, 23)) == 3
-        snapshot.assert_awaited_once_with("home_address", "Rua Antiga 2", date(2026, 11, 23))
+        today = date(2026, 11, 23)
+        assert await service._home_snapshot(HomeValues(address="Rua Antiga 2", city_id=15), today) == 3
+        assert [c.args for c in snapshot.await_args_list] == [
+            ("home_address", "Rua Antiga 2", today), ("home_city_id", 15, today),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_place_service_snapshots_only_the_home_values_that_changed(self, monkeypatch):
+        from datetime import date
+
+        from app.features.location.places.service import HomeValues
+
+        snapshot = AsyncMock(return_value=1)
+        monkeypatch.setattr("app.dependencies.TripRepository.snapshot_home_value", snapshot)
+
+        service = get_place_service(session=AsyncMock())
+
+        assert await service._home_snapshot(HomeValues(city_id=15), date(2026, 11, 23)) == 1
+        snapshot.assert_awaited_once_with("home_city_id", 15, date(2026, 11, 23))
 
     def test_planning_holiday_provider_is_none_without_an_api_key(self, monkeypatch):
         monkeypatch.setenv("DISABLE_INTEGRATIONS", "false")

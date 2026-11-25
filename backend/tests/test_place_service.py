@@ -8,7 +8,7 @@ import pytest
 from app.features.briefing.schemas import HolidayItem
 from app.features.location.errors import LocationConflictError, LocationNotFoundError, LocationValidationError
 from app.features.location.places.schemas import PlaceCreate, PlaceUpdate
-from app.features.location.places.service import PlaceService
+from app.features.location.places.service import HomeValues, PlaceService
 
 _NOW = datetime(2026, 11, 1, tzinfo=timezone.utc)
 # A Monday, 10:30 local time.
@@ -292,7 +292,7 @@ class TestDelete:
         assert await service.delete(99) is False
 
 
-class TestHomeAddressSnapshot:
+class TestHomeSnapshot:
     @pytest.fixture
     def home(self, service):
         service.stored[9] = _HOME
@@ -301,21 +301,38 @@ class TestHomeAddressSnapshot:
 
     async def test_address_change_snapshots_the_old_address_before_saving(self, service, home, home_snapshot):
         await service.update(9, PlaceUpdate(address="New street 2"))
-        home_snapshot.assert_awaited_once_with("Old street 1", _LOCAL_NOW.date())
+        home_snapshot.assert_awaited_once_with(HomeValues(address="Old street 1"), _LOCAL_NOW.date())
 
-    async def test_other_edits_and_the_same_address_do_not(self, service, home, home_snapshot):
-        await service.update(9, PlaceUpdate(notes="Ring twice", address="Old street 1"))
+    async def test_city_change_snapshots_the_old_city(self, service, home, home_snapshot):
+        service._repo.get_by_name.return_value = []
+        await service.update(9, PlaceUpdate(city_id=16))
+        home_snapshot.assert_awaited_once_with(HomeValues(city_id=15), _LOCAL_NOW.date())
+
+    async def test_moving_to_another_city_snapshots_both(self, service, home, home_snapshot):
+        service._repo.get_by_name.return_value = []
+        await service.update(9, PlaceUpdate(city_id=16, address="Far street 3"))
+        home_snapshot.assert_awaited_once_with(HomeValues(address="Old street 1", city_id=15), _LOCAL_NOW.date())
+
+    async def test_other_edits_and_the_same_address_and_city_do_not(self, service, home, home_snapshot):
+        await service.update(9, PlaceUpdate(notes="Ring twice", address="Old street 1", city_id=15))
         home_snapshot.assert_not_called()
 
-    async def test_home_that_stops_being_home_snapshots_its_address(self, service, home, home_snapshot):
+    async def test_home_that_stops_being_home_snapshots_its_address_and_city(self, service, home, home_snapshot):
         await service.update(9, PlaceUpdate(kind="other"))
-        home_snapshot.assert_awaited_once()
+        home_snapshot.assert_awaited_once_with(HomeValues(address="Old street 1", city_id=15), _LOCAL_NOW.date())
+
+    async def test_a_home_without_address_still_snapshots_its_city(self, service, home_snapshot):
+        service.stored[9] = _place(id=9, name="Casa", kind="home")
+        service._repo.get_by_name.return_value = []
+        await service.update(9, PlaceUpdate(city_id=16))
+        home_snapshot.assert_awaited_once_with(HomeValues(city_id=15), _LOCAL_NOW.date())
 
     async def test_other_places_never_snapshot(self, service, home_snapshot):
         service.stored[2] = _place(id=2, address="Shop street")
-        await service.update(2, PlaceUpdate(address="Other street"))
+        service._repo.get_by_name.return_value = []
+        await service.update(2, PlaceUpdate(address="Other street", city_id=16))
         home_snapshot.assert_not_called()
 
-    async def test_deleting_home_snapshots_its_address_first(self, service, home, home_snapshot):
+    async def test_deleting_home_snapshots_its_address_and_city_first(self, service, home, home_snapshot):
         await service.delete(9)
-        home_snapshot.assert_awaited_once_with("Old street 1", _LOCAL_NOW.date())
+        home_snapshot.assert_awaited_once_with(HomeValues(address="Old street 1", city_id=15), _LOCAL_NOW.date())

@@ -4,9 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.location.places.repository import PlaceRepository
-from app.features.location.cities.repository import CityRepository
 from app.features.location.cities.schemas import CityRef
-from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.settings_schemas import (
     DEFAULT_CHARGE_LINK_LEAD_DAYS,
     DEFAULT_CHARGE_LINK_TAIL_DAYS,
@@ -59,7 +57,6 @@ class TravelSettingsService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._settings = SettingService(session)
-        self._cities = CityRepository(session)
         self._trips = TripRepository(session)
         self._places = PlaceRepository(session)
 
@@ -71,26 +68,20 @@ class TravelSettingsService:
                 values[field] = raw == "1" if raw else default
             else:
                 values[field] = type(default)(raw) if raw else default
-        # The address lives on the Home place (location.places); trips only read it.
+        # Home's address and city live on the Home place (location.places); trips only read them.
         home = await self._places.get_home()
-        values["home_address"] = home.address if home else None
-        raw_city = await self._settings.get_value(_key("home_city_id"))
-        city = await self._cities.get_city(int(raw_city)) if raw_city else None
-        values["home_city_id"] = city.id if city else None
-        values["home_city"] = CityRef.model_validate(city) if city else None
+        if home is not None:
+            values.update(
+                home_address=home.address, home_city_id=home.city_id, home_city=CityRef.model_validate(home.city),
+                home=", ".join(filter(None, [home.address, home.city.name])), home_place_id=home.id,
+            )
         return TravelSettingsRead(**values)
 
     async def update(self, data: TravelSettingsUpdate) -> TravelSettingsRead:
-        sent = data.model_dump(exclude_unset=True)
-        # Only the home city may be cleared with null; the numbers and flags ignore it.
-        changes = {f: v for f, v in sent.items() if v is not None or f == "home_city_id"}
-        if changes.get("home_city_id") is not None and await self._cities.get_city(changes["home_city_id"]) is None:
-            raise TravelNotFoundError(f"City {changes['home_city_id']} not found")
+        # null leaves a value as it is (the home fields can't be sent at all: the schema refuses them).
+        changes = {f: v for f, v in data.model_dump(exclude_unset=True).items() if v is not None}
         await self._snapshot_changed_homes(changes)
         for field, value in changes.items():
-            if field == "home_city_id":
-                await self._settings.set_value(_key(field), "" if value is None else str(value))
-                continue
             stored = ("1" if value else "0") if isinstance(value, bool) else ("" if value is None else str(value).strip())
             await self._settings.set_value(_key(field), stored)
         logger.info("Travel settings updated: fields=%s", list(changes.keys()))
@@ -100,8 +91,8 @@ class TravelSettingsService:
         """Before a home setting changes, give each trip that has already started the old value it was planned with.
 
         Only trips whose own column is still NULL get it, and an old value that was never set is not copied: upcoming
-        trips keep following the setting. The home address is not a setting any more: location's `PlaceService` snapshots it
-        when the Home place's address changes.
+        trips keep following the setting. The home address and city are not settings any more: location's `PlaceService`
+        snapshots them when the Home place's address or city changes.
         """
         current = await self.get()
         today = local_today()

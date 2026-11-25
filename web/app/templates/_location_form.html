@@ -1,5 +1,6 @@
-{# Location form, shared by the list page (new) and the detail page (edit). Vars: form_id, form_url, form_method, loc (or none), categories, selected_ids, kinds, hours_help. #}
-<form id="{{ form_id }}" class="space-y-3" data-location-form data-url="{{ form_url }}" data-method="{{ form_method }}"{% if loc and loc.kind == 'home' %} data-home-address="{{ loc.address or '' }}"{% endif %}>
+{# Location form, shared by the list page (new) and the detail page (edit). Vars: form_id, form_url, form_method, loc (or none), categories, selected_ids, kinds, hours_help.
+   Only the edit form has a City picker (a new location gets the Home place's city); it needs _city_dialog.html, airport-input.js and travel-city-picker.js on the page. #}
+<form id="{{ form_id }}" class="space-y-3" data-location-form data-url="{{ form_url }}" data-method="{{ form_method }}"{% if loc and loc.kind == 'home' %} data-home-address="{{ loc.address or '' }}" data-home-city="{{ loc.city.id }}"{% endif %}>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <label class="space-y-1">
       <span class="block text-xs text-gray-500">Name</span>
@@ -13,6 +14,14 @@
         {% for k in kinds %}<option value="{{ k }}"{% if k == current_kind %} selected{% endif %}>{{ k }}</option>{% endfor %}
       </select>
     </label>
+    {% if loc %}
+    <div class="space-y-1">
+      <span class="block text-xs text-gray-500">City{% if loc.kind == 'home' %} <span class="text-gray-400">(the home city: trips start here)</span>{% endif %}</span>
+      <input name="city_text" placeholder="Pick a city" aria-label="City" class="input input-sm input-bordered w-full">
+      <input type="hidden" name="city_id" value="{{ loc.city.id }}">
+      <script type="application/json" data-city>{{ loc.city | tojson }}</script>
+    </div>
+    {% endif %}
     <label class="space-y-1">
       <span class="block text-xs text-gray-500">Address</span>
       <input name="address" value="{{ loc.address or '' if loc else '' }}" class="input input-sm input-bordered w-full">

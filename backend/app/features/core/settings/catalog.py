@@ -107,6 +107,8 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
             CatalogSource(
                 TravelSettingsUpdate, TravelSettingsRead, "/travel/settings", "/travel/settings",
                 lambda: TRAVEL_DEFAULTS,
+                # Refused fields kept only for their 422; the read-only Home row shows both.
+                exclude=frozenset({"home_address", "home_city_id"}),
             ),
             CatalogSource(
                 ChecklistTemplateUpdate, ChecklistTemplateRead, "/travel/checklist-template",

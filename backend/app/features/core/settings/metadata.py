@@ -9,7 +9,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 Widget = Literal[
-    "number", "toggle", "time", "text", "longtext", "markdown", "weekdays", "windows", "city", "place", "json",
+    "number", "toggle", "time", "text", "longtext", "markdown", "weekdays", "windows", "place", "json",
     "checklist", "readonly", "hidden",
 ]
 

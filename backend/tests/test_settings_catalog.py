@@ -57,8 +57,10 @@ class TestFieldShape:
         assert field.widget == "longtext"
         assert field.max_length is not None
 
-    def test_home_city_has_a_confirm_note(self):
-        assert "already started" in _fields(build_catalog())["travel.home_city_id"].confirm_note
+    def test_home_is_one_read_only_row_linking_to_the_home_place(self):
+        fields = _fields(build_catalog())
+        assert (fields["travel.home"].widget, fields["travel.home"].href) == ("readonly", "/locations/home")
+        assert "travel.home_city_id" not in fields and "travel.home_address" not in fields
 
     def test_cascades_are_json_written_per_entry(self):
         field = _fields(build_catalog())["organizer.calendar_notification_cascades"]

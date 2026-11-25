@@ -23,7 +23,7 @@ from app.features.organizer.shopping_categories.service import ShoppingCategoryS
 from app.features.organizer.shopping_products.service import ShoppingProductService
 from app.features.organizer.holidays.service import HolidayService
 from app.features.location.hooks import PlaceHooks
-from app.features.location.places.service import PlaceService
+from app.features.location.places.service import HomeValues, PlaceService
 from app.features.organizer.everyday_places.hooks import OrganizerPlaceHooks
 from app.features.organizer.everyday_places.service import EverydayPlaceService
 from app.features.organizer.travel_times.service import TravelTimeService
@@ -250,10 +250,16 @@ def get_place_hooks(session: AsyncSession) -> list[PlaceHooks]:
 def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
     trips = TripRepository(session)
 
-    async def keep_old_home_address(old: str, today: date) -> int:
-        return await trips.snapshot_home_value("home_address", old, today)
+    async def keep_old_home(old: HomeValues, today: date) -> int:
+        """Started trips keep Home's old address and city (travel's trip home columns)."""
+        counts = [0]
+        if old.address is not None:
+            counts.append(await trips.snapshot_home_value("home_address", old.address, today))
+        if old.city_id is not None:
+            counts.append(await trips.snapshot_home_value("home_city_id", old.city_id, today))
+        return max(counts)
 
-    return PlaceService(session, get_place_hooks(session), get_planning_holiday_provider(), keep_old_home_address)
+    return PlaceService(session, get_place_hooks(session), get_planning_holiday_provider(), keep_old_home)
 
 def get_everyday_place_service(session: AsyncSession = Depends(get_session)) -> EverydayPlaceService:
     return EverydayPlaceService(session, get_place_service(session))

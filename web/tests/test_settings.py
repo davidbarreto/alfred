@@ -1,4 +1,3 @@
-import copy
 import json
 import re
 from pathlib import Path
@@ -29,7 +28,7 @@ VALUES = {
     },
     "/travel/settings": {
         "airport_buffer_min": 100, "home_to_airport_min": 45, "home_address": "1 Example Street",
-        "home_city_id": 3, "home_city": _CITY, "max_visits_per_day": 4, "visit_duration_min": 90,
+        "home_city_id": 3, "home_city": _CITY, "home": "1 Example Street, Lisbon", "home_place_id": 4, "max_visits_per_day": 4, "visit_duration_min": 90,
         "unpaid_leg_days": 30, "snooze_other_events": True,
     },
     "/travel/checklist-template": {"items": [
@@ -107,7 +106,7 @@ class TestBuildSections:
     def test_fields_without_default_are_never_modified(self):
         rows = _rows(build_sections(CATALOG, VALUES))
         assert rows["planning.wake_time"]["modified"] is False
-        assert rows["travel.home_city_id"]["modified"] is False
+        assert rows["travel.home"]["modified"] is False
 
     def test_cascade_modified_when_one_profile_differs(self):
         rows = _rows(build_sections(CATALOG, VALUES))
@@ -115,8 +114,11 @@ class TestBuildSections:
         assert rows["organizer.contact_birthday_cascades"]["modified"] is False
         assert "light: 10m, 0" in rows["organizer.calendar_notification_cascades"]["summary"]
 
-    def test_city_row_carries_the_city(self):
-        assert _rows(build_sections(CATALOG, VALUES))["travel.home_city_id"]["city"] == _CITY
+    def test_home_is_one_read_only_row_with_address_and_city(self):
+        rows = _rows(build_sections(CATALOG, VALUES))
+        assert (rows["travel.home"]["widget"], rows["travel.home"]["value"]) == ("readonly", "1 Example Street, Lisbon")
+        assert rows["travel.home"]["href"] == "/locations/home"
+        assert "travel.home_city_id" not in rows and "travel.home_address" not in rows
 
     def test_place_row_covers_both_fields_and_hides_the_city_row(self):
         rows = _rows(build_sections(CATALOG, VALUES))
@@ -184,9 +186,10 @@ class TestSettingsPage:
         assert "No meetings before 9.</textarea>" in html
         assert 'data-day="mon" checked' in html and 'data-day="sat" >' in html
         assert 'data-chip="09:00-12:00"' in html
-        assert 'value="Lisbon, Portugal"' in html
         assert "Edit JSON" in html and "normal: 1h, 10m, 0" in html
-        assert "1 Example Street" in html
+        assert "1 Example Street, Lisbon" in html and 'href="/locations/home"' in html
+        # The city widget went with the home city setting.
+        assert 'id="city-dialog"' not in html and "data-city-text" not in html
         assert "data-markdown-edit" in html and 'id="markdown-dialog"' in html
         assert 'data-name="send-photos"' in html and "3 days after the end" in html
 
@@ -301,6 +304,8 @@ class TestPlanWrites:
     @pytest.mark.parametrize("changes", [
         {"planning": {"travel_times": []}},
         {"travel": {"home_address": "x"}},
+        {"travel": {"home_city_id": 3}},
+        {"travel": {"home": "x"}},
         {"nope": {"x": 1}},
         {"organizer": {"profiles": {"nromal": ["1h"]}}},
         {"organizer": {"profiles": ["1h"]}},
@@ -365,16 +370,6 @@ class TestSave:
 
         assert body["travel"] == {"ok": False, "error": "airport_buffer_min: at most 600"}
         assert body["finance"]["ok"] is True and body["finance"]["values"]["cycle_start_day"] == 25
-
-    def test_city_change_returns_the_city(self, client, mock_api):
-        mock_api["get"].side_effect = _get()
-        mock_api["put"].side_effect = self._put()
-
-        body = client.post("/settings/save", json={"travel": {"home_city_id": None}}).json()
-
-        assert body["travel"]["values"]["home_city_id"] is None
-        assert "home_city" in body["travel"]["values"]
-        assert "home_address" in body["travel"]["values"]
 
     def test_place_save_returns_the_place_and_its_label(self, client, mock_api):
         mock_api["get"].side_effect = _get()

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from app.features.core.settings.metadata import setting
 from app.features.location.cities.schemas import CityRef
@@ -17,10 +17,14 @@ DEFAULT_CHARGE_LINK_TAIL_DAYS = 30
 class TravelSettingsRead(BaseModel):
     airport_buffer_min: int
     home_to_airport_min: int
+    # Where trips start: the Home place's address and city (location.places), never stored here. Trips that have
+    # started keep the values they were planned with (the trips' own home columns, written by keep_old_home).
     home_address: str | None = None
-    # The city trips start from; trips started before it changes keep the old one (see the trips' own home columns).
     home_city_id: int | None = None
     home_city: CityRef | None = None
+    # "<address>, <city>" for the read-only Home row of /settings, and the Home place it links to.
+    home: str | None = None
+    home_place_id: int | None = None
     max_visits_per_day: int = 4
     visit_duration_min: int = 90
     # Warn about legs with no linked charge when the trip starts within this many days (0 = never).
@@ -94,22 +98,19 @@ class TravelSettingsUpdate(BaseModel):
         "Tagged charges until", "…and until this long after it.",
         unit="days after", group="Charges", ge=0, le=365,
     )
-    # Moved to the Home location: sending it is refused, so an old client fails loudly instead of being ignored.
-    home_address: str | None = setting(
-        "Home address", "Where the home → airport directions start. It is the Home location's address.",
-        widget="readonly", href="/locations", group="Home",
+    # Read-only: the Home place's address and city. Sending it (or the two fields it replaced) is refused, so an old
+    # client fails loudly instead of being ignored.
+    home: str | None = setting(
+        "Home", "Where trips start and the home → airport directions begin: the Home place's address and city.",
+        widget="readonly", href="/locations/home", group="Home",
     )
-    # Send null to clear the home city (an unknown id is a 404).
-    home_city_id: int | None = setting(
-        "Home city", "The city trips start from. Empty = none.",
-        widget="city", group="Home",
-        confirm_note="Trips that have already started keep the old home city.",
-    )
+    home_address: str | None = None
+    home_city_id: int | None = None
 
-    @field_validator("home_address")
+    @field_validator("home", "home_address", "home_city_id", mode="before")
     @classmethod
-    def _home_address_moved(cls, value: str | None) -> str | None:
+    def _home_moved(cls, value: object, info: ValidationInfo) -> object:
         raise ValueError(
-            "home_address moved to the Home place: change it with PATCH /location/places/{id} "
+            f"{info.field_name} moved to the Home place: change its address or city with PATCH /location/places/{{id}} "
             "(find Home with GET /location/places?kind=home) or on the portal's Locations page"
         )

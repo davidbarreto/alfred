@@ -41,7 +41,8 @@
     });
     // Text typed without picking never changes the city.
     input.addEventListener("blur", () => { input.value = label; });
-    clearButton.addEventListener("click", () => set(null, true));
+    // No clear button: the city is required.
+    if (clearButton) clearButton.addEventListener("click", () => set(null, true));
 
     return {
       reset: (city) => set(city || null, false),

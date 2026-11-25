@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 import app.client as api
 from app.shared.forward import forward, safe_get
@@ -70,6 +70,13 @@ async def locations_page(request: Request):
         "kinds": KINDS,
         "hours_help": _HOURS_HELP,
     })
+
+
+@router.get("/home")
+async def home_location():
+    """The Home place's page (the /settings Home row links here); the list when there is no Home yet."""
+    homes = await safe_get("/location/places", params={"kind": "home"}, default=[])
+    return RedirectResponse(f"/locations/{homes[0]['id']}" if homes else "/locations", status_code=302)
 
 
 @router.get("/{location_id}", response_class=HTMLResponse)

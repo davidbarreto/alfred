@@ -100,8 +100,8 @@ def _city_row(id=1, name="Alpha", country_id=2):
 def service():
     svc = TravelCityService(AsyncMock())
     svc._repo, svc._cities, svc._countries, svc._place_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
-    svc._cost_repo, svc._settings = AsyncMock(), AsyncMock()
-    svc._settings.get_value.return_value = None
+    svc._cost_repo, svc._places = AsyncMock(), AsyncMock()
+    svc._places.get_home.return_value = None
     svc._cost_repo.get_place_linked_ids.return_value = set()
     svc._cost_repo.get_unlinked_tagged_ids.return_value = set()
     svc._cost_repo.get_cost.return_value = (Decimal("0.00"), 0, 0)
@@ -346,17 +346,19 @@ class TestHome:
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
         service._repo.get_trips_of_cities.return_value = []
-        service._settings.get_value.return_value = "1"
+        service._places.get_home.return_value = SimpleNamespace(city_id=1)
         assert (await service.get_city_detail(1)).home is True
-        service._settings.get_value.return_value = "9"
+        service._places.get_home.return_value = SimpleNamespace(city_id=9)
+        assert (await service.get_city_detail(1)).home is False
+        service._places.get_home.return_value = None
         assert (await service.get_city_detail(1)).home is False
 
 
 @pytest.fixture
 def hooks():
     h = TravelLocationHooks(AsyncMock())
-    h._repo, h._trip_repo, h._link_repo, h._settings, h._notes = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
-    h._settings.get_value.return_value = None
+    h._repo, h._trip_repo, h._link_repo, h._places, h._notes = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+    h._places.get_home.return_value = None
     h._repo.count_places.return_value = 0
     h._repo.count_leg_ends.return_value = 0
     h._trip_repo.count_home_city_trips.return_value = 0
@@ -374,8 +376,8 @@ class TestHooks:
         assert await hooks.city_in_use(_city_row()) == "Alpha is used by 2 place(s), 3 leg end(s) and 1 trip home(s)"
 
     async def test_the_home_city_is_in_use(self, hooks):
-        hooks._settings.get_value.return_value = "1"
-        assert "home city" in await hooks.city_in_use(_city_row())
+        hooks._places.get_home.return_value = SimpleNamespace(city_id=1)
+        assert await hooks.city_in_use(_city_row()) == "Alpha is the home city (the Home place is there)"
 
     async def test_a_new_city_gets_the_leg_ends_with_its_name(self, hooks):
         hooks._repo.attach_leg_ends.return_value = 2

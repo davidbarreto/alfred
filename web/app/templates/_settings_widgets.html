@@ -57,16 +57,6 @@
 </div>
 {% endmacro %}
 
-{% macro city(row) %}
-<div class="flex items-center gap-1" data-control-group>
-  <input data-city-text placeholder="Pick a city" class="input input-sm input-bordered w-48" aria-label="{{ row.label }}"
-         value="{{ row.city.name ~ ', ' ~ row.city.country.name if row.city else '' }}">
-  <input type="hidden" data-city-id value="{{ row.value if row.value is not none else '' }}">
-  <button type="button" class="btn btn-xs btn-ghost" data-city-clear title="No city">clear</button>
-  <script type="application/json" data-city>{{ row.city | tojson }}</script>
-</div>
-{% endmacro %}
-
 {% macro place(row) %}
 {% set current = 'place:' ~ row.value.place_id if row.value.place_id is not none
    else ('city:' ~ row.value.city_id if row.value.city_id is not none else '') %}
@@ -152,7 +142,6 @@
 {%- elif row.widget == 'checklist' %}{{ checklist(row) }}
 {%- elif row.widget == 'weekdays' %}{{ weekdays(row) }}
 {%- elif row.widget == 'windows' %}{{ windows(row) }}
-{%- elif row.widget == 'city' %}{{ city(row) }}
 {%- elif row.widget == 'place' %}{{ place(row) }}
 {%- elif row.widget == 'json' %}{{ json(row) }}
 {%- elif row.widget == 'readonly' %}{{ readonly(row) }}

@@ -21,11 +21,26 @@ function locationBody(form) {
   const kind = (data.get('kind') || '').trim();
   if (kind) body.kind = kind;
   if (form.querySelector('[name="category_ids"]')) body.category_ids = data.getAll('category_ids').map(Number);
+  if (form.cityPicker && form.cityPicker.touched()) body.city_id = form.cityPicker.value();
   return body;
 }
 
+// The edit form's City picker: the place's city, required (no clear), "New city…" opens the shared dialog.
+document.querySelectorAll('[data-location-form]').forEach((form) => {
+  const text = form.elements.city_text;
+  if (!text) return;
+  form.cityPicker = initCityPicker({
+    input: text, idInput: form.elements.city_id, terminalInput: text,
+    newCity: initNewCityDialog({ dialog: document.getElementById('city-dialog'), send: async (method, url, body) => {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
+    } }),
+  });
+  form.cityPicker.reset(JSON.parse(form.querySelector('[data-city]').textContent));
+});
+
 // A form submits to its data-url with its data-method; on success the page opens the saved location
-// (with ?moved=1 when Home's address changed, so the page can say what that does and does not update).
+// (with ?moved=1 when Home's address or city changed, so the page can say what that does and does not update).
 document.querySelectorAll('[data-location-form]').forEach((form) => {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -34,7 +49,7 @@ document.querySelectorAll('[data-location-form]').forEach((form) => {
     try {
       const saved = await locationSend(form.dataset.url, form.dataset.method, locationBody(form));
       const homeMoved = form.dataset.homeAddress !== undefined && saved.kind === 'home'
-        && (saved.address || '') !== form.dataset.homeAddress;
+        && ((saved.address || '') !== form.dataset.homeAddress || String(saved.city.id) !== form.dataset.homeCity);
       window.location.href = `/locations/${saved.id}${homeMoved ? '?moved=1' : ''}`;
     } catch (e) { error.textContent = e.message; }
   });

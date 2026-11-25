@@ -3812,7 +3812,8 @@
               "pm.test('Both settings present', () => { pm.expect(j.airport_buffer_min).to.be.a('number'); pm.expect(j.home_to_airport_min).to.be.a('number'); pm.expect(j).to.have.property('home_address'); });",
               "pm.environment.set('travel_buffer_original', j.airport_buffer_min);",
               "pm.environment.set('travel_ride_original', j.home_to_airport_min);",
-              "pm.test('Visit limit and unpaid-leg window have defaults', () => { pm.expect(pm.response.json().max_visits_per_day).to.be.a('number'); pm.expect(pm.response.json().unpaid_leg_days).to.be.a('number'); });"
+              "pm.test('Visit limit and unpaid-leg window have defaults', () => { pm.expect(pm.response.json().max_visits_per_day).to.be.a('number'); pm.expect(pm.response.json().unpaid_leg_days).to.be.a('number'); });",
+              "pm.test('Home comes from the Home place', () => { pm.expect(j).to.have.property('home'); pm.expect(j).to.have.property('home_place_id'); pm.expect(j).to.have.property('home_city_id'); });"
             ],
             "type": "text/javascript"
           }
@@ -7548,13 +7549,14 @@
       }
     },
     {
-      "name": "178 - Set Unknown Home City",
+      "name": "178 - Home City Setting Is Refused",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+              "pm.test('Names where it moved', () => pm.expect(JSON.stringify(pm.response.json())).to.include('/location/places'));"
             ],
             "type": "text/javascript"
           }
@@ -7585,7 +7587,84 @@
       }
     },
     {
-      "name": "179 - Set Home City",
+      "name": "178a - Find The Home Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const homes = pm.response.json();",
+              "pm.test('One Home place', () => pm.expect(homes.length).to.eql(1));",
+              "pm.environment.set('travel_home_place_id', homes[0].id);",
+              "pm.environment.set('travel_home_original_city_id', homes[0].city.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/location/places?kind=home",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "kind",
+              "value": "home"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "179 - Move Home To The Home City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Home is in the new city', () => pm.expect(pm.response.json().city.id).to.eql(Number(pm.environment.get('travel_home_city_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/location/places/{{travel_home_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "places",
+            "{{travel_home_place_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"city_id\": {{travel_home_city_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "179a - Settings Read The Home Place",
       "event": [
         {
           "listen": "test",
@@ -7593,20 +7672,16 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
-              "pm.test('Home city is returned with its country', () => { pm.expect(j.home_city_id).to.eql(Number(pm.environment.get('travel_home_city_id'))); pm.expect(j.home_city.country.name).to.eql('Testland'); });"
+              "pm.test('Home city is the Home place\\'s, with its country', () => { pm.expect(j.home_city_id).to.eql(Number(pm.environment.get('travel_home_city_id'))); pm.expect(j.home_city.country.name).to.eql('Testland'); });",
+              "pm.test('One Home row', () => { pm.expect(j.home).to.include('Postman Home ' + pm.environment.get('travel_ts')); pm.expect(j.home_place_id).to.eql(Number(pm.environment.get('travel_home_place_id'))); });"
             ],
             "type": "text/javascript"
           }
         }
       ],
       "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
+        "method": "GET",
+        "header": [],
         "url": {
           "raw": "{{base_url}}/travel/settings",
           "host": [
@@ -7616,10 +7691,6 @@
             "travel",
             "settings"
           ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"home_city_id\": {{travel_home_city_id}}\n}"
         }
       }
     },
@@ -7733,7 +7804,7 @@
       }
     },
     {
-      "name": "183 - Trip Follows The Settings Home",
+      "name": "183 - Trip Follows The Home Place",
       "event": [
         {
           "listen": "test",
@@ -7741,7 +7812,7 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
-              "pm.test('Home from the settings', () => { pm.expect(j.home.city.id).to.eql(Number(pm.environment.get('travel_home_city_id'))); pm.expect(j.home.from_trip).to.eql(false); pm.expect(j.home_city_id).to.eql(null); });"
+              "pm.test('Home from the Home place', () => { pm.expect(j.home.city.id).to.eql(Number(pm.environment.get('travel_home_city_id'))); pm.expect(j.home.from_trip).to.eql(false); pm.expect(j.home_city_id).to.eql(null); });"
             ],
             "type": "text/javascript"
           }
@@ -7890,7 +7961,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Follows the settings again', () => { const j = pm.response.json(); pm.expect(j.home_city_id).to.eql(null); pm.expect(j.airport_buffer_min).to.eql(null); });"
+              "pm.test('Follows the Home place again', () => { const j = pm.response.json(); pm.expect(j.home_city_id).to.eql(null); pm.expect(j.airport_buffer_min).to.eql(null); });"
             ],
             "type": "text/javascript"
           }
@@ -8145,27 +8216,61 @@
       }
     },
     {
-      "name": "194 - Clear The Home City",
+      "name": "194 - Move Home Back",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('No home city', () => { const j = pm.response.json(); pm.expect(j.home_city_id).to.eql(null); pm.expect(j.home_city).to.eql(null); });"
+              "pm.test('Home is back in its city', () => pm.expect(pm.response.json().city.id).to.eql(Number(pm.environment.get('travel_home_original_city_id'))));"
             ],
             "type": "text/javascript"
           }
         }
       ],
       "request": {
-        "method": "PUT",
+        "method": "PATCH",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           }
         ],
+        "url": {
+          "raw": "{{base_url}}/location/places/{{travel_home_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "places",
+            "{{travel_home_place_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"city_id\": {{travel_home_original_city_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "194a - Settings Follow Home Back",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Home city is the original one', () => pm.expect(pm.response.json().home_city_id).to.eql(Number(pm.environment.get('travel_home_original_city_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
         "url": {
           "raw": "{{base_url}}/travel/settings",
           "host": [
@@ -8175,10 +8280,6 @@
             "travel",
             "settings"
           ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"home_city_id\": null\n}"
         }
       }
     },

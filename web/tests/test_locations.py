@@ -10,7 +10,7 @@ from app.shared.location_kinds import KIND_ICONS, KINDS, location_icon
 
 def _location(id=1, name="Market", kind="supermarket", **kw):
     base = {
-        "id": id, "name": name, "kind": kind, "address": None, "maps_url": None, "opening_hours": None,
+        "id": id, "name": name, "kind": kind, "city": _HOMETOWN, "address": None, "maps_url": None, "opening_hours": None,
         "opening_hours_text": "", "notes": None, "active": True, "categories": [],
         "today": {"date": "2026-11-23", "hours": None, "holiday": None, "note": None, "open_now": None},
         "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z",
@@ -20,11 +20,15 @@ def _location(id=1, name="Market", kind="supermarket", **kw):
 
 
 _GROCERIES = {"id": 1, "name": "groceries"}
+_HOMETOWN = {"id": 15, "name": "Hometown", "country": {"id": 1, "name": "Testland", "code": "TL"}}
 _HOURS = {"mon": [["08:00", "13:00"], ["14:00", "20:00"]], "sun": [], "hol": []}
 
 
-def _routes(locations=None, location=None, categories=None, travel_times=None, events=None):
+def _routes(locations=None, location=None, categories=None, travel_times=None, events=None, homes=None):
     def fake_get(path, params=None):
+        if path == "/location/places":
+            assert params == {"kind": "home"}
+            return homes if homes is not None else []
         if path == "/organizer/calendar-events":
             return events if events is not None else []
         if path == "/organizer/places":
@@ -194,13 +198,28 @@ class TestDetailPage:
         assert "Today is a public holiday (Feriado): holiday, hours unknown." in text
         assert "Open now" not in text and "Closed now" not in text
 
-    def test_home_form_remembers_the_address_to_detect_a_move(self, client, mock_api):
+    def test_home_form_remembers_the_address_and_city_to_detect_a_move(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location(kind="home", name="Home", address="Rua A 1"))
 
         text = client.get("/locations/1").text
 
-        assert 'data-home-address="Rua A 1"' in text
+        assert 'data-home-address="Rua A 1" data-home-city="15"' in text
+        assert "the home city: trips start here" in text
         assert 'id="home-moved"' not in text
+
+    def test_edit_form_has_a_city_picker_with_the_current_city(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location())
+
+        text = client.get("/locations/1").text
+
+        assert 'name="city_text"' in text and '<input type="hidden" name="city_id" value="15">' in text
+        assert '"name": "Hometown"' in text
+        assert 'id="city-dialog"' in text and "/static/js/travel-city-picker.js" in text
+        assert "the home city" not in text
+
+    def test_new_form_has_no_city_picker(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(locations=[])
+        assert 'name="city_text"' not in client.get("/locations").text
 
     def test_moved_banner_only_for_home(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location(kind="home", name="Home"))
@@ -221,6 +240,17 @@ class TestDetailPage:
         resp = client.get("/locations/9")
 
         assert resp.status_code == 404 and "does not exist" in resp.text
+
+
+class TestHomeLink:
+    def test_opens_the_home_place(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(homes=[_location(29, "Home", "home")])
+        response = client.get("/locations/home", follow_redirects=False)
+        assert (response.status_code, response.headers["location"]) == (302, "/locations/29")
+
+    def test_without_a_home_opens_the_list(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(homes=[])
+        assert client.get("/locations/home", follow_redirects=False).headers["location"] == "/locations"
 
 
 class TestWrites:

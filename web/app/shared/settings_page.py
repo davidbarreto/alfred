@@ -53,9 +53,6 @@ def _row(field: dict, values: dict) -> dict:
         "summary": _summary(value) if field["widget"] == "json" else [],
         "search": " ".join(filter(None, [field["label"], field["key"], field.get("description")])).lower(),
     }
-    if field["widget"] == "city":
-        # The picker shows the city's name: the GET returns the object next to its id (home_city_id -> home_city).
-        row["city"] = values.get(field["field"].removesuffix("_id"))
     if field["widget"] == "place":
         # The namespace GET lists what can be picked and what is in use now.
         row["choices"] = values.get("choices") or {"places": [], "cities": []}
@@ -174,6 +171,4 @@ def saved_values(catalog: dict, namespace: str, responses: list[dict]) -> dict[s
         values[field["field"]] = _value(field, merged)
         if field["widget"] == "place":
             values["place_label"] = merged.get("place_label")
-        if field["widget"] == "city":
-            values[field["field"].removesuffix("_id")] = merged.get(field["field"].removesuffix("_id"))
     return values

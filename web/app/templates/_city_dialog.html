@@ -1,0 +1,13 @@
+{# The "New city…" dialog of a city picker (travel-city-picker.js initNewCityDialog); needs airport-input.js for the country typeahead. #}
+<dialog id="city-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-sm space-y-3">
+    <h3 class="text-sm font-semibold">New city</h3>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span><input name="name" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span><input name="country" required maxlength="100" class="input input-sm input-bordered w-full"><input type="hidden" name="country_code"></label>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Create</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+</dialog>

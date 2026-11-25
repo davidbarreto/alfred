@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.auth import require_auth
 from app.dependencies import CalendarNotificationSettingsServiceDep
+from app.features.organizer.calendar_events.schemas import NotificationProfile
 from app.features.organizer.calendar_events.notification_settings.schemas import (
     CalendarNotificationCascadeUpdate,
     CalendarNotificationCascadesRead,
@@ -19,6 +20,6 @@ async def get_calendar_notification_settings(service: CalendarNotificationSettin
 
 @router.put("/{profile}", response_model=CalendarNotificationCascadesRead)
 async def update_calendar_notification_profile(
-    profile: str, request: CalendarNotificationCascadeUpdate, service: CalendarNotificationSettingsServiceDep
+    profile: NotificationProfile, request: CalendarNotificationCascadeUpdate, service: CalendarNotificationSettingsServiceDep
 ):
     return await service.update_profile(profile, request)

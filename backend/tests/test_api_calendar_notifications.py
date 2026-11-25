@@ -95,5 +95,33 @@ class TestGetCalendarNotificationSettings:
         assert response.status_code == 200
         service.update_profile.assert_awaited_once()
 
+    def test_unknown_profile_is_refused(self, client):
+        from app.dependencies import get_calendar_notification_settings_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_calendar_notification_settings_service] = lambda: service
+
+        response = client.put(
+            "/organizer/calendar-notification-settings/nromal", json={"offsets": ["10m"]}, headers=AUTH
+        )
+
+        assert response.status_code == 422
+        service.update_profile.assert_not_awaited()
+
+    def test_invalid_offset_is_refused(self, client):
+        from app.dependencies import get_calendar_notification_settings_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_calendar_notification_settings_service] = lambda: service
+
+        response = client.put(
+            "/organizer/calendar-notification-settings/light", json={"offsets": ["soon"]}, headers=AUTH
+        )
+
+        assert response.status_code == 422
+        service.update_profile.assert_not_awaited()
+
     def test_requires_auth(self, client):
         assert client.get("/organizer/calendar-notification-settings").status_code == 403

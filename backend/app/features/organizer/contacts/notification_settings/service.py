@@ -1,15 +1,14 @@
 import json
 import logging
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.organizer.contacts.notification_settings.schemas import (
+    BirthdayRelationship,
     ContactBirthdayCascadeUpdate,
     ContactBirthdayCascadesRead,
 )
-from app.shared.utils.time_text import parse_offset
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +29,9 @@ class ContactBirthdaySettingsService:
 
     async def get(self) -> ContactBirthdayCascadesRead:
         raw = await self._settings.get_value(CASCADES_KEY)
-        stored: dict[str, list[str]] = json.loads(raw) if raw is not None else {}
-        relationships = {**DEFAULT_CASCADES, **stored}
+        stored: dict[str, list[str]] = json.loads(raw) if raw else {}
+        # A relationship the app does not know (stored before the PUT checked it) is ignored, not served.
+        relationships = {**DEFAULT_CASCADES, **{k: v for k, v in stored.items() if k in DEFAULT_CASCADES}}
         return ContactBirthdayCascadesRead(relationships=relationships)
 
     async def get_cascade(self, relationship: str | None) -> list[str]:
@@ -39,14 +39,8 @@ class ContactBirthdaySettingsService:
         return settings.relationships.get(relationship or "other", DEFAULT_CASCADES["other"])
 
     async def update_relationship(
-        self, relationship: str, data: ContactBirthdayCascadeUpdate
+        self, relationship: BirthdayRelationship, data: ContactBirthdayCascadeUpdate
     ) -> ContactBirthdayCascadesRead:
-        for offset in data.offsets:
-            try:
-                parse_offset(offset)
-            except ValueError as exc:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-
         current = await self.get()
         current.relationships[relationship] = data.offsets
         await self._settings.set_value(CASCADES_KEY, json.dumps(current.relationships))

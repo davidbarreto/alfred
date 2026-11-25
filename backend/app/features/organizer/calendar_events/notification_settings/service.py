@@ -1,15 +1,14 @@
 import json
 import logging
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
+from app.features.organizer.calendar_events.schemas import NotificationProfile
 from app.features.organizer.calendar_events.notification_settings.schemas import (
     CalendarNotificationCascadeUpdate,
     CalendarNotificationCascadesRead,
 )
-from app.shared.utils.time_text import parse_offset
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +30,9 @@ class CalendarNotificationSettingsService:
 
     async def get(self) -> CalendarNotificationCascadesRead:
         raw = await self._settings.get_value(CASCADES_KEY)
-        stored: dict[str, list[str]] = json.loads(raw) if raw is not None else {}
-        profiles = {**DEFAULT_CASCADES, **stored}
+        stored: dict[str, list[str]] = json.loads(raw) if raw else {}
+        # A profile the app does not know (stored before the PUT checked it) is ignored, not served.
+        profiles = {**DEFAULT_CASCADES, **{k: v for k, v in stored.items() if k in DEFAULT_CASCADES}}
         return CalendarNotificationCascadesRead(profiles=profiles)
 
     async def get_cascade(self, profile: str) -> list[str]:
@@ -40,14 +40,8 @@ class CalendarNotificationSettingsService:
         return settings.profiles.get(profile, DEFAULT_CASCADES["normal"])
 
     async def update_profile(
-        self, profile: str, data: CalendarNotificationCascadeUpdate
+        self, profile: NotificationProfile, data: CalendarNotificationCascadeUpdate
     ) -> CalendarNotificationCascadesRead:
-        for offset in data.offsets:
-            try:
-                parse_offset(offset)
-            except ValueError as exc:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-
         current = await self.get()
         current.profiles[profile] = data.offsets
         await self._settings.set_value(CASCADES_KEY, json.dumps(current.profiles))

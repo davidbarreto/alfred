@@ -8,7 +8,8 @@ from app.features.study.settings.schemas import StudySettingsRead, StudySettings
 logger = logging.getLogger(__name__)
 
 MAX_ACTIVE_PLANS_KEY = "study.max_active_plans"
-_DEFAULT_MAX_ACTIVE_PLANS = 3
+# A missing or blank row falls back to the default.
+DEFAULTS = {"max_active_plans": 3}
 
 
 class StudySettingsService:
@@ -18,7 +19,7 @@ class StudySettingsService:
 
     async def get(self) -> StudySettingsRead:
         raw = await self._settings.get_value(MAX_ACTIVE_PLANS_KEY)
-        max_active_plans = int(raw) if raw is not None else _DEFAULT_MAX_ACTIVE_PLANS
+        max_active_plans = int(raw) if raw else DEFAULTS["max_active_plans"]
         return StudySettingsRead(max_active_plans=max_active_plans)
 
     async def get_max_active_plans(self) -> int:

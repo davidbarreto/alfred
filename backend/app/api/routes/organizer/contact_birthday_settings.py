@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.api.auth import require_auth
 from app.dependencies import ContactBirthdaySettingsServiceDep
 from app.features.organizer.contacts.notification_settings.schemas import (
+    BirthdayRelationship,
     ContactBirthdayCascadeUpdate,
     ContactBirthdayCascadesRead,
 )
@@ -19,6 +20,6 @@ async def get_contact_birthday_settings(service: ContactBirthdaySettingsServiceD
 
 @router.put("/{relationship}", response_model=ContactBirthdayCascadesRead)
 async def update_contact_birthday_cascade(
-    relationship: str, request: ContactBirthdayCascadeUpdate, service: ContactBirthdaySettingsServiceDep
+    relationship: BirthdayRelationship, request: ContactBirthdayCascadeUpdate, service: ContactBirthdaySettingsServiceDep
 ):
     return await service.update_relationship(relationship, request)

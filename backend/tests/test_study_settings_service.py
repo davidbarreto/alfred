@@ -20,6 +20,10 @@ class TestGet:
         assert (await service.get()).max_active_plans == 3
         service._settings.get_value.assert_awaited_once_with(MAX_ACTIVE_PLANS_KEY)
 
+    async def test_blank_row_falls_back_to_default(self, service):
+        service._settings.get_value.return_value = ""
+        assert (await service.get()).max_active_plans == 3
+
     async def test_reads_stored_value(self, service):
         service._settings.get_value.return_value = "5"
         assert await service.get_max_active_plans() == 5

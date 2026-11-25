@@ -30,6 +30,14 @@ class TestGet:
         assert result == FinanceSettingsRead(cycle_start_day=25)
 
 
+    async def test_blank_row_falls_back_to_default(self, service):
+        service._settings.get_value.return_value = ""
+
+        result = await service.get()
+
+        assert result == FinanceSettingsRead(cycle_start_day=1)
+
+
 class TestGetCycleStartDay:
     async def test_returns_int(self, service):
         service._settings.get_value.return_value = "25"

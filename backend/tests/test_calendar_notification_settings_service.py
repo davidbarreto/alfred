@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 from unittest.mock import AsyncMock
 
 from app.features.organizer.calendar_events.notification_settings.schemas import (
@@ -33,6 +34,11 @@ class TestGet:
         assert result.profiles["light"] == ["10m", "0"]
         assert result.profiles["cant_miss"] == DEFAULT_CASCADES["cant_miss"]
 
+    async def test_ignores_unknown_stored_profile(self, service):
+        service._settings.get_value.return_value = json.dumps({"nromal": ["10m"]})
+        result = await service.get()
+        assert result.profiles == DEFAULT_CASCADES
+
 
 class TestGetCascade:
     async def test_returns_profile_cascade(self, service):
@@ -56,7 +62,6 @@ class TestUpdateProfile:
         assert stored["light"] == ["10m", "0"]
         assert stored["cant_miss"] == DEFAULT_CASCADES["cant_miss"]
 
-    async def test_rejects_invalid_offset(self, service):
-        service._settings.get_value.return_value = None
-        with pytest.raises(Exception):
-            await service.update_profile("light", CalendarNotificationCascadeUpdate(offsets=["nonsense"]))
+    def test_schema_rejects_invalid_offset(self):
+        with pytest.raises(ValidationError, match="nonsense"):
+            CalendarNotificationCascadeUpdate(offsets=["nonsense"])

@@ -91,5 +91,29 @@ class TestGetContactBirthdaySettings:
         assert response.status_code == 200
         service.update_relationship.assert_awaited_once()
 
+    def test_unknown_relationship_is_refused(self, client):
+        from app.dependencies import get_contact_birthday_settings_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_contact_birthday_settings_service] = lambda: service
+
+        response = client.put("/organizer/contact-birthday-settings/freind", json={"offsets": ["3d"]}, headers=AUTH)
+
+        assert response.status_code == 422
+        service.update_relationship.assert_not_awaited()
+
+    def test_invalid_offset_is_refused(self, client):
+        from app.dependencies import get_contact_birthday_settings_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_contact_birthday_settings_service] = lambda: service
+
+        response = client.put("/organizer/contact-birthday-settings/friend", json={"offsets": ["soon"]}, headers=AUTH)
+
+        assert response.status_code == 422
+        service.update_relationship.assert_not_awaited()
+
     def test_requires_auth(self, client):
         assert client.get("/organizer/contact-birthday-settings").status_code == 403

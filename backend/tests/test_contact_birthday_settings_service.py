@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 from unittest.mock import AsyncMock
 
 from app.features.organizer.contacts.notification_settings.schemas import ContactBirthdayCascadeUpdate
@@ -31,6 +32,11 @@ class TestGet:
         assert result.relationships["friend"] == ["3d"]
         assert result.relationships["family"] == DEFAULT_CASCADES["family"]
 
+    async def test_ignores_unknown_stored_relationship(self, service):
+        service._settings.get_value.return_value = json.dumps({"freind": ["3d"]})
+        result = await service.get()
+        assert result.relationships == DEFAULT_CASCADES
+
 
 class TestGetCascade:
     async def test_returns_relationship_cascade(self, service):
@@ -59,7 +65,6 @@ class TestUpdateRelationship:
         assert stored["friend"] == ["3d"]
         assert stored["family"] == DEFAULT_CASCADES["family"]
 
-    async def test_rejects_invalid_offset(self, service):
-        service._settings.get_value.return_value = None
-        with pytest.raises(Exception):
-            await service.update_relationship("friend", ContactBirthdayCascadeUpdate(offsets=["nonsense"]))
+    def test_schema_rejects_invalid_offset(self):
+        with pytest.raises(ValidationError, match="nonsense"):
+            ContactBirthdayCascadeUpdate(offsets=["nonsense"])

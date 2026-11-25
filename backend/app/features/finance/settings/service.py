@@ -8,7 +8,8 @@ from app.features.finance.settings.schemas import FinanceSettingsRead, FinanceSe
 logger = logging.getLogger(__name__)
 
 CYCLE_START_DAY_KEY = "finance.cycle_start_day"
-_DEFAULT_CYCLE_START_DAY = 1
+# A missing or blank row falls back to the default.
+DEFAULTS = {"cycle_start_day": 1}
 
 
 class FinanceSettingsService:
@@ -18,7 +19,7 @@ class FinanceSettingsService:
 
     async def get(self) -> FinanceSettingsRead:
         raw = await self._settings.get_value(CYCLE_START_DAY_KEY)
-        cycle_start_day = int(raw) if raw is not None else _DEFAULT_CYCLE_START_DAY
+        cycle_start_day = int(raw) if raw else DEFAULTS["cycle_start_day"]
         return FinanceSettingsRead(cycle_start_day=cycle_start_day)
 
     async def get_cycle_start_day(self) -> int:

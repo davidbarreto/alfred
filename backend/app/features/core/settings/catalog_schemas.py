@@ -33,6 +33,9 @@ class SettingFieldRead(BaseModel):
     entry_field: str | None = None
     # Other fields this control sets with its own (they have widget "hidden").
     covers: list[str] | None = None
+    # A read-model field shown read-only next to the editor (the base persona), under `reference_label`.
+    reference: str | None = None
+    reference_label: str | None = None
     # A tuning knob: the page shows it only with "Show tuning" on (or when a search matches it).
     advanced: bool = False
 
@@ -53,12 +56,5 @@ class SettingsNamespaceRead(BaseModel):
     links: list[SettingsLinkRead] = []
 
 
-class StoredSettingRead(BaseModel):
-    key: str
-    value: str
-
-
 class SettingsCatalogRead(BaseModel):
     namespaces: list[SettingsNamespaceRead]
-    # Stored keys no field covers (checklist template, pause state, ...), shown read-only. Never `assistant.*`.
-    unregistered: list[StoredSettingRead]

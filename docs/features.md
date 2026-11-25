@@ -83,7 +83,7 @@ Alfred's long-term knowledge about you and the short-term context it carries.
 ## Chat and assistant
 
 - **Chat:** `/chat` in the portal, or Telegram. Messages are classified into a command (embedding match, LLM fallback) and executed; anything else is a normal conversation with the LLM.
-- **Persona:** the chat prompt is the committed basic persona (`backend/app/assistant/persona.md`, nothing personal), then the user's name (`/settings#assistant`) and persona additions (`/persona`), both `assistant.*` in `core.settings`. The briefings use the name too.
+- **Persona:** the chat prompt is the committed basic persona (`backend/app/assistant/persona.md`, nothing personal), then the user's name (`/settings#assistant`) and persona additions (also `/settings#assistant`), both `assistant.*` in `core.settings`. The briefings use the name too.
 - **Voice:** Telegram voice messages are transcribed (`POST /core/transcription`) and handled like text.
 - **Commands:** `assistant focus` ("what should I focus on now"), `reminder set`, `weather current`, `recall search`, `help`.
 - **Sessions and messages:** every conversation is logged (`/core/sessions`, `/core/messages`, `/core/command-executions`); browse them in the portal under `/insights`.

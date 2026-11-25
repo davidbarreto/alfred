@@ -6,14 +6,10 @@ by the route, so one failing namespace leaves only its own rows out.
 """
 from typing import Any
 
-UNREGISTERED_PREVIEW = 5
-
-# Rows that show no value: the value is edited, and may be personal, on another page.
-_VALUELESS_WIDGETS = {"link"}
 # Fields set through another row's control (its `covers`), never shown on their own.
 _HIDDEN_WIDGETS = {"hidden"}
 # Rows the page never sends.
-READ_ONLY_WIDGETS = {"readonly", "link"}
+READ_ONLY_WIDGETS = {"readonly"}
 
 
 def read_paths(catalog: dict) -> list[str]:
@@ -34,9 +30,15 @@ def _summary(value: Any) -> list[str]:
 
 
 def _value(field: dict, values: dict) -> Any:
-    """The row's value: one field's, or {field: value} over the field and the ones it covers (the weather place)."""
-    if field["widget"] in _VALUELESS_WIDGETS:
-        return None
+    """The row's value: one field's, or {field: value} over the field and the ones it covers (the weather place).
+
+    A checklist keeps only what its PUT takes, so the loaded value compares equal to the one the page reads back.
+    """
+    if field["widget"] == "checklist":
+        return [
+            {"anchor": item["anchor"], "name": item["name"], "offset_days": item["offset_days"]}
+            for item in values.get(field["field"]) or []
+        ]
     if field.get("covers"):
         return {name: values.get(name) for name in [field["field"], *field["covers"]]}
     return values.get(field["field"])
@@ -58,6 +60,9 @@ def _row(field: dict, values: dict) -> dict:
         # The namespace GET lists what can be picked and what is in use now.
         row["choices"] = values.get("choices") or {"locations": [], "cities": []}
         row["place_label"] = values.get("place_label")
+    if field.get("reference"):
+        # Shown read-only next to the editor (the base persona next to the additions).
+        row["reference_text"] = values.get(field["reference"]) or ""
     return row
 
 
@@ -117,11 +122,6 @@ def section_notes(current_period: dict | None) -> dict[str, str]:
     return notes
 
 
-def unregistered_preview(catalog: dict) -> tuple[list[dict], int]:
-    rows = catalog.get("unregistered", [])
-    return rows[:UNREGISTERED_PREVIEW], len(rows)
-
-
 class SaveError(ValueError):
     """A change the page should never send (unknown or read-only field)."""
 
@@ -169,7 +169,7 @@ def saved_values(catalog: dict, namespace: str, responses: list[dict]) -> dict[s
         merged.update(response or {})
     values: dict[str, Any] = {}
     for field in fields:
-        if field["field"] not in merged or field["widget"] in _VALUELESS_WIDGETS | _HIDDEN_WIDGETS:
+        if field["field"] not in merged or field["widget"] in _HIDDEN_WIDGETS:
             continue
         values[field["field"]] = _value(field, merged)
         if field["widget"] == "place":

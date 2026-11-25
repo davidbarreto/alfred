@@ -485,8 +485,8 @@ def get_reminder_settings_service(session: AsyncSession = Depends(get_session)) 
 def get_assistant_settings_service(session: AsyncSession = Depends(get_session)) -> AssistantSettingsService:
     return AssistantSettingsService(session)
 
-def get_settings_catalog_service(session: AsyncSession = Depends(get_session)) -> SettingsCatalogService:
-    return SettingsCatalogService(session)
+def get_settings_catalog_service() -> SettingsCatalogService:
+    return SettingsCatalogService()
 
 def get_weather_settings_service(session: AsyncSession = Depends(get_session)) -> WeatherSettingsService:
     return WeatherSettingsService(session)

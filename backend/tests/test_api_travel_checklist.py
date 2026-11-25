@@ -3,8 +3,13 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.features.travel.checklist.schemas import ChecklistGenerated, ChecklistItemRead
-from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.checklist.schemas import (
+    ChecklistGenerated,
+    ChecklistItemRead,
+    ChecklistItemWrite,
+    ChecklistTemplateRead,
+)
+from app.features.travel.errors import TravelNotFoundError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -22,34 +27,33 @@ def api():
 
 def test_get_template(api):
     client, service = api
-    service.get_template.return_value = [ChecklistItemRead(anchor="start", name="currency", title="currency", offset_days=-14)]
-    assert client.get("/travel/checklist-template", headers=AUTH).json() == [
-        {"anchor": "start", "name": "currency", "title": "currency", "offset_days": -14}
-    ]
+    service.get_template.return_value = ChecklistTemplateRead(
+        items=[ChecklistItemRead(anchor="start", name="currency", title="currency", offset_days=-14)]
+    )
+    assert client.get("/travel/checklist-template", headers=AUTH).json() == {
+        "items": [{"anchor": "start", "name": "currency", "title": "currency", "offset_days": -14}]
+    }
 
 
-def test_put_item(api):
+def test_put_replaces_the_template(api):
     client, service = api
-    service.put_item.return_value = ChecklistItemRead(anchor="end", name="x", title="x", offset_days=3)
-    resp = client.put("/travel/checklist-template/end/x", headers=AUTH, json={"offset_days": 3})
-    assert resp.status_code == 200
-    service.put_item.assert_awaited_once_with("end", "x", 3)
+    service.replace_template.return_value = ChecklistTemplateRead(
+        items=[ChecklistItemRead(anchor="end", name="x", title="x", offset_days=3)]
+    )
+    resp = client.put("/travel/checklist-template", headers=AUTH, json={"items": [{"anchor": "end", "name": "x", "offset_days": 3}]})
+    assert resp.status_code == 200 and resp.json()["items"][0]["name"] == "x"
+    service.replace_template.assert_awaited_once_with([ChecklistItemWrite(anchor="end", name="x", offset_days=3)])
 
 
-def test_put_duplicate_is_409_and_invalid_is_422(api):
+@pytest.mark.parametrize("items", [
+    [{"anchor": "end", "name": "x", "offset_days": 3}, {"anchor": "start", "name": "x", "offset_days": -3}],
+    [{"anchor": "mid", "name": "x", "offset_days": 3}],
+    [{"anchor": "end", "name": "Bad Name", "offset_days": 3}],
+])
+def test_put_invalid_or_duplicate_is_422(api, items):
     client, service = api
-    service.put_item.side_effect = TravelConflictError("exists")
-    assert client.put("/travel/checklist-template/end/x", headers=AUTH, json={"offset_days": 3}).status_code == 409
-    service.put_item.side_effect = ValueError("bad anchor")
-    assert client.put("/travel/checklist-template/mid/x", headers=AUTH, json={"offset_days": 3}).status_code == 422
-
-
-def test_delete_item(api):
-    client, service = api
-    service.delete_item.return_value = True
-    assert client.delete("/travel/checklist-template/start/x", headers=AUTH).status_code == 204
-    service.delete_item.return_value = False
-    assert client.delete("/travel/checklist-template/start/x", headers=AUTH).status_code == 404
+    assert client.put("/travel/checklist-template", headers=AUTH, json={"items": items}).status_code == 422
+    service.replace_template.assert_not_awaited()
 
 
 def test_generate(api):

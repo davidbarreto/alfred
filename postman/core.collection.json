@@ -3452,10 +3452,15 @@
               "    pm.expect(f.write_path).to.eql('/organizer/calendar-notification-settings/{entry}');",
               "});",
               "pm.test('Planning never offers travel times', () => pm.expect(byKey).to.not.have.property('planning.travel_times'));",
-              "pm.test('Unregistered rows never include assistant keys', () => {",
-              "    catalog.unregistered.forEach(row => pm.expect(row.key.startsWith('assistant.'), row.key).to.be.false);",
-              "    catalog.unregistered.forEach(row => pm.expect(byKey).to.not.have.property(row.key));",
-              "});"
+              "pm.test('The checklist template is a list written whole', () => {",
+              "    const f = byKey['travel.checklist'];",
+              "    pm.expect([f.widget, f.type, f.write_path]).to.eql(['checklist', 'array', '/travel/checklist-template']);",
+              "});",
+              "pm.test('Persona additions are markdown next to the base persona', () => {",
+              "    const f = byKey['assistant.persona_additions'];",
+              "    pm.expect([f.widget, f.reference]).to.eql(['markdown', 'base_persona']);",
+              "});",
+              "pm.test('No raw stored values are listed', () => pm.expect(catalog).to.not.have.property('unregistered'));"
             ],
             "type": "text/javascript"
           }

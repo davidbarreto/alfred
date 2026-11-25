@@ -3,10 +3,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from freezegun import freeze_time
+from pydantic import ValidationError
 
+from app.features.travel.checklist.schemas import ChecklistItemWrite, ChecklistTemplateUpdate
 from app.features.travel.checklist.service import ChecklistService
 from app.features.travel.checklist.template import DEFAULT_ITEMS
-from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.errors import TravelNotFoundError
 
 
 @pytest.fixture
@@ -33,30 +35,74 @@ class TestSeeding:
         assert len(written) == len(DEFAULT_ITEMS) + 1
 
     async def test_an_emptied_list_is_not_reseeded(self, service):
-        assert await service.get_template() == []
+        assert (await service.get_template()).items == []
         service._settings.set_value.assert_not_awaited()
 
 
-class TestPutAndDelete:
-    async def test_put_stores_the_signed_offset_under_the_anchored_key(self, service):
-        item = await service.put_item("end", "send-photos", 3)
+class TestReplace:
+    async def test_writes_new_and_changed_items_and_deletes_missing_ones(self, service):
+        service._settings.list_values.side_effect = [
+            {"travel.checklist.start.currency": "-14", "travel.checklist.start.plug-adapter": "-7"},
+            {"travel.checklist.start.currency": "-10", "travel.checklist.end.send-photos": "3"},
+        ]
 
-        service._settings.set_value.assert_awaited_once_with("travel.checklist.end.send-photos", "3")
-        assert item.title == "send photos"
+        result = await service.replace_template([
+            ChecklistItemWrite(anchor="start", name="currency", offset_days=-10),
+            ChecklistItemWrite(anchor="end", name="send-photos", offset_days=3),
+        ])
 
-    async def test_same_name_under_the_other_anchor_is_a_conflict(self, service):
+        service._settings.delete_value.assert_awaited_once_with("travel.checklist.start.plug-adapter")
+        written = [c.args for c in service._settings.set_value.await_args_list]
+        assert written == [("travel.checklist.start.currency", "-10"), ("travel.checklist.end.send-photos", "3")]
+        assert [(i.name, i.title, i.offset_days) for i in result.items] == [
+            ("currency", "currency", -10), ("send-photos", "send photos", 3),
+        ]
+
+    async def test_moving_an_item_to_the_other_anchor_replaces_its_key(self, service):
         service._settings.list_values.return_value = {"travel.checklist.start.currency": "-14"}
-        with pytest.raises(TravelConflictError):
-            await service.put_item("end", "currency", 1)
 
-    @pytest.mark.parametrize("anchor,name", [("middle", "x"), ("start", "Has Space")])
-    async def test_invalid_anchor_or_name_is_rejected(self, service, anchor, name):
-        with pytest.raises(ValueError):
-            await service.put_item(anchor, name, 1)
+        await service.replace_template([ChecklistItemWrite(anchor="end", name="currency", offset_days=1)])
 
-    async def test_delete_reports_missing(self, service):
-        service._settings.delete_value.return_value = False
-        assert await service.delete_item("start", "nope") is False
+        service._settings.delete_value.assert_awaited_once_with("travel.checklist.start.currency")
+        service._settings.set_value.assert_awaited_once_with("travel.checklist.end.currency", "1")
+
+    async def test_unchanged_items_are_not_rewritten(self, service):
+        service._settings.list_values.return_value = {"travel.checklist.start.currency": "-14"}
+
+        await service.replace_template([ChecklistItemWrite(anchor="start", name="currency", offset_days=-14)])
+
+        service._settings.set_value.assert_not_awaited()
+        service._settings.delete_value.assert_not_awaited()
+
+    async def test_an_unseeded_template_is_seeded_before_it_is_replaced(self, service):
+        service._settings.get_value.return_value = None
+
+        await service.replace_template([])
+
+        assert ("travel.checklist_seeded", "1") in [c.args for c in service._settings.set_value.await_args_list]
+        assert service._settings.delete_value.await_count == 0  # list_values is mocked empty
+
+
+class TestTemplateSchema:
+    def test_names_are_unique_across_both_anchors(self):
+        with pytest.raises(ValidationError, match="unique"):
+            ChecklistTemplateUpdate(items=[
+                {"anchor": "start", "name": "currency", "offset_days": -14},
+                {"anchor": "end", "name": "currency", "offset_days": 1},
+            ])
+
+    @pytest.mark.parametrize("item", [
+        {"anchor": "middle", "name": "x", "offset_days": 1},
+        {"anchor": "start", "name": "Has Space", "offset_days": 1},
+        {"anchor": "start", "name": "x", "offset_days": 5000},
+    ])
+    def test_invalid_anchor_name_or_offset_is_rejected(self, item):
+        with pytest.raises(ValidationError):
+            ChecklistTemplateUpdate(items=[item])
+
+    def test_items_are_required(self):
+        with pytest.raises(ValidationError):
+            ChecklistTemplateUpdate()
 
 
 class TestGenerate:

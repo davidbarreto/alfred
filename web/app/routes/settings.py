@@ -14,7 +14,6 @@ from app.shared.settings_page import (
     read_paths,
     saved_values,
     section_notes,
-    unregistered_preview,
 )
 from app.templates_config import templates
 
@@ -34,19 +33,8 @@ async def settings_page(request: Request):
     *values, current_period = await asyncio.gather(
         *(safe_get(path) for path in paths), safe_get("/finance/budgets/current-period")
     )
-    unregistered, unregistered_total = unregistered_preview(catalog)
     return templates.TemplateResponse(request, "settings.html", {
         "sections": build_sections(catalog, dict(zip(paths, values)), section_notes(current_period)),
-        "unregistered": unregistered,
-        "unregistered_total": unregistered_total,
-    })
-
-
-@router.get("/stored", response_class=HTMLResponse)
-async def stored_settings_page(request: Request):
-    catalog = await safe_get(_CATALOG_PATH)
-    return templates.TemplateResponse(request, "settings_stored.html", {
-        "rows": catalog["unregistered"] if catalog else None,
     })
 
 

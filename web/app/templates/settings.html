@@ -78,30 +78,9 @@
       </section>
       {% endfor %}
 
-      {% if unregistered_total %}
-      <section id="stored" class="card bg-white" data-stored>
-        <div class="card-body p-5 gap-2">
-          <h2 class="text-sm font-semibold text-gray-900">Other stored settings</h2>
-          <p class="text-xs text-gray-400">Stored values no section edits (the travel checklist template, the pause state). Read-only here.</p>
-          <ul class="divide-y divide-gray-100">
-            {% for row in unregistered %}
-            <li class="action-row flex items-start gap-3 py-2">
-              <span class="text-xs font-mono text-gray-600 break-all">{{ row.key }}</span>
-              <span class="text-xs font-mono text-gray-500 break-all">{{ row.value if row.value != '' else '(empty)' }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-          {% if unregistered_total > unregistered | length %}
-          <a href="/settings/stored" class="text-xs text-[#378ADD] hover:underline">See all {{ unregistered_total }}</a>
-          {% endif %}
-        </div>
-      </section>
-      {% endif %}
-
       <p class="text-xs text-gray-400">Also edited on their own pages:
         <a href="/interviews/preferences" class="text-[#378ADD] hover:underline">interview preferences</a>,
-        <a href="/languages" class="text-[#378ADD] hover:underline">language tracks</a>,
-        <a href="/persona" class="text-[#378ADD] hover:underline">persona</a>.</p>
+        <a href="/languages" class="text-[#378ADD] hover:underline">language tracks</a>.</p>
     </div>
   </div>
   {% endif %}
@@ -137,6 +116,28 @@
     <div class="flex items-center justify-end gap-2">
       <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
       <button type="button" id="json-apply" class="btn btn-sm btn-outline">Apply</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="markdown-dialog" class="modal">
+  <div class="modal-box w-11/12 max-w-6xl space-y-3">
+    <h3 class="text-sm font-semibold" id="markdown-title">Edit</h3>
+    <div class="split">
+      <div class="space-y-1">
+        <p class="text-xs text-gray-500">Markdown</p>
+        <textarea id="markdown-text" rows="22" spellcheck="false" class="textarea textarea-bordered textarea-sm w-full font-mono text-xs" aria-label="Markdown"></textarea>
+        <p class="text-[11px] text-gray-400 text-right"><span id="markdown-counter">0</span><span id="markdown-max"></span></p>
+      </div>
+      <div class="space-y-1" id="markdown-reference-pane">
+        <p class="text-xs text-gray-500" id="markdown-reference-label"></p>
+        <pre id="markdown-reference" class="whitespace-pre-wrap break-words text-xs text-gray-600 font-mono max-h-[60vh] overflow-y-auto rounded border border-gray-200 p-3"></pre>
+      </div>
+    </div>
+    <p id="markdown-error" class="text-xs text-red-600"></p>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <button type="button" id="markdown-apply" class="btn btn-sm btn-outline">Apply</button>
     </div>
   </div>
 </dialog>

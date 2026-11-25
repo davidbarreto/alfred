@@ -99,8 +99,48 @@
   {% if row.href %}<a href="{{ row.href }}" class="ml-1 text-xs text-[#378ADD] hover:underline">Edit</a>{% endif %}</p>
 {% endmacro %}
 
-{% macro link(row) %}
-<a href="{{ row.href }}" class="text-xs text-[#378ADD] hover:underline">Edit on its page <i class="ti ti-arrow-right"></i></a>
+{% macro markdown(row) %}
+<div class="flex items-center gap-2" data-control-group>
+  <span class="text-xs text-gray-500" data-markdown-summary>{{ '{:,} characters'.format(row.value | length) if row.value else 'Not set' }}</span>
+  <button type="button" class="btn btn-xs btn-outline" data-markdown-edit>Edit</button>
+  <textarea data-control hidden {% if row.max_length %}maxlength="{{ row.max_length }}"{% endif %} aria-label="{{ row.label }}">{{ row.value or '' }}</textarea>
+  {% if row.reference %}<pre hidden data-reference data-reference-label="{{ row.reference_label or '' }}">{{ row.reference_text }}</pre>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro checklist_hint(anchor, offset) -%}
+{%- if offset == 0 %}on the {{ anchor }} day{% else %}{{ offset | abs }} day{{ '' if offset | abs == 1 else 's' }} {{ 'after' if offset > 0 else 'before' }} the {{ anchor }}{% endif -%}
+{%- endmacro %}
+
+{% macro checklist(row) %}
+<div class="w-full space-y-3" data-control-group aria-label="{{ row.label }}">
+  {% for anchor, heading in [('start', 'Around departure'), ('end', 'After the trip')] %}
+  <div>
+    <p class="text-xs font-medium text-gray-500 mb-1">{{ heading }}</p>
+    <ul class="space-y-1" data-checklist="{{ anchor }}">
+      {% for item in row.value if item.anchor == anchor %}
+      <li class="flex flex-wrap items-center gap-2" data-item data-anchor="{{ item.anchor }}" data-name="{{ item.name }}">
+        <span class="text-sm text-gray-900 w-full sm:w-44">{{ item.name | replace('-', ' ') | replace('_', ' ') }}</span>
+        <input type="number" data-item-offset min="-3650" max="3650" step="1" value="{{ item.offset_days }}"
+               class="input input-xs input-bordered w-20" aria-label="Days for {{ item.name }}">
+        <span class="text-xs text-gray-400" data-item-hint>{{ checklist_hint(anchor, item.offset_days) }}</span>
+        <button type="button" data-item-remove class="btn btn-xs btn-ghost" aria-label="Remove {{ item.name }}"><i class="ti ti-x"></i></button>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  <div class="flex flex-wrap items-end gap-2" data-checklist-add>
+    <label class="space-y-1"><span class="block text-[11px] text-gray-500">New item</span>
+      <input data-add-name placeholder="send photos" maxlength="60" class="input input-xs input-bordered w-40"></label>
+    <label class="space-y-1"><span class="block text-[11px] text-gray-500">Counted from</span>
+      <select data-add-anchor class="select select-xs select-bordered"><option value="start">Trip start</option><option value="end">Trip end</option></select></label>
+    <label class="space-y-1"><span class="block text-[11px] text-gray-500">Days (negative = before)</span>
+      <input data-add-offset type="number" min="-3650" max="3650" step="1" value="-7" class="input input-xs input-bordered w-20"></label>
+    <button type="button" data-add class="btn btn-xs btn-outline">Add</button>
+    <span data-add-error class="text-[11px] text-red-600"></span>
+  </div>
+</div>
 {% endmacro %}
 
 {% macro control(row) %}
@@ -108,13 +148,14 @@
 {%- elif row.widget == 'toggle' %}{{ toggle(row) }}
 {%- elif row.widget == 'time' %}{{ time(row) }}
 {%- elif row.widget == 'longtext' %}{{ longtext(row) }}
+{%- elif row.widget == 'markdown' %}{{ markdown(row) }}
+{%- elif row.widget == 'checklist' %}{{ checklist(row) }}
 {%- elif row.widget == 'weekdays' %}{{ weekdays(row) }}
 {%- elif row.widget == 'windows' %}{{ windows(row) }}
 {%- elif row.widget == 'city' %}{{ city(row) }}
 {%- elif row.widget == 'place' %}{{ place(row) }}
 {%- elif row.widget == 'json' %}{{ json(row) }}
 {%- elif row.widget == 'readonly' %}{{ readonly(row) }}
-{%- elif row.widget == 'link' %}{{ link(row) }}
 {%- else %}{{ text(row) }}
 {%- endif %}
 {% endmacro %}
@@ -143,7 +184,7 @@
     {% if row.description %}<p class="text-xs text-gray-500">{{ row.description }}</p>{% endif %}
     <p data-row-error class="text-xs text-red-600"></p>
   </div>
-  <div class="flex items-center gap-2 {{ 'w-full' if row.widget == 'longtext' else 'w-full sm:w-auto' if row.widget in ('json', 'windows', 'weekdays', 'place') else '' }}">
+  <div class="flex items-center gap-2 {{ 'w-full' if row.widget in ('longtext', 'checklist') else 'w-full sm:w-auto' if row.widget in ('json', 'windows', 'weekdays', 'place') else '' }}">
     {{ control(row) }}
     {% if row.unit and row.widget == 'number' %}<span class="text-xs text-gray-500 whitespace-nowrap">{{ row.unit }}</span>{% endif %}
     {% if row.has_default %}

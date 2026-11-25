@@ -4118,7 +4118,9 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Seeded defaults are anchored and signed', () => { const j = pm.response.json(); pm.expect(j.length).to.be.above(0); pm.expect(j.every(i => ['start','end'].includes(i.anchor))).to.eql(true); });"
+              "const items = pm.response.json().items;",
+              "pm.test('Seeded defaults are anchored and signed', () => { pm.expect(items.length).to.be.above(0); pm.expect(items.every(i => ['start','end'].includes(i.anchor))).to.eql(true); });",
+              "pm.collectionVariables.set('checklist_original', JSON.stringify(items.map(i => ({ anchor: i.anchor, name: i.name, offset_days: i.offset_days }))));"
             ],
             "type": "text/javascript"
           }
@@ -4145,21 +4147,231 @@
       }
     },
     {
-      "name": "96 - Put Checklist Item",
+      "name": "96 - Put Checklist Template With A New Item",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const original = JSON.parse(pm.collectionVariables.get('checklist_original'));",
+              "pm.variables.set('checklist_body', JSON.stringify({ items: [...original, { anchor: 'end', name: 'postman-check', offset_days: -2 }] }));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The new item is listed with a humanized title', () => { const item = pm.response.json().items.find(i => i.name === 'postman-check'); pm.expect(item.title).to.eql('postman check'); pm.expect(item.offset_days).to.eql(-2); });",
+              "const original = JSON.parse(pm.collectionVariables.get('checklist_original'));",
+              "pm.test('The other items are kept', () => pm.expect(pm.response.json().items.length).to.eql(original.length + 1));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{checklist_body}}"
+        }
+      }
+    },
+    {
+      "name": "97 - Put Checklist Template With A Name Under Both Anchors",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    {\"anchor\": \"start\", \"name\": \"postman-check\", \"offset_days\": -1},\n    {\"anchor\": \"end\", \"name\": \"postman-check\", \"offset_days\": 1}\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "98 - Put Checklist Template With Bad Anchor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [{\"anchor\": \"middle\", \"name\": \"postman-check\", \"offset_days\": 1}]\n}"
+        }
+      }
+    },
+    {
+      "name": "99 - Put Checklist Template With Bad Name",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [{\"anchor\": \"start\", \"name\": \"Has Space\", \"offset_days\": 1}]\n}"
+        }
+      }
+    },
+    {
+      "name": "100 - Restore Checklist Template",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const original = JSON.parse(pm.collectionVariables.get('checklist_original'));",
+              "pm.variables.set('checklist_body', JSON.stringify({ items: original }));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The added item is deleted', () => pm.expect(pm.response.json().items.map(i => i.name)).to.not.include('postman-check'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{checklist_body}}"
+        }
+      }
+    },
+    {
+      "name": "101 - Get Checklist Template After Restore",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Title is humanized and offset kept', () => { const j = pm.response.json(); pm.expect(j.title).to.eql('postman check'); pm.expect(j.offset_days).to.eql(-2); });"
+              "const original = JSON.parse(pm.collectionVariables.get('checklist_original'));",
+              "pm.test('The template is back to what it was', () => pm.expect(pm.response.json().items.map(i => ({ anchor: i.anchor, name: i.name, offset_days: i.offset_days }))).to.eql(original));"
             ],
             "type": "text/javascript"
           }
         }
       ],
       "request": {
-        "method": "PUT",
+        "method": "GET",
         "header": [
           {
             "key": "Content-Type",
@@ -4167,206 +4379,13 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
+          "raw": "{{base_url}}/travel/checklist-template",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "travel",
-            "checklist-template",
-            "end",
-            "postman-check"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"offset_days\": -2\n}"
-        }
-      }
-    },
-    {
-      "name": "97 - Put Checklist Item Under The Other Anchor",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/travel/checklist-template/start/postman-check",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "travel",
-            "checklist-template",
-            "start",
-            "postman-check"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"offset_days\": 1\n}"
-        }
-      }
-    },
-    {
-      "name": "98 - Put Checklist Item With Bad Anchor",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/travel/checklist-template/middle/postman-check",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "travel",
-            "checklist-template",
-            "middle",
-            "postman-check"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"offset_days\": 1\n}"
-        }
-      }
-    },
-    {
-      "name": "99 - Put Checklist Item With Bad Name",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/travel/checklist-template/start/Bad%20Name",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "travel",
-            "checklist-template",
-            "start",
-            "Bad%20Name"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"offset_days\": 1\n}"
-        }
-      }
-    },
-    {
-      "name": "100 - Delete Checklist Item",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "travel",
-            "checklist-template",
-            "end",
-            "postman-check"
-          ]
-        }
-      }
-    },
-    {
-      "name": "101 - Delete Checklist Item Again",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "travel",
-            "checklist-template",
-            "end",
-            "postman-check"
+            "checklist-template"
           ]
         }
       }

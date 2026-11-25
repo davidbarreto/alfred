@@ -10,11 +10,14 @@
  * at the bottom counts the changes, Review lists them (key: old → new, with any confirm note), and Save posts only the
  * changed fields to /settings/save, which answers per namespace. Saved sections take the new values; a failed one
  * shows the error at the top of its card and keeps its rows changed.
+ *
+ * Two rows edit more than one input: the checklist (a list of items, compared in a fixed order so moving nothing
+ * changes nothing) and markdown (edited in a dialog next to its read-only reference, the base persona).
  */
 (function () {
-  // Read-only and link rows are never edited or sent.
+  // Read-only rows are never edited or sent.
   const rows = [...document.querySelectorAll("[data-setting-row]")]
-    .filter((row) => !["readonly", "link"].includes(row.dataset.widget));
+    .filter((row) => row.dataset.widget !== "readonly");
   const sections = [...document.querySelectorAll("[data-section]")];
   const WINDOW = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -51,7 +54,6 @@
         link.querySelector("[data-nav-count]").textContent = String(shown);
       });
     });
-    document.querySelector("[data-stored]")?.classList.toggle("hidden", Boolean(q));
     noMatch.classList.toggle("hidden", shownSections > 0);
     const url = new URL(window.location.href);
     if (q) url.searchParams.set("q", query.trim());
@@ -76,6 +78,18 @@
   const parse = (raw) => (raw === undefined ? undefined : JSON.parse(raw));
   const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
   const control = (row) => row.querySelector("[data-control]");
+  const SLUG = /^[a-z0-9_-]+$/;
+  const OFFSET_LIMIT = 3650;
+
+  /** Checklist items in the order the API lists them: departure first, then by offset and name. */
+  function sortChecklist(items) {
+    return [...(items || [])].sort((a, b) => (a.anchor === b.anchor ? 0 : a.anchor === "start" ? -1 : 1)
+      || a.offset_days - b.offset_days || a.name.localeCompare(b.name));
+  }
+  const loadedValue = (row) => {
+    const value = parse(row.dataset.value);
+    return row.dataset.widget === "checklist" ? sortChecklist(value) : value;
+  };
 
   /** The control's value as the API expects it, or { error } when it cannot be sent. */
   function readValue(row) {
@@ -92,7 +106,8 @@
       case "time":
         return { value: input.value || null };
       case "text":
-      case "longtext": {
+      case "longtext":
+      case "markdown": {
         const text = input.value.trim();
         if (!text && nullable !== "true") return { error: "This cannot be empty." };
         return { value: text || null };
@@ -107,6 +122,17 @@
       }
       case "json":
         return { value: state.get(row).json };
+      case "checklist": {
+        const items = [];
+        for (const li of row.querySelectorAll("[data-item]")) {
+          const offset = li.querySelector("[data-item-offset]");
+          if (offset.value === "" || !offset.checkValidity()) {
+            return { error: `Days for "${itemTitle(li.dataset.name)}" must be a whole number from -${OFFSET_LIMIT} to ${OFFSET_LIMIT}.` };
+          }
+          items.push({ anchor: li.dataset.anchor, name: li.dataset.name, offset_days: Number(offset.value) });
+        }
+        return { value: sortChecklist(items) };
+      }
       case "place": {
         // "location:5", "city:3" or "" (Home): the row's value covers both fields.
         const [kind, id] = input.value.split(":");
@@ -131,6 +157,44 @@
     return el;
   }
 
+  const itemTitle = (name) => name.replace(/[-_]/g, " ");
+
+  function itemHint(anchor, offset) {
+    if (offset === 0) return `on the ${anchor} day`;
+    const days = Math.abs(offset);
+    return `${days} day${days === 1 ? "" : "s"} ${offset > 0 ? "after" : "before"} the ${anchor}`;
+  }
+
+  function checklistItem(item) {
+    const li = document.createElement("li");
+    li.className = "flex flex-wrap items-center gap-2";
+    li.dataset.item = "";
+    li.dataset.anchor = item.anchor;
+    li.dataset.name = item.name;
+    const title = document.createElement("span");
+    title.className = "text-sm text-gray-900 w-full sm:w-44";
+    title.textContent = itemTitle(item.name);
+    const offset = document.createElement("input");
+    Object.assign(offset, { type: "number", min: -OFFSET_LIMIT, max: OFFSET_LIMIT, step: 1, value: item.offset_days });
+    offset.className = "input input-xs input-bordered w-20";
+    offset.dataset.itemOffset = "";
+    offset.setAttribute("aria-label", `Days for ${item.name}`);
+    const hint = document.createElement("span");
+    hint.className = "text-xs text-gray-400";
+    hint.dataset.itemHint = "";
+    hint.textContent = itemHint(item.anchor, item.offset_days);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn-xs btn-ghost";
+    remove.dataset.itemRemove = "";
+    remove.setAttribute("aria-label", `Remove ${item.name}`);
+    remove.innerHTML = '<i class="ti ti-x"></i>';
+    li.append(title, offset, hint, remove);
+    return li;
+  }
+
+  const markdownSummary = (text) => (text ? `${text.length.toLocaleString("en-US")} characters` : "Not set");
+
   function summaryLines(value) {
     return Object.entries(value || {}).map(([entry, items]) => `${entry}: ${Array.isArray(items) ? items.join(", ") : items}`);
   }
@@ -144,6 +208,15 @@
       case "time": input.value = value || ""; break;
       case "text": input.value = value || ""; break;
       case "longtext": input.value = value || ""; updateCounter(row); break;
+      case "markdown":
+        input.value = value || "";
+        row.querySelector("[data-markdown-summary]").textContent = markdownSummary(input.value);
+        break;
+      case "checklist":
+        row.querySelectorAll("[data-checklist]").forEach((list) => {
+          list.replaceChildren(...(value || []).filter((item) => item.anchor === list.dataset.checklist).map(checklistItem));
+        });
+        break;
       case "weekdays":
         row.querySelectorAll("[data-day]").forEach((box) => { box.checked = (value || []).includes(box.dataset.day); });
         break;
@@ -202,7 +275,7 @@
   }
 
   rows.forEach((row) => {
-    state.set(row, { loaded: parse(row.dataset.value), json: parse(row.dataset.value), picker: null });
+    state.set(row, { loaded: loadedValue(row), json: parse(row.dataset.value), picker: null });
     row.addEventListener("input", () => { updateCounter(row); refresh(row); });
     row.addEventListener("change", () => refresh(row));
   });
@@ -232,6 +305,42 @@
       if (!remove) return;
       remove.closest("[data-chip]").remove();
       refresh(row);
+    });
+  });
+
+  // Checklist: items added from the row's own inputs (which are not the value), removed with their x; an offset edit
+  // updates its hint.
+  rows.filter((row) => row.dataset.widget === "checklist").forEach((row) => {
+    const add = row.querySelector("[data-checklist-add]");
+    const name = add.querySelector("[data-add-name]");
+    const offset = add.querySelector("[data-add-offset]");
+    const error = add.querySelector("[data-add-error]");
+    function addItem() {
+      const slug = name.value.trim().toLowerCase().replace(/\s+/g, "-");
+      const taken = [...row.querySelectorAll("[data-item]")].map((li) => li.dataset.name);
+      if (!SLUG.test(slug)) { error.textContent = "Use letters, digits, spaces, - or _."; return; }
+      if (taken.includes(slug)) { error.textContent = "That item is already on the list."; return; }
+      if (offset.value === "" || !offset.checkValidity()) { error.textContent = "Days must be a whole number."; return; }
+      error.textContent = "";
+      const anchor = add.querySelector("[data-add-anchor]").value;
+      row.querySelector(`[data-checklist="${anchor}"]`).appendChild(checklistItem({ anchor, name: slug, offset_days: Number(offset.value) }));
+      name.value = "";
+      refresh(row);
+    }
+    add.addEventListener("input", (event) => event.stopPropagation());
+    add.addEventListener("change", (event) => event.stopPropagation());
+    add.querySelector("[data-add]").addEventListener("click", addItem);
+    name.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); addItem(); } });
+    row.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-item-remove]");
+      if (!remove) return;
+      remove.closest("[data-item]").remove();
+      refresh(row);
+    });
+    row.addEventListener("input", (event) => {
+      if (!event.target.matches("[data-item-offset]")) return;
+      const li = event.target.closest("[data-item]");
+      if (event.target.value !== "") li.querySelector("[data-item-hint]").textContent = itemHint(li.dataset.anchor, Number(event.target.value));
     });
   });
 
@@ -304,6 +413,43 @@
     button.addEventListener("click", () => button.closest("dialog").close());
   });
 
+  // ── Markdown editor ─────────────────────────────────────────────────────
+
+  const markdownDialog = document.getElementById("markdown-dialog");
+  const markdownText = document.getElementById("markdown-text");
+  const markdownCounter = document.getElementById("markdown-counter");
+  const markdownError = document.getElementById("markdown-error");
+  let markdownRow = null;
+
+  document.querySelectorAll("[data-markdown-edit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      markdownRow = button.closest("[data-setting-row]");
+      const input = control(markdownRow);
+      const reference = markdownRow.querySelector("[data-reference]");
+      document.getElementById("markdown-title").textContent = markdownRow.dataset.label;
+      document.getElementById("markdown-max").textContent = input.maxLength > 0 ? ` / ${input.maxLength}` : "";
+      document.getElementById("markdown-reference-pane").classList.toggle("hidden", !reference);
+      document.getElementById("markdown-reference-label").textContent = reference ? reference.dataset.referenceLabel : "";
+      document.getElementById("markdown-reference").textContent = reference ? reference.textContent : "";
+      markdownText.maxLength = input.maxLength;
+      markdownText.value = input.value;
+      markdownCounter.textContent = String(markdownText.value.length);
+      markdownError.textContent = "";
+      markdownDialog.showModal();
+    });
+  });
+  markdownText?.addEventListener("input", () => { markdownCounter.textContent = String(markdownText.value.length); });
+  document.getElementById("markdown-apply")?.addEventListener("click", () => {
+    const input = control(markdownRow);
+    if (input.maxLength > 0 && markdownText.value.length > input.maxLength) {
+      markdownError.textContent = `At most ${input.maxLength} characters.`;
+      return;
+    }
+    setValue(markdownRow, markdownText.value);
+    markdownDialog.close();
+    refresh(markdownRow);
+  });
+
   // ── Review and save ─────────────────────────────────────────────────────
 
   function display(row, value) {
@@ -348,6 +494,20 @@
       Object.entries(changedEntries(row)).forEach(([entry, items]) => {
         lines.push(`${entry}: ${display(row, loaded[entry])} → ${display(row, items)}`);
       });
+    } else if (row.dataset.widget === "markdown") {
+      const length = (text) => (text ? `${text.length.toLocaleString("en-US")} characters` : "not set");
+      lines.push(`${length(state.get(row).loaded)} → ${length(readValue(row).value)}`);
+    } else if (row.dataset.widget === "checklist") {
+      const days = (item) => `${item.offset_days} (${itemHint(item.anchor, item.offset_days)})`;
+      const key = (item) => `${item.anchor}.${item.name}`;
+      const before = new Map((state.get(row).loaded || []).map((item) => [item.name, item]));
+      const after = new Map(readValue(row).value.map((item) => [item.name, item]));
+      after.forEach((item, name) => {
+        const old = before.get(name);
+        if (!old) lines.push(`+ ${key(item)}: ${days(item)}`);
+        else if (!same(old, item)) lines.push(`${key(old)}: ${days(old)} → ${key(item)}: ${days(item)}`);
+      });
+      before.forEach((item, name) => { if (!after.has(name)) lines.push(`− ${key(item)}`); });
     } else if (row.dataset.widget === "place") {
       const select = control(row);
       const labelOf = (v) => {

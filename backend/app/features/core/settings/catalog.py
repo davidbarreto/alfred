@@ -27,7 +27,6 @@ from app.features.core.settings.catalog_schemas import (
     SettingsCatalogRead,
     SettingsLinkRead,
     SettingsNamespaceRead,
-    StoredSettingRead,
 )
 from app.features.cs.settings.schemas import CsSettingsRead, CsSettingsUpdate
 from app.features.cs.settings.service import DEFAULTS as CS_DEFAULTS
@@ -51,11 +50,9 @@ from app.features.planning.schemas import PlanningSettingsRead, PlanningSettings
 from app.features.planning.settings_service import DEFAULTS as PLANNING_DEFAULTS
 from app.features.study.settings.schemas import StudySettingsRead, StudySettingsUpdate
 from app.features.study.settings.service import DEFAULTS as STUDY_DEFAULTS
+from app.features.travel.checklist.schemas import ChecklistTemplateRead, ChecklistTemplateUpdate
 from app.features.travel.settings_schemas import TravelSettingsRead, TravelSettingsUpdate
 from app.features.travel.settings_service import DEFAULTS as TRAVEL_DEFAULTS
-
-# Personal values: covered by fields, and never listed as raw rows even if a stray key is stored.
-_PRIVATE_PREFIXES = ("assistant.",)
 
 _WIDGET_BY_TYPE = {"integer": "number", "number": "number", "boolean": "toggle", "string": "text"}
 
@@ -106,10 +103,16 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
     ),
     CatalogNamespace(
         "travel", "Travel", "Getting to the airport, trip warnings and where trips start.",
-        (CatalogSource(
-            TravelSettingsUpdate, TravelSettingsRead, "/travel/settings", "/travel/settings", lambda: TRAVEL_DEFAULTS,
-        ),),
-        (SettingsLinkRead(label="Checklist template", href="/travel", description="Edited on the Travel page."),),
+        (
+            CatalogSource(
+                TravelSettingsUpdate, TravelSettingsRead, "/travel/settings", "/travel/settings",
+                lambda: TRAVEL_DEFAULTS,
+            ),
+            CatalogSource(
+                ChecklistTemplateUpdate, ChecklistTemplateRead, "/travel/checklist-template",
+                "/travel/checklist-template", lambda: {},
+            ),
+        ),
     ),
     CatalogNamespace(
         "briefing", "Briefing", "What the morning briefing covers and how much of each list it spells out.",
@@ -263,12 +266,14 @@ def _field(
         write_path=extra.get("write_path", source.write_path),
         entry_field=extra.get("entry_field"),
         covers=extra.get("covers"),
+        reference=extra.get("reference"),
+        reference_label=extra.get("reference_label"),
         advanced=bool(extra.get("advanced")),
     )
 
 
-def build_catalog(stored: Mapping[str, str]) -> SettingsCatalogRead:
-    """The catalog, with `stored` (every core.settings row) used only to list the keys no field covers."""
+def build_catalog() -> SettingsCatalogRead:
+    """Every namespace with its fields, in page order."""
     defaults = {id(source): source.defaults() for namespace in NAMESPACES for source in namespace.sources}
     namespaces = [
         SettingsNamespaceRead(
@@ -284,10 +289,4 @@ def build_catalog(stored: Mapping[str, str]) -> SettingsCatalogRead:
         )
         for namespace in NAMESPACES
     ]
-    covered = {f.key for ns in namespaces for f in ns.fields}
-    unregistered = [
-        StoredSettingRead(key=key, value=value)
-        for key, value in sorted(stored.items())
-        if key not in covered and not key.startswith(_PRIVATE_PREFIXES)
-    ]
-    return SettingsCatalogRead(namespaces=namespaces, unregistered=unregistered)
+    return SettingsCatalogRead(namespaces=namespaces)

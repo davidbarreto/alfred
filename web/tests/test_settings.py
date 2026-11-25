@@ -6,9 +6,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.shared.settings_page import SaveError, build_sections, plan_writes, read_paths, unregistered_preview
+from app.shared.settings_page import SaveError, build_sections, plan_writes, read_paths, saved_values
 
-# Generated from the backend's build_catalog (defaults only, no stored values but two unregistered keys).
+# Generated from the backend's build_catalog().
 CATALOG = json.loads((Path(__file__).parent / "fixtures" / "settings_catalog.json").read_text())
 
 _CITY = {"id": 3, "name": "Lisbon", "country": {"id": 1, "name": "Portugal", "code": "PT"}}
@@ -32,6 +32,10 @@ VALUES = {
         "home_city_id": 3, "home_city": _CITY, "max_visits_per_day": 4, "visit_duration_min": 90,
         "unpaid_leg_days": 30, "snooze_other_events": True,
     },
+    "/travel/checklist-template": {"items": [
+        {"anchor": "start", "name": "currency", "title": "currency", "offset_days": -14},
+        {"anchor": "end", "name": "send-photos", "title": "send photos", "offset_days": 3},
+    ]},
     "/finance/settings": {"cycle_start_day": 1, "import_knn_limit": 7, "import_knn_threshold": 0.72, "import_knn_min_vote": 0.7},
     "/cs/settings": {"weak_tag_min_attempts": 3, "weak_tag_max_solve_rate": 0.85, "weak_tags_shown": 5},
     "/metrics/settings": {"trend_days": 30, "min_samples": 5},
@@ -130,9 +134,21 @@ class TestBuildSections:
     def test_temperature_modified_against_the_env_default(self):
         assert _rows(build_sections(CATALOG, VALUES))["chat.temperature"]["modified"] is True
 
-    def test_link_rows_never_carry_their_value(self):
+    def test_markdown_row_carries_its_reference(self):
         row = _rows(build_sections(CATALOG, VALUES))["assistant.persona_additions"]
-        assert row["value"] is None
+        assert (row["value"], row["reference_text"]) == ("SECRET-PERSONA-TEXT", "# Alfred")
+
+    def test_checklist_value_keeps_only_what_its_put_takes(self):
+        row = _rows(build_sections(CATALOG, VALUES))["travel.checklist"]
+        assert row["value"] == [
+            {"anchor": "start", "name": "currency", "offset_days": -14},
+            {"anchor": "end", "name": "send-photos", "offset_days": 3},
+        ]
+        assert row["group"] == "Pre-trip checklist"
+
+    def test_saved_checklist_drops_the_title_too(self):
+        values = saved_values(CATALOG, "travel", [VALUES["/travel/checklist-template"]])
+        assert values["items"][1] == {"anchor": "end", "name": "send-photos", "offset_days": 3}
 
     def test_rows_are_grouped_in_order(self):
         reminders = _section(build_sections(CATALOG, VALUES), "reminders")
@@ -142,15 +158,9 @@ class TestBuildSections:
         values = {**VALUES, "/travel/settings": None, "/organizer/contact-birthday-settings": None}
         sections = build_sections(CATALOG, values)
         travel, organizer, planning = (_section(sections, n) for n in ("travel", "organizer", "planning"))
-        assert travel["load_error"] is True and travel["count"] == 0 and travel["groups"] == []
+        assert travel["load_error"] is True and [g["name"] for g in travel["groups"]] == ["Pre-trip checklist"]
         assert organizer["load_error"] is True and organizer["count"] == 1
         assert planning["load_error"] is False and planning["count"] > 0
-
-    def test_unregistered_preview_is_capped(self):
-        catalog = copy.deepcopy(CATALOG)
-        catalog["unregistered"] = [{"key": f"travel.checklist.k{i}", "value": "1"} for i in range(8)]
-        shown, total = unregistered_preview(catalog)
-        assert (len(shown), total) == (5, 8)
 
 
 class TestSettingsPage:
@@ -177,7 +187,8 @@ class TestSettingsPage:
         assert 'value="Lisbon, Portugal"' in html
         assert "Edit JSON" in html and "normal: 1h, 10m, 0" in html
         assert "1 Example Street" in html
-        assert 'href="/persona"' in html
+        assert "data-markdown-edit" in html and 'id="markdown-dialog"' in html
+        assert 'data-name="send-photos"' in html and "3 days after the end" in html
 
     def test_long_text_takes_the_full_row_width(self, page):
         row = re.search(r'data-key="planning.conventions".*?</div>\s*<div class="([^"]*)"', page.text, re.S)
@@ -204,28 +215,36 @@ class TestSettingsPage:
         finance = page.text[page.text.index('id="finance"'):page.text.index('id="study"')]
         assert "Current cycle: 2026-11" in finance
 
-    def test_personal_persona_text_is_never_rendered(self, page):
-        assert "SECRET-PERSONA-TEXT" not in page.text
+    def test_persona_additions_and_base_persona_are_in_the_editor(self, page):
+        row = page.text[page.text.index('data-key="assistant.persona_additions"'):]
+        assert re.search(r'<textarea data-control hidden maxlength="20000"[^>]*>SECRET-PERSONA-TEXT</textarea>', row)
+        assert re.search(r'<pre hidden data-reference data-reference-label="Base persona[^"]*"># Alfred</pre>', row)
+        assert "19 characters" in row
         assert 'value="Sam"' in page.text
+
+    def test_checklist_items_are_grouped_by_anchor(self, page):
+        start = page.text[page.text.index('data-checklist="start"'):page.text.index('data-checklist="end"')]
+        assert 'data-name="currency"' in start and 'value="-14"' in start and "14 days before the start" in start
+        assert 'data-name="send-photos"' not in start
 
     def test_travel_times_are_not_offered(self, page):
         assert "planning.travel_times" not in page.text
 
-    def test_unregistered_rows_are_read_only(self, page):
-        stored = page.text[page.text.index('data-stored'):]
-        assert "travel.checklist.departure.passport" in stored and "core.paused_at" in stored
-        assert "<input" not in stored[:stored.index("</section>")]
+    def test_no_stored_values_card_and_no_persona_page_link(self, page):
+        assert "data-stored" not in page.text and "Other stored settings" not in page.text
+        assert 'href="/persona"' not in page.text
 
     def test_sidebar_has_the_settings_link(self, page):
         assert re.search(r'href="/settings" class="nav-link active"', page.text)
 
-    def test_failing_namespace_leaves_only_its_section_empty(self, client, mock_api):
+    def test_failing_namespace_get_leaves_out_only_its_rows(self, client, mock_api):
         mock_api["get"].side_effect = _get({**VALUES, "/travel/settings": None})
 
         html = client.get("/settings").text
 
         travel = html[html.index('id="travel"'):html.index('id="briefing"')]
-        assert "could not be loaded" in travel and "data-setting-row" not in travel
+        assert "could not be loaded" in travel and 'data-key="travel.airport_buffer_min"' not in travel
+        assert 'data-key="travel.checklist"' in travel
         assert 'data-key="planning.wake_time"' in html
 
     def test_catalog_down(self, client, mock_api):
@@ -233,31 +252,27 @@ class TestSettingsPage:
         assert "unavailable right now" in client.get("/settings").text
 
 
-class TestStoredPage:
-    def test_lists_every_unregistered_key(self, client, mock_api):
-        catalog = copy.deepcopy(CATALOG)
-        catalog["unregistered"] = [{"key": f"travel.checklist.k{i}", "value": "1"} for i in range(8)]
-        mock_api["get"].side_effect = _get(catalog=catalog)
-
-        html = client.get("/settings/stored").text
-
-        assert all(f"travel.checklist.k{i}" in html for i in range(8))
-
-    def test_settings_page_links_to_it_when_capped(self, client, mock_api):
-        catalog = copy.deepcopy(CATALOG)
-        catalog["unregistered"] = [{"key": f"travel.checklist.k{i}", "value": "1"} for i in range(8)]
-        mock_api["get"].side_effect = _get(catalog=catalog)
-
-        html = client.get("/settings").text
-
-        assert "See all 8" in html and 'href="/settings/stored"' in html
-        assert "travel.checklist.k5" not in html
+class TestRemovedPages:
+    @pytest.mark.parametrize("path", ["/settings/stored", "/persona"])
+    def test_are_gone(self, client, mock_api, path):
+        assert client.get(path).status_code == 404
 
 
 class TestPlanWrites:
     def test_fields_sharing_a_path_go_in_one_body(self):
         plan = plan_writes(CATALOG, {"travel": {"airport_buffer_min": 90, "snooze_other_events": False}})
         assert plan == {"travel": [("/travel/settings", {"airport_buffer_min": 90, "snooze_other_events": False})]}
+
+    def test_checklist_is_written_whole(self):
+        items = [{"anchor": "start", "name": "currency", "offset_days": -10}]
+        plan = plan_writes(CATALOG, {"travel": {"items": items, "airport_buffer_min": 90}})
+        assert sorted(plan["travel"]) == [
+            ("/travel/checklist-template", {"items": items}), ("/travel/settings", {"airport_buffer_min": 90}),
+        ]
+
+    def test_persona_additions_are_sent_to_the_assistant_settings(self):
+        plan = plan_writes(CATALOG, {"assistant": {"persona_additions": "More."}})
+        assert plan == {"assistant": [("/core/assistant-settings", {"persona_additions": "More."})]}
 
     def test_place_writes_both_fields(self):
         plan = plan_writes(CATALOG, {"weather": {"location_id": {"location_id": 1, "city_id": None}}})
@@ -286,7 +301,6 @@ class TestPlanWrites:
     @pytest.mark.parametrize("changes", [
         {"planning": {"travel_times": []}},
         {"travel": {"home_address": "x"}},
-        {"assistant": {"persona_additions": "x"}},
         {"nope": {"x": 1}},
         {"organizer": {"profiles": {"nromal": ["1h"]}}},
         {"organizer": {"profiles": ["1h"]}},
@@ -372,13 +386,13 @@ class TestSave:
         assert body["weather"]["values"]["location_id"] == {"location_id": 1, "city_id": None}
         assert "place_label" in body["weather"]["values"]
 
-    def test_never_returns_persona_additions(self, client, mock_api):
+    def test_returns_the_saved_persona_additions_but_not_the_base(self, client, mock_api):
         mock_api["get"].side_effect = _get()
         mock_api["put"].side_effect = self._put()
 
-        body = client.post("/settings/save", json={"assistant": {"user_name": "Alex"}}).json()
+        body = client.post("/settings/save", json={"assistant": {"persona_additions": "More."}}).json()
 
-        assert body["assistant"]["values"] == {"user_name": "Alex"}
+        assert body["assistant"]["values"] == {"user_name": "Sam", "persona_additions": "More."}
 
     def test_refused_change_is_a_422(self, client, mock_api):
         mock_api["get"].side_effect = _get()

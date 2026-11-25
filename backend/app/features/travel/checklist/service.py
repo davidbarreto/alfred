@@ -8,8 +8,13 @@ from app.features.organizer.tasks.schemas import TaskCreate, TaskFilters
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.service import TaskService
 from app.features.travel.checklist import template
-from app.features.travel.checklist.schemas import ChecklistGenerated, ChecklistItemRead
-from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.checklist.schemas import (
+    ChecklistGenerated,
+    ChecklistItemRead,
+    ChecklistItemWrite,
+    ChecklistTemplateRead,
+)
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.trips.repository import TripRepository
 from app.shared.utils.timezone import local_today
 
@@ -49,27 +54,23 @@ class ChecklistService:
         ))
         return not any(t.title.lower().endswith(suffix) for t in found)
 
-    async def get_template(self) -> list[ChecklistItemRead]:
-        return [_read(i) for i in await self._items()]
+    async def get_template(self) -> ChecklistTemplateRead:
+        return ChecklistTemplateRead(items=[_read(i) for i in await self._items()])
 
-    async def put_item(self, anchor: str, name: str, offset_days: int) -> ChecklistItemRead:
-        self._validate(anchor, name)
-        existing = await self._items()
-        if any(i.slug == name and i.anchor != anchor for i in existing):
-            raise TravelConflictError(f"'{name}' already exists under the other anchor")
-        await self._settings.set_value(template.make_key(anchor, name), str(offset_days))
-        return _read(template.ChecklistItem(anchor, name, offset_days))  # type: ignore[arg-type]
-
-    async def delete_item(self, anchor: str, name: str) -> bool:
-        self._validate(anchor, name)
-        return await self._settings.delete_value(template.make_key(anchor, name))
-
-    @staticmethod
-    def _validate(anchor: str, name: str) -> None:
-        if anchor not in template.ANCHORS:
-            raise ValueError(f"anchor must be one of {', '.join(template.ANCHORS)}")
-        if not template.SLUG_PATTERN.match(name):
-            raise ValueError("name may only contain lowercase letters, digits, '-' and '_'")
+    async def replace_template(self, items: list[ChecklistItemWrite]) -> ChecklistTemplateRead:
+        """Store exactly `items` (validated by the schema): new and changed ones are written, missing ones deleted."""
+        current = {i.key: str(i.offset_days) for i in await self._items()}
+        wanted = {template.make_key(i.anchor, i.name): str(i.offset_days) for i in items}
+        for key in current.keys() - wanted.keys():
+            await self._settings.delete_value(key)
+        changed = [key for key, value in wanted.items() if current.get(key) != value]
+        for key in changed:
+            await self._settings.set_value(key, wanted[key])
+        logger.info(
+            "Checklist template replaced: items=%d written=%d deleted=%d",
+            len(wanted), len(changed), len(current.keys() - wanted.keys()),
+        )
+        return await self.get_template()
 
     async def generate(self, trip_id: int) -> ChecklistGenerated:
         """One task per template item, due at its offset from the trip; an item whose task already exists is skipped."""

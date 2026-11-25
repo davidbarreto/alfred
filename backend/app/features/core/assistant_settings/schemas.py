@@ -24,8 +24,9 @@ class AssistantSettingsUpdate(BaseModel):
         "Your name", "How the chat and the briefings call you. Empty = \"the user\".", max_length=USER_NAME_MAX_LENGTH,
     )
     persona_additions: Optional[str] = setting(
-        "Persona additions", "Markdown added after the base persona.",
-        widget="link", href="/persona", max_length=PERSONA_ADDITIONS_MAX_LENGTH,
+        "Persona additions", "Markdown added after the base persona; where they disagree, these win.",
+        widget="markdown", reference="base_persona", reference_label="Base persona (shared, in the repository)",
+        max_length=PERSONA_ADDITIONS_MAX_LENGTH,
     )
 
     @field_validator("user_name")

@@ -1,6 +1,6 @@
 # Travel module
 
-Remember past travels and run an upcoming trip (`travel` schema). Design and phases: `docs/plans/travel.md` (gitignored). No AI and no external API: maps links are plain URLs, coordinates are optional and user-supplied.
+Remember past travels and run an upcoming trip (`travel` schema). No AI and no external API: maps links are plain URLs, coordinates are optional and user-supplied.
 
 ## Data model
 

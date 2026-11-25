@@ -123,7 +123,7 @@ Per-language tracks with CEFR level, a daily quota and a review mode.
 ## CS practice and study planner
 
 - **CS coach:** syncs Codeforces and LeetCode submissions, tracks weak tags and streaks, recommends problems. Portal `/cs`; command `cs context` loads weak spots into working memory; API `/cs/*`.
-- **Study planner:** tracks, LLM-generated plans with a backlog and a cap on active plans, items you complete. Portal `/study`; command `study plans`; API `/study/*`. Design: `docs/plans/study-coach.md`.
+- **Study planner:** tracks, LLM-generated plans with a backlog and a cap on active plans, items you complete. Portal `/study`; command `study plans`; API `/study/*`.
 
 ## Interview prep and tracking
 

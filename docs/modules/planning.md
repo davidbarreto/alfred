@@ -2,7 +2,7 @@
 
 An LLM client (Claude via MCP) plans a day or week from Alfred's data. Alfred only gathers facts and stores what was agreed; it never schedules anything and never sends a notification for any of this.
 
-The design notes live in `docs/plans/day-planning.md` (gitignored: it names real people and routines, so keep personal names out of code, fixtures and these docs).
+Keep personal names and routines out of code, fixtures and these docs.
 
 ## Alfred-only fields
 
@@ -117,7 +117,7 @@ Saving a date archives its active version (`archived_at`) and inserts the next; 
 The recommended flow for an LLM client is the committed skill `.claude/skills/alfred-day-planning/SKILL.md`; this section is the contract it relies on.
 
 - One `get` for the whole week (`days` through Sunday, max 7) is enough: it already carries `saved_plan`, `preferences` and `warnings`. `get_saved` / `review` are only for looking back at last week.
-- Personal rules never live in the repo: they belong in `planning.conventions`, `travel_times`, the other `planning.*` preferences and memory, all of which come back in `preferences`. A full skill with names and routines can be kept in `docs/skills/` (gitignored) or in the Claude web skill.
+- Personal rules never live in the repo: they belong in `planning.conventions`, `travel_times`, the other `planning.*` preferences and memory, all of which come back in `preferences`. A full skill with names and routines belongs outside the repo, for example as a Claude web skill.
 - Save only the dates that changed (`days` is a JSON string); use `edit` for a window inside an already saved day. Mark outcomes with `miss`/`done` rather than re-saving.
 - Legs between places are `transport` blocks the client chooses from the travel times; focused non-task work is `work`. Events the client creates at a frequent place (an office day) get `location_id`, so the commute comes from the travel times.
 - The mcp container fetches the catalog once at startup, so after adding a kind or action restart it before the client sees it.

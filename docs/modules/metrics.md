@@ -1,6 +1,6 @@
 # Metrics module
 
-Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metrics.md`.
+Personal measurement log (`metrics` schema).
 
 ## Data model
 

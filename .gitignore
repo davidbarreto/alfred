@@ -230,12 +230,6 @@ __marimo__/
 # never commit credentials or execution data
 docker_volumes
 n8n_export
-infra/docs
-docs/plans
-docs/skills
-# Personal prompt text kept out of git (persona additions live in core.settings: assistant.persona_additions)
-docs/private
-docs/ideas
 creds_export.json
 
 # MCP OAuth store (test artifacts / local runs)

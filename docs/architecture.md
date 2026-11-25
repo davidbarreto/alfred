@@ -142,6 +142,6 @@ alfred/
 ├── n8n/
 ├── infra/                         # docker-compose.yml, .env, postgres-init scripts
 ├── postman/                       # One collection per feature/integration
-├── docs/                          # This documentation; docs/plans is gitignored
+├── docs/                          # This documentation
 └── CLAUDE.md
 ```

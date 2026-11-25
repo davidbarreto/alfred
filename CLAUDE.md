@@ -33,7 +33,6 @@ This file holds the rules that apply to every change. Reference material lives i
 | `docs/modules/planning.md` | Day plans, saved plans, routines, activities, recurring-event skip/move, Alfred-only task/event fields |
 | `docs/modules/shopping.md` | Shopping list, products, wishlist, recurrence |
 | `docs/modules/locations.md` | Frequent places (home, office, shops), opening hours, what they sell |
-| `docs/plans/` | Design notes per feature (gitignored: they name real people and routines, so never copy personal names into code, fixtures or docs) |
 
 When you change behaviour a module doc describes, update that doc in the same commit.
 

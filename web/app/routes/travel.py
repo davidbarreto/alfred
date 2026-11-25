@@ -505,7 +505,7 @@ async def update_place(place_id: int, request: Request):
 
 @router.delete("/places/{place_id}")
 async def delete_place(place_id: int):
-    return await forward(api.delete(f"/travel/places/{place_id}"), "Could not delete the place.")
+    return await forward(api.delete(f"/location/places/{place_id}"), "Could not delete the place.")
 
 
 @router.post("/visits")

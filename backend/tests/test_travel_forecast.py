@@ -49,7 +49,7 @@ class TestDaysFromDaily:
 
 def _stay(city="Beta", lat=None, lng=None, check_in=datetime(2026, 12, 17, 14), check_out=datetime(2026, 12, 19, 10)):
     ref = city_ref(city)
-    return SimpleNamespace(place=SimpleNamespace(city_id=ref.id, city=ref, lat=lat, lng=lng),
+    return SimpleNamespace(place=SimpleNamespace(city_id=ref.id, city=ref, latitude=lat, longitude=lng),
                            check_in_at=check_in, check_out_at=check_out, timezone="UTC")
 
 

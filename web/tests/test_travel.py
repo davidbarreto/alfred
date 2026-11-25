@@ -32,7 +32,7 @@ def _city(name="Beta", country="Testland", code=None):
 
 def _place(**kw):
     place = {"id": 3, "kind": "hotel", "name": "Hotel Example", "city": _city("Beta"), "maps_url": None,
-             "lat": None, "lng": None, "address": None, "notes": None, "maps_link": "https://maps.example/x",
+             "latitude": None, "longitude": None, "address": None, "notes": None, "maps_link": "https://maps.example/x",
              "tags": [], "grade": None, "grade_count": 0}
     place.update(kw)
     return place
@@ -41,7 +41,7 @@ def _place(**kw):
 def _visit(id=11, status="planned", day="2026-12-18", grade=None, **kw):
     return {
         "id": id, "place_id": 3, "place": {"id": 3, "kind": "restaurant", "name": "Cafe Example", "city": _city("Beta"),
-                                          "maps_url": None, "lat": None, "lng": None, "maps_link": "https://maps.example/c"},
+                                          "maps_url": None, "latitude": None, "longitude": None, "maps_link": "https://maps.example/c"},
         "trip_id": 1, "trip_name": "Example trip", "status": status, "visit_date": day,
         "visit_time": kw.get("time", "20:00:00"), "notes": kw.get("notes"), "grade": grade,
     }
@@ -491,7 +491,7 @@ class TestPlacesPage:
 class TestPlacePage:
     def _detail(self, **kw):
         return _place(
-            tags=["Would return"], grade=4.0, grade_count=2, notes="Book the terrace", lat=38.7, lng=-9.1,
+            tags=["Would return"], grade=4.0, grade_count=2, notes="Book the terrace", latitude=38.7, longitude=-9.1,
             visits=[_visit(id=1, status="visited", grade=4), _visit(id=2, status="planned", day=None)],
             stays=[{"id": 7, "trip_id": 1, "check_in_local": "2026-12-17T15:00:00", "check_out_local": "2026-12-19T11:00:00",
                     "grade": 4, "notes": "Quiet room"}], **kw,

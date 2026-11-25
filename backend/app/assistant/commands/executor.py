@@ -65,8 +65,8 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.activities.service import ActivityService
-from app.features.organizer.locations.service import LocationService
-from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
+from app.features.organizer.everyday_places.service import EverydayPlaceService
+from app.features.organizer.travel_times.service import TravelTimeService
 from app.features.organizer.routines.service import RoutineService
 from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
@@ -118,8 +118,8 @@ async def execute(
     planning_settings_service: PlanningSettingsService | None = None,
     saved_plan_service: SavedPlanService | None = None,
     activity_service: ActivityService | None = None,
-    location_service: LocationService | None = None,
-    location_travel_time_service: LocationTravelTimeService | None = None,
+    location_service: EverydayPlaceService | None = None,
+    location_travel_time_service: TravelTimeService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,

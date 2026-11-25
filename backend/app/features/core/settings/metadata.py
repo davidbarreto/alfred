@@ -42,7 +42,7 @@ def setting(
 
     `key` is the stored key when it is not `<namespace>.<field>`. `write_path` overrides the namespace's PUT; with an
     `{entry}` placeholder the value is a JSON object written one entry at a time, as `{entry_field: value}`.
-    `covers` names other fields of the same schema this control sets too (the weather place sets location_id and
+    `covers` names other fields of the same schema this control sets too (the weather place sets place_id and
     city_id); those are declared with widget="hidden".
     `reference` names a field of the read model shown read-only next to the editor, under `reference_label` (the base
     persona next to the persona additions).

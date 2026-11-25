@@ -25,9 +25,9 @@ def _leg(id, origin, destination, mode="flight", origin_code=None, destination_c
     )
 
 
-def _place(id=1, name="Hotel Example", city="Lisbon", lat=None, lng=None, address=None):
+def _place(id=1, name="Hotel Example", city="Lisbon", latitude=None, longitude=None, address=None):
     return PlaceRead(
-        id=id, kind="hotel", name=name, city=city_ref(city, "Portugal"), maps_url=None, lat=lat, lng=lng,
+        id=id, kind="hotel", name=name, city=city_ref(city, "Portugal"), maps_url=None, latitude=latitude, longitude=longitude,
         address=address, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -43,7 +43,7 @@ def _stay(id, place, day_in, day_out):
 def _visit(id, place_id=30, name="Cafe Example", status="planned", day=date(2031, 3, 3)):
     return VisitRead(
         id=id, place_id=place_id, place=VisitPlace(id=place_id, kind="restaurant", name=name, city=city_ref("Lisbon", "Portugal"),
-                                                  maps_url=None, lat=None, lng=None),
+                                                  maps_url=None, latitude=None, longitude=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=day, visit_time=time(20, 0), notes=None,
         grade=None, created_at=NOW, updated_at=NOW,
     )
@@ -57,7 +57,7 @@ class TestBuildTripMap:
         assert point.description == "Stay 02 Mar - 04 Mar (2 nights)"
 
     def test_coordinates_win_then_address(self):
-        with_coords = build_trip_map(1, "T", [], [_stay(1, _place(lat=38.7, lng=-9.1, address="Rua A 1"), 2, 4)], [])
+        with_coords = build_trip_map(1, "T", [], [_stay(1, _place(latitude=38.7, longitude=-9.1, address="Rua A 1"), 2, 4)], [])
         assert with_coords.points[0].address == "38.7,-9.1"
         with_address = build_trip_map(1, "T", [], [_stay(1, _place(address="Rua A 1"), 2, 4)], [])
         assert with_address.points[0].address == "Hotel Example, Rua A 1, Lisbon"

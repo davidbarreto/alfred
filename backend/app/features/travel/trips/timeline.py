@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.features.travel.legs.schemas import LegRead
 from app.shared.utils.links import maps_directions_url, maps_search_url, place_maps_url
-from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.places.schemas import TravelPlaceRead
 from app.features.travel.settings_schemas import DEFAULT_LONG_WAIT_HOURS, DEFAULT_TIGHT_CONNECTION_MIN
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.zones import to_local
@@ -60,7 +60,7 @@ def _same_place(name: str | None, city: str | None) -> bool:
     return bool(a) and bool(b) and (a in b or b in a)
 
 
-def _end_at_city(end_text: str, end_city_id: int | None, place: PlaceRead) -> bool:
+def _end_at_city(end_text: str, end_city_id: int | None, place: TravelPlaceRead) -> bool:
     """Whether a leg end is in the place's city: by city when the end has one, else by the terminal text."""
     if end_city_id is not None:
         return end_city_id == place.city.id
@@ -108,10 +108,10 @@ def terminal_query(mode: str, code: str | None, name: str) -> str:
     return f"{code} airport" if code else f"{name} airport"
 
 
-def _lodging(place: PlaceRead) -> str:
+def _lodging(place: TravelPlaceRead) -> str:
     """What to type into Maps for a stay: the address or coordinates when known, else name + city."""
-    if place.lat is not None and place.lng is not None:
-        return f"{place.lat},{place.lng}"
+    if place.latitude is not None and place.longitude is not None:
+        return f"{place.latitude},{place.longitude}"
     return " ".join(p for p in (place.name, place.address or place.city.name) if p)
 
 
@@ -196,7 +196,7 @@ def _stay_items(stay: StayRead) -> list[TimelineItem]:
     place = stay.place
     near = " ".join(p for p in (place.name, place.city.name) if p)
     links = {
-        "map": place_maps_url(place.name, place.city.name, place.maps_url, place.lat, place.lng),
+        "map": place_maps_url(place.name, place.city.name, place.maps_url, place.latitude, place.longitude),
         **_food_links(near),
         "luggage": maps_search_url(f"luggage storage near {near}"),
         "pharmacy": maps_search_url(f"pharmacy near {near}"),

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
 from app.features.travel.legs.tables import Leg
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
 from app.features.travel.stays.tables import Stay
 from app.features.travel.trips.tables import Trip
 from app.features.travel.visits.tables import Visit

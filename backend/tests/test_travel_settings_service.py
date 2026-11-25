@@ -18,26 +18,26 @@ def service():
     svc._cities = AsyncMock()
     svc._trips = AsyncMock()
     svc._trips.snapshot_home_value.return_value = 2
-    svc._locations = AsyncMock()
-    svc._locations.get_home.return_value = None
+    svc._places = AsyncMock()
+    svc._places.get_home.return_value = None
     return svc
 
 
 class TestHomeAddress:
     @pytest.mark.asyncio
     async def test_is_read_from_the_home_location(self, service):
-        service._locations.get_home.return_value = SimpleNamespace(address="Rua Exemplo 1")
+        service._places.get_home.return_value = SimpleNamespace(address="Rua Exemplo 1")
         assert (await service.get()).home_address == "Rua Exemplo 1"
 
     @pytest.mark.asyncio
     async def test_is_none_without_a_home_or_its_address(self, service):
         assert (await service.get()).home_address is None
-        service._locations.get_home.return_value = SimpleNamespace(address=None)
+        service._places.get_home.return_value = SimpleNamespace(address=None)
         assert (await service.get()).home_address is None
 
     @pytest.mark.parametrize("value", ["Rua Exemplo 1", "", None])
-    def test_sending_it_is_refused_and_names_the_locations_route(self, value):
-        with pytest.raises(ValueError, match="/organizer/locations"):
+    def test_sending_it_is_refused_and_names_the_places_route(self, value):
+        with pytest.raises(ValueError, match="/location/places"):
             TravelSettingsUpdate(home_address=value)
 
     @pytest.mark.asyncio

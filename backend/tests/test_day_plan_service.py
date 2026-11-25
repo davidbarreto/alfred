@@ -6,7 +6,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.features.organizer.calendar_events.schemas import EventRead
-from app.features.organizer.locations.travel_time_service import TravelNetwork
+from app.features.organizer.travel_times.service import TravelNetwork
 from app.features.organizer.routines.schemas import RoutineRead, RoutineStepRead
 from app.features.organizer.tasks.schemas import TaskRead
 from app.features.planning.schemas import PlanningSettingsRead
@@ -779,15 +779,15 @@ class TestTravel:
             {"place": "office", "mode": "metro", "minutes": 50}, {"place": "office", "mode": "foot", "minutes": 56},
         ])
         parts.events.get_events.return_value = [
-            _event(1, "Office", datetime(2026, 10, 21, 9, 0), datetime(2026, 10, 21, 17, 0), location_id=2),
-            _event(1, "Office", datetime(2026, 10, 22, 9, 0), datetime(2026, 10, 22, 17, 0), location_id=2),
+            _event(1, "Office", datetime(2026, 10, 21, 9, 0), datetime(2026, 10, 21, 17, 0), place_id=2),
+            _event(1, "Office", datetime(2026, 10, 22, 9, 0), datetime(2026, 10, 22, 17, 0), place_id=2),
         ]
 
         plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))
 
         assert all(i["kind"] != "travel" for d in plan["days"] for i in d["timeline"])
         event = plan["days"][0]["timeline"][0]
-        assert (event["location"], event["location_id"]) == ("Office", 2)
+        assert (event["location"], event["place_id"]) == ("Office", 2)
         assert plan["preferences"]["travel_times"] == [  # once per request, however many days
             {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
             {"origin": "home", "place": "office", "mode": "foot", "minutes": 56},
@@ -811,8 +811,8 @@ class TestTravel:
     async def test_missing_route_warnings_are_not_repeated_on_each_day(self, service, parts):
         parts.travel_times.network.return_value = TravelNetwork(names={1: "Casa", 3: "School"}, home_id=1, routes=[])
         parts.events.get_events.return_value = [
-            _event(5, "Pickup", datetime(2026, 10, 21, 17, 0), datetime(2026, 10, 21, 17, 30), location_id=3),
-            _event(5, "Pickup", datetime(2026, 10, 22, 17, 0), datetime(2026, 10, 22, 17, 30), location_id=3),
+            _event(5, "Pickup", datetime(2026, 10, 21, 17, 0), datetime(2026, 10, 21, 17, 30), place_id=3),
+            _event(5, "Pickup", datetime(2026, 10, 22, 17, 0), datetime(2026, 10, 22, 17, 30), place_id=3),
         ]
 
         plan = _dump(await service.get_plan(date(2026, 10, 21), days=2))

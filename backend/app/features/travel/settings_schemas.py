@@ -110,6 +110,6 @@ class TravelSettingsUpdate(BaseModel):
     @classmethod
     def _home_address_moved(cls, value: str | None) -> str | None:
         raise ValueError(
-            "home_address moved to the Home location: change it with PATCH /organizer/locations/{id} "
-            "(find Home with GET /organizer/locations?kind=home) or on the portal's Locations page"
+            "home_address moved to the Home place: change it with PATCH /location/places/{id} "
+            "(find Home with GET /location/places?kind=home) or on the portal's Locations page"
         )

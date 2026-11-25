@@ -76,9 +76,9 @@ class TestGetEvents:
         assert filters.q == "sync"
 
     def test_location_filter_passed_to_service(self, client, mock_service):
-        client.get("/organizer/calendar-events/?location_id=4", headers=AUTH)
+        client.get("/organizer/calendar-events/?place_id=4", headers=AUTH)
         filters = mock_service.get_events.call_args[0][0]
-        assert filters.location_id == 4
+        assert filters.place_id == 4
 
     def test_start_from_filter_passed_to_service(self, client, mock_service):
         client.get("/organizer/calendar-events/?start_from=2026-06-01T00:00:00", headers=AUTH)

@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
 from app.features.travel.visits.schemas import VisitFilters
 from app.features.travel.visits.tables import Visit
 

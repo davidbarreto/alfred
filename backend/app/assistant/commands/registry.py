@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 from app.assistant.commands.schemas import CommandMetadata
 from app.features.organizer.calendar_events.constants import EVENT_AVAILABILITIES, EVENT_PRESENCES
-from app.features.organizer.locations.constants import DEFAULT_KIND, LOCATION_KINDS
+from app.features.location.places.constants import DEFAULT_KIND, PLACE_KINDS
 from app.features.organizer.tasks.schemas import TASK_CONTEXTS
 
 # --- Shared Flag Constants ---
@@ -29,8 +29,8 @@ FLAG_EVENT_AVAILABILITY = {"--availability": "availability"}
 FLAG_EVENT_PRESENCE = {"--presence": "presence"}
 FLAG_TRAVEL = {"--travel": "travel_minutes"}
 FLAG_ROUTINE = {"--routine": "routine_id"}
-# --location is the calendar's free-text location (sent to Google); --at links one of the user's locations.
-FLAG_AT_LOCATION = {"--at": "location_id"}
+# --location is the calendar's free-text location (sent to Google); --at links one of the user's places.
+FLAG_AT_LOCATION = {"--at": "place_id"}
 
 # --- Finance Flag Constants ---
 FLAG_AMOUNT = {"-a": "amount", "--amount": "amount"}
@@ -63,12 +63,12 @@ TASK_UPDATE_FLAGS = {
 _EVENT_PLANNING_DETAILS = (
     f"Planning fields (series-wide, Alfred only, never sent to Google): availability = how much the event blocks, one of "
     f"{'/'.join(EVENT_AVAILABILITIES)} (unset: all-day events are free, timed ones blocked); presence = "
-    f"{'/'.join(EVENT_PRESENCES)} (default in_person); location_id = one of the user's frequent places (alfred_location, "
+    f"{'/'.join(EVENT_PRESENCES)} (default in_person); place_id = one of the user's everyday places (alfred_location, "
     "id or name) the event happens at, so the client plans the trips there from the travel times between places; travel_minutes "
     "= one-way travel in minutes for an event with no location (default 0; with neither, in-person events "
     "get the assumed planning default); routine_id = an event-attached routine whose steps run around this event. "
-    "Pass an empty availability, routine_id or location_id to clear it. location (free text) is the calendar's own "
-    "location and is sent to Google; location_id never is, but when an event without invitees is linked and its location "
+    "Pass an empty availability, routine_id or place_id to clear it. location (free text) is the calendar's own "
+    "location and is sent to Google; place_id never is, but when an event without invitees is linked and its location "
     "is empty (or still the previous location's), Alfred fills location with the location's address (else its name). Locations are for frequent places only: for a one-off "
     "appointment set travel_minutes (ask the user), and mark online events remote. When the user says it is a place they "
     "go to often, create it first with alfred_location add (with --from travel times the user gives) and pass its id."
@@ -185,7 +185,7 @@ LOCATION_FIELD_FLAGS = {
 _LOCATION_DETAILS = (
     "Locations are the user's frequent everyday places: home, work, school, gym and the shops they use "
     "(not trip sights: those are travel places). kind is one of "
-    f"{', '.join(LOCATION_KINDS)} (default {DEFAULT_KIND}; school also covers classes and courses, sports a pool, pitch "
+    f"{', '.join(PLACE_KINDS)} (default {DEFAULT_KIND}; school also covers classes and courses, sports a pool, pitch "
     "or club, mall a shopping centre, variety_store a bazaar-style shop with household goods, tools and gear, "
     "hardware_store DIY, health a doctor, dentist or clinic, playground also an indoor play centre, venue concerts, "
     "theatre or cinema). Only one location can be home, and the office or workplace is kind work, so find it with "
@@ -233,8 +233,8 @@ _DAY_PLAN_GET_DETAILS = (
     "daily work target for this request (0 for a day off). Alfred only gathers facts; it never schedules or notifies, "
     "and free slots are not returned: derive gaps from the timeline. All datetimes carry their UTC offset; timezone is "
     "the display zone. With days=1 the day's fields sit at the top level, otherwise under days[]. "
-    "Per day: timeline (events with availability/presence/notification_profile and location (location_id when the event "
-    "is at one of the user's locations), routine_step entries around events, travel blocks of events with no location, sorted; overlaps are "
+    "Per day: timeline (events with availability/presence/notification_profile and location (place_id when the event "
+    "is at one of the user's places), routine_step entries around events, travel blocks of events with no location, sorted; overlaps are "
     "only reported in warnings), routine_blocks (steps of scheduled "
     "routines with a duration and a window, fixed=true when the window is exactly the duration), all_day, work "
     "(target, committed by events tagged with the work tag plus the saved work blocks and saved task blocks of work-tagged tasks, missed blocks excluded, overlaps counted once, remaining, preferred windows). Once per request: "

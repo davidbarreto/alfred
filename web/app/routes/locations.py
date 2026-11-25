@@ -61,7 +61,7 @@ def group_locations(locations: list[dict]) -> list[tuple[str, list[dict]]]:
 
 @router.get("", response_class=HTMLResponse)
 async def locations_page(request: Request):
-    locations = await safe_get("/organizer/locations")
+    locations = await safe_get("/organizer/places")
     categories = await safe_get("/organizer/shopping-categories", default=[])
     return templates.TemplateResponse(request, "locations.html", {
         "available": locations is not None,
@@ -74,13 +74,13 @@ async def locations_page(request: Request):
 
 @router.get("/{location_id}", response_class=HTMLResponse)
 async def location_detail(request: Request, location_id: int):
-    location = await safe_get(f"/organizer/locations/{location_id}")
+    location = await safe_get(f"/organizer/places/{location_id}")
     if location is None:
         return templates.TemplateResponse(
             request, "location_detail.html", {"location": None}, status_code=404,
         )
     categories = await safe_get("/organizer/shopping-categories", default=[])
-    travel_times = await safe_get(f"/organizer/locations/{location_id}/travel-times", default=[])
+    travel_times = await safe_get(f"/organizer/places/{location_id}/travel-times", default=[])
     others = await _other_locations(location_id)
     events = await upcoming_events(location_id)
     today_key = _DAYS[local_today().weekday()][0]
@@ -104,10 +104,10 @@ async def location_detail(request: Request, location_id: int):
 
 @router.get("/{location_id}/travel-times", response_class=HTMLResponse)
 async def location_travel_times(request: Request, location_id: int):
-    location = await safe_get(f"/organizer/locations/{location_id}")
+    location = await safe_get(f"/organizer/places/{location_id}")
     if location is None:
         return templates.TemplateResponse(request, "location_detail.html", {"location": None}, status_code=404)
-    travel_times = await safe_get(f"/organizer/locations/{location_id}/travel-times", default=[])
+    travel_times = await safe_get(f"/organizer/places/{location_id}/travel-times", default=[])
     return templates.TemplateResponse(request, "location_travel_times.html", {
         "location": location, "travel_times": travel_times, "others": await _other_locations(location_id), "modes": _MODES,
     })
@@ -115,7 +115,7 @@ async def location_travel_times(request: Request, location_id: int):
 
 @router.get("/{location_id}/events", response_class=HTMLResponse)
 async def location_events(request: Request, location_id: int):
-    location = await safe_get(f"/organizer/locations/{location_id}")
+    location = await safe_get(f"/organizer/places/{location_id}")
     if location is None:
         return templates.TemplateResponse(request, "location_detail.html", {"location": None}, status_code=404)
     return templates.TemplateResponse(request, "location_events.html", {
@@ -127,7 +127,7 @@ async def upcoming_events(location_id: int) -> list[dict]:
     """Timed and all-day events at this location from today through the next 60 days, each occurrence listed."""
     today = local_today()
     params = {
-        "location_id": location_id,
+        "place_id": location_id,
         "start_from": datetime.combine(today, time.min).isoformat(),
         "start_to": datetime.combine(today + timedelta(days=_EVENTS_AHEAD_DAYS), time.max).isoformat(timespec="seconds"),
         "limit": 500,
@@ -138,31 +138,40 @@ async def upcoming_events(location_id: int) -> list[dict]:
 
 async def _other_locations(location_id: int) -> list[dict]:
     """Active locations a travel time from this one can go to."""
-    locations = await safe_get("/organizer/locations", params={"active": "true"}, default=[])
+    locations = await safe_get("/organizer/places", params={"active": "true"}, default=[])
     return [loc for loc in locations or [] if loc["id"] != location_id]
 
 
 @router.post("")
 async def create_location(request: Request):
-    return await forward(api.post("/organizer/locations", json=await request.json()), "Could not add the location.")
+    """A new everyday place (with what it sells); its city defaults to the Home place's."""
+    return await forward(api.post("/organizer/places", json=await request.json()), "Could not add the location.")
+
+
+async def _save_location(location_id: int, body: dict) -> dict:
+    """The place's own fields go to the location API, what it sells to the everyday one; returns the everyday view."""
+    category_ids = body.pop("category_ids", None)
+    if body:
+        await api.patch(f"/location/places/{location_id}", json=body)
+    if category_ids is not None:
+        await api.put(f"/organizer/places/{location_id}/categories", json={"category_ids": category_ids})
+    return await api.get(f"/organizer/places/{location_id}")
 
 
 @router.patch("/{location_id}")
 async def update_location(location_id: int, request: Request):
-    return await forward(
-        api.patch(f"/organizer/locations/{location_id}", json=await request.json()), "Could not save the location."
-    )
+    return await forward(_save_location(location_id, await request.json()), "Could not save the location.")
 
 
 @router.delete("/{location_id}")
 async def delete_location(location_id: int):
-    return await forward(api.delete(f"/organizer/locations/{location_id}"), "Could not delete the location.")
+    return await forward(api.delete(f"/location/places/{location_id}"), "Could not delete the location.")
 
 
 @router.put("/{location_id}/travel-times")
 async def set_travel_time(location_id: int, request: Request):
     return await forward(
-        api.put(f"/organizer/locations/{location_id}/travel-times", json=await request.json()),
+        api.put(f"/organizer/places/{location_id}/travel-times", json=await request.json()),
         "Could not save the travel time.",
     )
 
@@ -170,5 +179,5 @@ async def set_travel_time(location_id: int, request: Request):
 @router.delete("/travel-times/{travel_time_id}")
 async def delete_travel_time(travel_time_id: int):
     return await forward(
-        api.delete(f"/organizer/locations/travel-times/{travel_time_id}"), "Could not delete the travel time."
+        api.delete(f"/organizer/travel-times/{travel_time_id}"), "Could not delete the travel time."
     )

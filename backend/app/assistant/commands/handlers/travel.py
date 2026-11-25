@@ -18,8 +18,10 @@ from app.features.travel.links.schemas import WebLinkCreate, WebLinkRead, WebLin
 from app.features.travel.links.service import WebLinkService
 from app.features.travel.legs.service import LegService
 from app.features.travel.recap.service import TripRecapService
-from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
-from app.features.travel.places.service import PlaceInUseError, PlaceService
+from app.features.location.errors import LocationConflictError
+from app.features.location.places.service import PlaceService
+from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceFilters, TravelPlaceRead, TravelPlaceUpdate
+from app.features.travel.places.service import TravelPlaceService
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
 from app.features.travel.stays.service import StayService
 from app.features.travel.transaction_links.service import TransactionLinkService, TransferNotLinkableError
@@ -37,7 +39,7 @@ class TravelServices:
     trips: TripService
     legs: LegService
     stays: StayService
-    places: PlaceService
+    places: TravelPlaceService
     visits: VisitService
     links: TransactionLinkService
     default_tags: TripDefaultTagService
@@ -45,6 +47,8 @@ class TravelServices:
     web_links: WebLinkService | None = None
     cities: CityService | None = None
     countries: CountryService | None = None
+    # What a place is (deleting it): location's service, which asks organizer and travel what holds the place.
+    base_places: PlaceService | None = None
 
 
 def _bad_request(detail: str) -> HTTPException:
@@ -128,7 +132,7 @@ async def _find_trip(services: TravelServices, ref: str) -> TripRead:
 async def _find_place(
     services: TravelServices, ref: str, kind: str | None = None, city: str | None = None, country: str | None = None,
     create: bool = False,
-) -> PlaceRead:
+) -> TravelPlaceRead:
     """A place by id or exact (case-insensitive) name, narrowed by city; created when `create` and none matches."""
     if _is_id(ref):
         place = await services.places.get_place(int(ref))
@@ -136,7 +140,7 @@ async def _find_place(
             raise _not_found("Place", ref)
         return place
     candidates = await services.places.get_places(
-        PlaceFilters(q=ref, kind=None, city=city, country=None, tag=None, min_grade=None, status=None, no_trip=False, limit=50, offset=0)
+        TravelPlaceFilters(q=ref, kind=None, city=city, country=None, tag=None, min_grade=None, status=None, no_trip=False, limit=50, offset=0)
     )
     exact = [p for p in candidates if p.name.lower() == ref.lower()]
     if exact:
@@ -145,7 +149,7 @@ async def _find_place(
         raise _not_found("Place", repr(ref))
     if not city or not country:
         raise _bad_request(f"Which city and country is {ref} in?")
-    data = build_model(PlaceCreate, kind=kind or "other", name=ref, city=city, country=country)
+    data = build_model(TravelPlaceCreate, kind=kind or "other", name=ref, city=city, country=country)
     return await services.places.create_place(data)
 
 
@@ -185,7 +189,7 @@ def _visit_summary(visit: VisitRead) -> dict[str, Any]:
     }
 
 
-def _place_summary(place: PlaceRead) -> dict[str, Any]:
+def _place_summary(place: TravelPlaceRead) -> dict[str, Any]:
     return {
         "id": place.id, "kind": place.kind, "name": place.name, "city": place.city.name, "country": place.city.country.name,
         "grade": place.grade, "grade_count": place.grade_count, "tags": place.tags, "notes": place.notes,
@@ -308,7 +312,7 @@ async def handle_travel(cmd_type: str, command: str, arguments: dict[str, Any], 
         return await handler(command, arguments, services)
     except TravelNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-    except (TravelConflictError, PlaceInUseError) as exc:
+    except (TravelConflictError, LocationConflictError) as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc) or "Conflict")
     except (TransferNotLinkableError, ValueError) as exc:
         raise _bad_request(str(exc))
@@ -502,7 +506,7 @@ async def _stay(command: str, arguments: dict[str, Any], services: TravelService
         )
         fields["place_id"] = place.id
         if hotel and _text(arguments, "maps_url") and not place.maps_url:
-            await services.places.update_place(place.id, PlaceUpdate(maps_url=_text(arguments, "maps_url")))
+            await services.places.update_place(place.id, TravelPlaceUpdate(maps_url=_text(arguments, "maps_url")))
 
     if command == "add":
         if "trip_id" not in fields and _text(arguments, "trip_id"):
@@ -530,22 +534,24 @@ async def _stay(command: str, arguments: dict[str, Any], services: TravelService
 
 async def _place(command: str, arguments: dict[str, Any], services: TravelServices) -> Any:
     fields = _present(arguments, ("kind", "city", "country", "maps_url", "address", "notes"))
-    for key in ("lat", "lng"):
-        if key in arguments:
-            fields[key] = _float(_text(arguments, key), key)
+    if "lat" in arguments or "lng" in arguments:
+        lat, lng = _float(_text(arguments, "lat"), "lat"), _float(_text(arguments, "lng"), "lng")
+        if (lat is None) != (lng is None):
+            raise _bad_request("Give both --lat and --lng, or neither")
+        fields["coordinates"] = None if lat is None else (lat, lng)
     if "tags" in arguments:
         fields["tags"] = parse_tags(arguments.get("tags"))
 
     if command == "add":
         if not fields.get("city") or not fields.get("country"):
             raise _bad_request(f"Which city and country is {_text(arguments, 'name')} in?")
-        place = await services.places.create_place(build_model(PlaceCreate, name=_text(arguments, "name"), **{
+        place = await services.places.create_place(build_model(TravelPlaceCreate, name=_text(arguments, "name"), **{
             "kind": "other", **{k: v for k, v in fields.items() if v is not None},
         }))
         return {"id": place.id, "message": f"Place '{place.name}' added"}
 
     if command == "list":
-        filters = PlaceFilters(
+        filters = TravelPlaceFilters(
             q=_text(arguments, "q"), kind=_text(arguments, "kind"), city=_text(arguments, "city"),
             country=_text(arguments, "country"), tag=parse_tags(arguments.get("tag")) or None,
             min_grade=parse_int(arguments.get("min_grade"), "min_grade"), ungraded=_flag(arguments, "ungraded"),
@@ -577,14 +583,16 @@ async def _place(command: str, arguments: dict[str, Any], services: TravelServic
             fields["name"] = _text(arguments, "name")
         if not fields:
             raise _bad_request("Nothing to update")
-        place = await services.places.update_place(place_id, build_model(PlaceUpdate, **fields))
+        place = await services.places.update_place(place_id, build_model(TravelPlaceUpdate, **fields))
         if place is None:
             raise _not_found("Place", place_id)
         return {"id": place.id, "message": f"Place '{place.name}' updated"}
 
     if command == "delete":
         place_id = require_int(arguments, "id")
-        if not await services.places.delete_place(place_id):
+        if services.base_places is None:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Place service not available")
+        if not await services.base_places.delete(place_id):
             raise _not_found("Place", place_id)
         return {"message": f"Place {place_id} deleted"}
 

@@ -7,7 +7,7 @@ from app.features.language.sessions.service import SessionService as LanguageSes
 from app.features.organizer.activities.service import ActivityService
 from app.features.organizer.calendar_events.schemas import EventFilters, EventRead
 from app.features.organizer.calendar_events.service import CalendarEventService
-from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
+from app.features.organizer.travel_times.service import TravelTimeService
 from app.features.organizer.routines.expansion import expand_scheduled_steps, localize, scheduled_dates
 from app.features.organizer.routines.schemas import RoutineRead
 from app.features.organizer.routines.service import RoutineService
@@ -69,7 +69,7 @@ class DayPlanService:
         activity_service: ActivityService,
         trip_service: TripService,
         holiday_provider: HolidayProvider | None,
-        travel_time_service: LocationTravelTimeService,
+        travel_time_service: TravelTimeService,
     ) -> None:
         self._events = event_service
         self._routines = routine_service

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
-from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.places.schemas import TravelPlaceRead
 from app.features.travel.zones import to_local, to_utc, validate_zone
 
 
@@ -56,7 +56,7 @@ class StayRead(BaseModel):
     id: int
     trip_id: int | None
     place_id: int
-    place: PlaceRead
+    place: TravelPlaceRead
     check_in_at: datetime
     check_out_at: datetime
     timezone: str

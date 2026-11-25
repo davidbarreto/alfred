@@ -68,13 +68,13 @@
 {% endmacro %}
 
 {% macro place(row) %}
-{% set current = 'location:' ~ row.value.location_id if row.value.location_id is not none
+{% set current = 'place:' ~ row.value.place_id if row.value.place_id is not none
    else ('city:' ~ row.value.city_id if row.value.city_id is not none else '') %}
 <div class="space-y-1 w-full sm:w-64">
   <select data-control class="select select-sm select-bordered w-full" aria-label="{{ row.label }}">
     <option value="" {{ 'selected' if current == '' }}>Home (default)</option>
-    {% if row.choices.locations %}<optgroup label="Locations">
-      {% for c in row.choices.locations %}<option value="location:{{ c.id }}" {{ 'selected' if current == 'location:' ~ c.id }}>{{ c.label }}</option>{% endfor %}
+    {% if row.choices.places %}<optgroup label="Places">
+      {% for c in row.choices.places %}<option value="place:{{ c.id }}" {{ 'selected' if current == 'place:' ~ c.id }}>{{ c.label }}</option>{% endfor %}
     </optgroup>{% endif %}
     {% if row.choices.cities %}<optgroup label="Cities">
       {% for c in row.choices.cities %}<option value="city:{{ c.id }}" {{ 'selected' if current == 'city:' ~ c.id }}>{{ c.label }}</option>{% endfor %}

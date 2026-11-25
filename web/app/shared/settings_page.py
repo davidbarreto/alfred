@@ -58,7 +58,7 @@ def _row(field: dict, values: dict) -> dict:
         row["city"] = values.get(field["field"].removesuffix("_id"))
     if field["widget"] == "place":
         # The namespace GET lists what can be picked and what is in use now.
-        row["choices"] = values.get("choices") or {"locations": [], "cities": []}
+        row["choices"] = values.get("choices") or {"places": [], "cities": []}
         row["place_label"] = values.get("place_label")
     if field.get("reference"):
         # Shown read-only next to the editor (the base persona next to the additions).

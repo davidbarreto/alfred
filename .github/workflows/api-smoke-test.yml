@@ -156,7 +156,8 @@ jobs:
             finance.collection.json
             interview_prep.collection.json
             interviews.collection.json
-            locations.collection.json
+            everyday_places.collection.json
+            location.collection.json
             metrics.collection.json
             travel.collection.json
             notes.collection.json

@@ -1,12 +1,10 @@
-from typing import Any
-
 from sqlalchemy import func, or_, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
 from app.features.location.countries.tables import Country
-from app.features.travel.places.schemas import PlaceFilters
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
+from app.features.travel.places.schemas import TravelPlaceFilters
 from app.features.travel.stays.tables import Stay
 from app.features.travel.tags.tables import TravelTag, places_tags
 from app.features.travel.visits.tables import Visit
@@ -19,14 +17,14 @@ def _grades():
     return union_all(visits, stays).subquery()
 
 
-class PlaceRepository:
+class TravelPlaceRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
     async def get_place(self, place_id: int) -> Place | None:
         return await self._session.get(Place, place_id)
 
-    async def get_places(self, filters: PlaceFilters) -> list[Place]:
+    async def get_places(self, filters: TravelPlaceFilters) -> list[Place]:
         stmt = select(Place).join(City, City.id == Place.city_id).join(Country, Country.id == City.country_id)
         if filters.q:
             pattern = f"%{filters.q.strip().lower()}%"
@@ -88,30 +86,7 @@ class PlaceRepository:
         )
         return {pid: (round(float(avg), 2), int(n)) for pid, avg, n in (await self._session.execute(stmt)).all()}
 
-    async def create_place(self, data: dict[str, Any], tags: list[TravelTag]) -> Place:
-        place = Place(**data)
+    async def set_tags(self, place: Place, tags: list[TravelTag]) -> None:
         place.tags = tags
-        self._session.add(place)
         await self._session.commit()
         await self._session.refresh(place)
-        return place
-
-    async def update_place(self, place_id: int, data: dict[str, Any], tags: list[TravelTag] | None) -> Place | None:
-        place = await self.get_place(place_id)
-        if place is None:
-            return None
-        for field, value in data.items():
-            setattr(place, field, value)
-        if tags is not None:
-            place.tags = tags
-        await self._session.commit()
-        await self._session.refresh(place)
-        return place
-
-    async def delete_place(self, place_id: int) -> bool:
-        place = await self.get_place(place_id)
-        if place is None:
-            return False
-        await self._session.delete(place)
-        await self._session.commit()
-        return True

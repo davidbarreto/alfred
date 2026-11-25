@@ -11,7 +11,7 @@ from app.dependencies import (
     get_extraction_llm_provider,
     get_exchange_rate_provider,
     get_day_plan_service,
-    get_location_service,
+    get_place_service,
     get_holiday_provider,
     get_holiday_service,
     get_planning_holiday_provider,
@@ -140,14 +140,15 @@ class TestDisableIntegrations:
         assert get_holiday_service()._provider._calendars == {"BR": "br-cal"}
 
     @pytest.mark.asyncio
-    async def test_location_service_keeps_the_old_home_address_on_started_trips(self, monkeypatch):
+    async def test_place_service_keeps_the_old_home_address_on_started_trips(self, monkeypatch):
         from datetime import date
 
         snapshot = AsyncMock(return_value=3)
         monkeypatch.setattr("app.dependencies.TripRepository.snapshot_home_value", snapshot)
 
-        service = get_location_service(session=AsyncMock())
+        service = get_place_service(session=AsyncMock())
 
+        assert [type(h).__name__ for h in service._hooks] == ["OrganizerPlaceHooks", "TravelPlaceHooks"]
         assert await service._home_snapshot("Rua Antiga 2", date(2026, 11, 23)) == 3
         snapshot.assert_awaited_once_with("home_address", "Rua Antiga 2", date(2026, 11, 23))
 

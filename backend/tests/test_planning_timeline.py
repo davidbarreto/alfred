@@ -296,8 +296,8 @@ class TestLocatedEvents:
     def test_events_at_a_location_get_no_travel_blocks(self):
         graph = _graph({(HOME, OFFICE), (OFFICE, SCHOOL), (HOME, SCHOOL)})
         events = [
-            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 16, 30), location_id=OFFICE),
-            _event(2, "Pickup", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 0), location_id=SCHOOL),
+            _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 16, 30), place_id=OFFICE),
+            _event(2, "Pickup", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 0), place_id=SCHOOL),
         ]
 
         day = timeline.build_timeline(events, {}, {}, WED, graph=graph)
@@ -306,16 +306,16 @@ class TestLocatedEvents:
         assert day.warnings == [] and day.assumed_events == []
 
     def test_event_items_carry_the_location_name_and_id(self):
-        events = [_event(1, "Office day", location_id=OFFICE, location="Some street 1")]
+        events = [_event(1, "Office day", place_id=OFFICE, location="Some street 1")]
         item = timeline.build_timeline(events, {}, {}, WED, graph=_graph({(HOME, OFFICE)})).items[0]
-        assert (item.kind, item.location, item.location_id) == ("event", "Office", OFFICE)
+        assert (item.kind, item.location, item.place_id) == ("event", "Office", OFFICE)
 
     def test_a_place_with_no_route_from_home_is_warned_once(self):
         graph = _graph({(OFFICE, DENTIST)})  # a route between two places does not reach home
         events = [
-            _event(1, "Pickup", (2026, 10, 21, 9, 0), (2026, 10, 21, 9, 30), location_id=SCHOOL),
-            _event(2, "Pickup again", (2026, 10, 21, 17, 0), (2026, 10, 21, 17, 30), location_id=SCHOOL),
-            _event(3, "Dentist", (2026, 10, 21, 12, 0), (2026, 10, 21, 13, 0), location_id=DENTIST),
+            _event(1, "Pickup", (2026, 10, 21, 9, 0), (2026, 10, 21, 9, 30), place_id=SCHOOL),
+            _event(2, "Pickup again", (2026, 10, 21, 17, 0), (2026, 10, 21, 17, 30), place_id=SCHOOL),
+            _event(3, "Dentist", (2026, 10, 21, 12, 0), (2026, 10, 21, 13, 0), place_id=DENTIST),
         ]
         day = timeline.build_timeline(events, {}, {}, WED, graph=graph)
         assert _travel(day.items) == []
@@ -325,28 +325,28 @@ class TestLocatedEvents:
         ]
 
     def test_a_route_saved_the_other_way_counts(self):
-        events = [_event(1, "Pickup", location_id=SCHOOL)]
+        events = [_event(1, "Pickup", place_id=SCHOOL)]
         day = timeline.build_timeline(events, {}, {}, WED, graph=_graph({(SCHOOL, HOME)}))
         assert day.warnings == []
 
     def test_remote_free_and_home_events_are_not_warned(self):
         events = [
-            _event(1, "Remote class", location_id=SCHOOL, presence="remote_home"),
-            _event(2, "Someone else's course", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), location_id=SCHOOL,
+            _event(1, "Remote class", place_id=SCHOOL, presence="remote_home"),
+            _event(2, "Someone else's course", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), place_id=SCHOOL,
                    availability="free"),
-            _event(3, "Plumber", (2026, 10, 21, 16, 0), (2026, 10, 21, 17, 0), location_id=HOME),
+            _event(3, "Plumber", (2026, 10, 21, 16, 0), (2026, 10, 21, 17, 0), place_id=HOME),
         ]
         day = timeline.build_timeline(events, {}, {}, WED, graph=_graph())
         assert _travel(day.items) == [] and day.warnings == []
 
     def test_without_a_home_location_the_place_is_warned(self):
-        events = [_event(1, "Office", location_id=OFFICE)]
+        events = [_event(1, "Office", place_id=OFFICE)]
         day = timeline.build_timeline(events, {}, {}, WED, graph=_graph(home=None))
         assert _travel(day.items) == []
         assert day.warnings == ["No Home location saved: travel from home to Office is unknown"]
 
     def test_the_events_own_minutes_do_not_make_blocks_at_a_location(self):
-        events = [_event(1, "Dentist", location_id=DENTIST, travel_minutes=20)]
+        events = [_event(1, "Dentist", place_id=DENTIST, travel_minutes=20)]
         day = timeline.build_timeline(events, {}, {}, WED, graph=_graph({(HOME, DENTIST)}))
         assert _travel(day.items) == []
 
@@ -381,14 +381,14 @@ class TestAssumedTravelForUnlocatedEvents:
         events = [
             _event(1, "Office day", (2026, 10, 21, 9, 0), (2026, 10, 21, 12, 0), tags=["office"]),
             _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 15)),
-            _event(3, "Dentist", (2026, 10, 21, 15, 0), (2026, 10, 21, 16, 0), location_id=DENTIST),
+            _event(3, "Dentist", (2026, 10, 21, 15, 0), (2026, 10, 21, 16, 0), place_id=DENTIST),
             _event(4, "Quick call", (2026, 10, 21, 15, 10), (2026, 10, 21, 15, 20)),
         ]
         day = timeline.build_timeline(events, {}, {}, WED, "office", graph=graph)
         assert day.assumed_events == [(1, "Office day")]  # the office day itself has no location here
 
     def test_a_zero_default_switches_the_assumption_off(self):
-        events = [_event(7, "Party"), _event(8, "Office", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), location_id=OFFICE)]
+        events = [_event(7, "Party"), _event(8, "Office", (2026, 10, 21, 14, 0), (2026, 10, 21, 15, 0), place_id=OFFICE)]
         day = timeline.build_timeline(events, {}, {}, WED, graph=_graph({(HOME, OFFICE)}, default=0))
         assert _travel(day.items) == [] and day.warnings == [] and day.assumed_events == []
 

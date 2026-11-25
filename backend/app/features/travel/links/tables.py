@@ -27,7 +27,7 @@ class WebLink(Base):
         Integer, ForeignKey("travel.trips.id", ondelete="CASCADE"), nullable=True, index=True
     )
     place_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("travel.places.id", ondelete="CASCADE"), nullable=True, index=True
+        Integer, ForeignKey("location.places.id", ondelete="CASCADE"), nullable=True, index=True
     )
     city_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("location.cities.id", ondelete="CASCADE"), nullable=True, index=True

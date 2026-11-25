@@ -75,13 +75,13 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/organizer/locations",
+          "raw": "{{base_url}}/organizer/places",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "organizer",
-            "locations"
+            "places"
           ]
         },
         "body": {
@@ -105,10 +105,10 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const json = pm.response.json();",
               "pm.test('The location is in use and listed as a choice', () => {",
-              "    pm.expect(json.location_id).to.eql(pm.environment.get('briefing_weather_location_id'));",
+              "    pm.expect(json.place_id).to.eql(pm.environment.get('briefing_weather_location_id'));",
               "    pm.expect(json.city_id).to.eql(null);",
               "    pm.expect(json.place_label).to.eql(pm.environment.get('briefing_weather_location_name'));",
-              "    pm.expect(json.choices.locations.map(c => c.id)).to.include(pm.environment.get('briefing_weather_location_id'));",
+              "    pm.expect(json.choices.places.map(c => c.id)).to.include(pm.environment.get('briefing_weather_location_id'));",
               "});"
             ],
             "type": "text/javascript"
@@ -135,7 +135,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"location_id\": \"{{briefing_weather_location_id}}\"\n}",
+          "raw": "{\n  \"place_id\": \"{{briefing_weather_location_id}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -177,7 +177,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"location_id\": \"{{briefing_weather_location_id}}\",\n  \"city_id\": 1\n}",
+          "raw": "{\n  \"place_id\": \"{{briefing_weather_location_id}}\",\n  \"city_id\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -219,7 +219,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"location_id\": 999999999\n}",
+          "raw": "{\n  \"place_id\": 999999999\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -876,7 +876,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Nothing is chosen', () => pm.expect([pm.response.json().location_id, pm.response.json().city_id]).to.eql([null, null]));"
+              "pm.test('Nothing is chosen', () => pm.expect([pm.response.json().place_id, pm.response.json().city_id]).to.eql([null, null]));"
             ],
             "type": "text/javascript"
           }
@@ -902,7 +902,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"location_id\": null,\n  \"city_id\": null\n}",
+          "raw": "{\n  \"place_id\": null,\n  \"city_id\": null\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -928,13 +928,13 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/locations/{{briefing_weather_location_id}}",
+          "raw": "{{base_url}}/location/places/{{briefing_weather_location_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "organizer",
-            "locations",
+            "location",
+            "places",
             "{{briefing_weather_location_id}}"
           ]
         }

@@ -14,10 +14,10 @@ from app.features.travel.cities.repository import TravelCityRepository
 from app.features.travel.cities.service import TravelCityService
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
-from app.features.travel.places.repository import PlaceRepository
-from app.features.travel.places.schemas import PlaceFilters
+from app.features.travel.places.repository import TravelPlaceRepository
+from app.features.travel.places.schemas import TravelPlaceFilters
 from app.features.travel.stays.schemas import StayRead
-from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.places.schemas import TravelPlaceRead
 from app.features.travel.trips.trip_cities import build_trip_cities
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 from app.main import app
@@ -41,14 +41,14 @@ def _leg(origin, destination, dep, arr):
 
 
 def _stay(city, check_in):
-    place = PlaceRead(id=1, kind="hotel", name="Hotel Example", city=city_ref(city), maps_url=None, lat=None, lng=None,
+    place = TravelPlaceRead(id=1, kind="hotel", name="Hotel Example", city=city_ref(city), maps_url=None, latitude=None, longitude=None,
                       address=None, notes=None, created_at=NOW, updated_at=NOW)
     return StayRead(id=1, trip_id=1, place_id=1, place=place, check_in_at=check_in, check_out_at=check_in.replace(day=check_in.day + 1),
                     timezone="UTC", booking_ref=None, booking_url=None, notes=None, grade=None, created_at=NOW, updated_at=NOW)
 
 
 def _visit(city, day, status="planned"):
-    place = VisitPlace(id=2, kind="museum", name="Museum Example", city=city_ref(city), maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=2, kind="museum", name="Museum Example", city=city_ref(city), maps_url=None, latitude=None, longitude=None)
     return VisitRead(id=1, place_id=2, place=place, trip_id=1, trip_name=None, status=status,
                      visit_date=date(2026, 12, day) if day else None, visit_time=None, notes=None, grade=None,
                      created_at=NOW, updated_at=NOW)
@@ -186,9 +186,9 @@ class TestSql:
 
     async def test_places_filter_by_city_id_and_country_id(self):
         session = self._Session()
-        await PlaceRepository(session).get_places(PlaceFilters(city_id=4, country_id=2))
+        await TravelPlaceRepository(session).get_places(TravelPlaceFilters(city_id=4, country_id=2))
         sql = self._sql(session.statements[0])
-        assert "travel.places.city_id = 4" in sql and "location.cities.country_id = 2" in sql
+        assert "location.places.city_id = 4" in sql and "location.cities.country_id = 2" in sql
 
 
 class TestRoutes:

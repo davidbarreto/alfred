@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.features.travel.legs.schemas import LegRead
-from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.places.schemas import TravelPlaceRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.trips.timeline import TERMINAL_MODES, terminal_query
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
@@ -34,9 +34,9 @@ class TripMap(BaseModel):
     points: list[MapPoint]
 
 
-def _location(place: PlaceRead | VisitPlace) -> str:
-    if place.lat is not None and place.lng is not None:
-        return f"{place.lat},{place.lng}"
+def _location(place: TravelPlaceRead | VisitPlace) -> str:
+    if place.latitude is not None and place.longitude is not None:
+        return f"{place.latitude},{place.longitude}"
     address = getattr(place, "address", None)  # a visit's place slice has no address
     if address:
         return ", ".join(p for p in (place.name, address, place.city.name) if p)
@@ -70,7 +70,7 @@ def build_trip_map(
     by_place: dict[int, MapPoint] = {}
     notes: dict[int, list[str]] = {}
 
-    def add(place: PlaceRead | VisitPlace, text: str, category: str, status: str) -> None:
+    def add(place: TravelPlaceRead | VisitPlace, text: str, category: str, status: str) -> None:
         if scope not in ("all", status):
             return
         if place.id not in by_place:

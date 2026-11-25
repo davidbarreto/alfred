@@ -27,7 +27,7 @@ class EventBase(BaseModel):
     presence: EventPresence = "in_person"
     travel_minutes: int = Field(default=0, ge=0)
     routine_id: int | None = None
-    location_id: int | None = None
+    place_id: int | None = None
 
 
 class EventCreate(EventBase):
@@ -51,7 +51,7 @@ class EventUpdate(BaseModel):
     presence: EventPresence | None = None
     travel_minutes: int | None = Field(default=None, ge=0)
     routine_id: int | None = None
-    location_id: int | None = None
+    place_id: int | None = None
 
     @model_validator(mode="after")
     def _required_columns_not_null(self) -> "EventUpdate":
@@ -122,14 +122,14 @@ class EventFilters:
         start_to: Annotated[Optional[datetime], Query()] = None,
         tags: Annotated[Optional[List[str]], Query()] = None,
         q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
-        location_id: Annotated[Optional[int], Query(description="Only events at this location")] = None,
+        place_id: Annotated[Optional[int], Query(description="Only events at this place")] = None,
     ) -> None:
         self.limit = limit
         self.start_from = _to_local_naive(start_from)
         self.start_to = _to_local_naive(start_to)
         self.tags = tags
         self.q = q
-        self.location_id = location_id
+        self.place_id = place_id
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, EventFilters) and vars(self) == vars(other)
@@ -137,7 +137,7 @@ class EventFilters:
     def __repr__(self) -> str:
         return (
             f"EventFilters(limit={self.limit}, start_from={self.start_from!r}, "
-            f"start_to={self.start_to!r}, tags={self.tags!r}, q={self.q!r}, location_id={self.location_id!r})"
+            f"start_to={self.start_to!r}, tags={self.tags!r}, q={self.q!r}, place_id={self.place_id!r})"
         )
 
 

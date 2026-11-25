@@ -8,7 +8,7 @@ from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import WEB_LINK_NOTE, TravelNoteIndex
 from app.features.location.cities.repository import CityRepository
 from app.features.location.countries.repository import CountryRepository
-from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.links.kind import display_domain, guess_kind, is_social
 from app.features.travel.links.repository import WebLinkRepository
@@ -26,7 +26,7 @@ class WebLinkService:
         self._session = session
         self._repo = WebLinkRepository(session)
         self._trip_repo = TripRepository(session)
-        self._place_repo = PlaceRepository(session)
+        self._place_repo = TravelPlaceRepository(session)
         self._city_repo = CityRepository(session)
         self._country_repo = CountryRepository(session)
         self._preview = preview_client

@@ -141,12 +141,12 @@ class TestGetEvents:
         session = _make_session()
         session.execute.return_value = _scalar_all([])
 
-        await CalendarEventRepository(session).get_events(EventFilters(location_id=4))
+        await CalendarEventRepository(session).get_events(EventFilters(place_id=4))
 
         sql = str(session.execute.call_args.args[0].compile(
             dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
         ))
-        assert "organizer.calendar_events.location_id = 4" in sql
+        assert "organizer.calendar_events.place_id = 4" in sql
 
     async def test_range_query_includes_recurring_series_regardless_of_own_start(self):
         # A recurring series can start well before the queried range and still produce

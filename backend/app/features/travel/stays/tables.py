@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, St
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
 
 
 class Stay(Base):
@@ -20,7 +20,7 @@ class Stay(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     # A weekend in a hotel needs no trip; deleting a trip keeps its stays (and their notes and grades).
     trip_id: Mapped[Optional[int]] = mapped_column(ForeignKey("travel.trips.id", ondelete="SET NULL"), nullable=True)
-    place_id: Mapped[int] = mapped_column(ForeignKey("travel.places.id", ondelete="RESTRICT"), nullable=False, index=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("location.places.id", ondelete="RESTRICT"), nullable=False, index=True)
     check_in_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     check_out_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # IANA zone of the lodging, so a check-in time is comparable with a flight's arrival instant.

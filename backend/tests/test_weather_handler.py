@@ -45,7 +45,7 @@ class TestHandleWeather:
         with pytest.raises(HTTPException) as exc:
             await handle_weather("current", {}, places)
 
-        assert exc.value.status_code == 404 and "Home location" in exc.value.detail
+        assert exc.value.status_code == 404 and "Home place" in exc.value.detail
         client.get_forecast_at.assert_not_awaited()
 
     async def test_unknown_command(self, client):

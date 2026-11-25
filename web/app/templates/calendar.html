@@ -497,8 +497,8 @@ function _toggleNewLocation() {
 
 function _setEventLocation(ev) {
   const select = document.getElementById("event-location-id");
-  const suggested = !ev.location_id && ev.suggested_location_id;
-  select.value = String(ev.location_id || ev.suggested_location_id || "");
+  const suggested = !ev.place_id && ev.suggested_location_id;
+  select.value = String(ev.place_id || ev.suggested_location_id || "");
   _toggleNewLocation();
   document.getElementById("event-location-suggested").classList.toggle("hidden", !suggested);
 }

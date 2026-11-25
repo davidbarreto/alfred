@@ -96,7 +96,7 @@ async def _event_routines() -> list[dict]:
 
 async def _locations() -> list[dict]:
     """Every location for the event form's picker: active ones first, archived ones after (an event may sit there)."""
-    locations = await safe_get("/organizer/locations", default=[]) or []
+    locations = await safe_get("/organizer/places", default=[]) or []
     return sorted(locations, key=lambda loc: (not loc.get("active", True), loc.get("kind") != "home", loc.get("name", "")))
 
 
@@ -112,7 +112,7 @@ async def _holidays_by_date(start: date, end: date) -> dict[str, list[str]]:
 
 def suggest_location_id(event: dict, locations: list[dict]) -> int | None:
     """For an event with no location yet: the active location whose name or address equals its calendar location text."""
-    if event.get("location_id") is not None:
+    if event.get("place_id") is not None:
         return None
     text = " ".join((event.get("location") or "").split()).lower()
     if not text:
@@ -300,7 +300,7 @@ def _event_payload(
         "presence": presence or "in_person",
         "travel_minutes": _whole_number(travel_minutes, "Travel time"),
         "routine_id": _whole_number(routine_id, "Routine") if routine_id else None,
-        "location_id": None,  # set by the route from the picker
+        "place_id": None,  # set by the route from the picker
         "tags": [t.strip() for t in (tags or "").split(",") if t.strip()],
     }
 
@@ -338,14 +338,14 @@ async def _event_location_id(choice: str | None, name: str | None, kind: str | N
     routes = parse_minutes_by_mode(from_home)
     home = None
     if routes:
-        homes = await api.get("/organizer/locations", params={"kind": "home"})
+        homes = await api.get("/organizer/places", params={"kind": "home"})
         if not homes:
             raise ValueError("There is no Home location yet: add it on Locations, or leave the minutes empty.")
         home = homes[0]["id"]
-    created = await api.post("/organizer/locations", json={"name": name, "kind": (kind or "").strip() or "other"})
+    created = await api.post("/organizer/places", json={"name": name, "kind": (kind or "").strip() or "other"})
     for mode, minutes in routes:
         await api.put(
-            f"/organizer/locations/{home}/travel-times",
+            f"/organizer/places/{home}/travel-times",
             json={"destination_id": created["id"], "mode": mode, "minutes": minutes},
         )
     return created["id"]
@@ -390,7 +390,7 @@ async def create_event(
             recurrence_rule, timezone, end_date, notification_profile,
             availability, presence, travel_minutes, routine_id, tags,
         )
-        payload["location_id"] = await _form_location_id(
+        payload["place_id"] = await _form_location_id(
             location_id, new_location_name, new_location_kind, new_location_from_home,
         )
     except ValueError as exc:
@@ -441,7 +441,7 @@ async def update_event(
             recurrence_rule, timezone, end_date, notification_profile,
             availability, presence, travel_minutes, routine_id, tags,
         )
-        payload["location_id"] = await _form_location_id(
+        payload["place_id"] = await _form_location_id(
             location_id, new_location_name, new_location_kind, new_location_from_home,
         )
     except ValueError as exc:

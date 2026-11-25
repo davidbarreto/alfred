@@ -283,7 +283,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -312,7 +312,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -341,7 +341,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -359,7 +359,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -377,7 +377,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -405,7 +405,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -432,7 +432,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -486,7 +486,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -513,7 +513,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -541,7 +541,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -570,7 +570,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -588,7 +588,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -606,7 +606,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
-            "location_id": None,
+            "place_id": None,
             "tags": [],
         })
 
@@ -1002,7 +1002,7 @@ class TestLocationPicker:
         assert suggest_location_id({"location": "rua nova  10, lisboa"}, _LOCS) == 2
 
     def test_no_suggestion_when_linked_unknown_or_archived(self):
-        assert suggest_location_id({"location": "Office", "location_id": 9}, _LOCS) is None
+        assert suggest_location_id({"location": "Office", "place_id": 9}, _LOCS) is None
         assert suggest_location_id({"location": "Somewhere"}, _LOCS) is None
         assert suggest_location_id({"location": None}, _LOCS) is None
         assert suggest_location_id({"location": "Old gym"}, _LOCS) is None
@@ -1016,7 +1016,7 @@ class TestLocationPicker:
 
     def test_form_lists_active_then_archived_and_a_new_option(self, client, mock_api):
         def fake_get(path, params=None):
-            return list(reversed(_LOCS)) if path == "/organizer/locations" else []
+            return list(reversed(_LOCS)) if path == "/organizer/places" else []
         mock_api["get"].side_effect = fake_get
 
         text = client.get("/calendar/").text
@@ -1029,7 +1029,7 @@ class TestLocationPicker:
         event = _event(id=5, title="Office day", start="2026-07-14T09:00:00", end="2026-07-14T17:00:00", location="Office")
 
         def fake_get(path, params=None):
-            return _LOCS if path == "/organizer/locations" else [event]
+            return _LOCS if path == "/organizer/places" else [event]
         mock_api["get"].side_effect = fake_get
 
         text = client.get("/calendar/day/2026-07-14").text
@@ -1043,11 +1043,11 @@ class TestEventLocation:
     def test_picked_location_is_sent(self, client, mock_api):
         resp = client.post("/calendar/", data={**self._FORM, "location_id": "4"})
         assert resp.status_code == 204
-        assert mock_api["post"].await_args.kwargs["json"]["location_id"] == 4
+        assert mock_api["post"].await_args.kwargs["json"]["place_id"] == 4
 
     def test_empty_choice_clears_it_on_update(self, client, mock_api):
         client.patch("/calendar/7", data={**self._FORM, "location_id": ""})
-        assert mock_api["patch"].await_args.kwargs["json"]["location_id"] is None
+        assert mock_api["patch"].await_args.kwargs["json"]["place_id"] is None
 
     def test_new_location_is_created_with_minutes_from_home(self, client, mock_api):
         mock_api["get"].return_value = [{"id": 1, "name": "Home", "kind": "home"}]
@@ -1059,14 +1059,14 @@ class TestEventLocation:
         })
 
         assert resp.status_code == 204
-        mock_api["get"].assert_awaited_with("/organizer/locations", params={"kind": "home"})
-        assert mock_api["post"].await_args_list[0].args == ("/organizer/locations",)
+        mock_api["get"].assert_awaited_with("/organizer/places", params={"kind": "home"})
+        assert mock_api["post"].await_args_list[0].args == ("/organizer/places",)
         assert mock_api["post"].await_args_list[0].kwargs["json"] == {"name": "Dentist", "kind": "other"}
         assert [c.kwargs["json"] for c in mock_api["put"].await_args_list] == [
             {"destination_id": 9, "mode": "metro", "minutes": 20}, {"destination_id": 9, "mode": "foot", "minutes": 35},
         ]
-        assert all(c.args == ("/organizer/locations/1/travel-times",) for c in mock_api["put"].await_args_list)
-        assert mock_api["post"].await_args_list[1].kwargs["json"]["location_id"] == 9
+        assert all(c.args == ("/organizer/places/1/travel-times",) for c in mock_api["put"].await_args_list)
+        assert mock_api["post"].await_args_list[1].kwargs["json"]["place_id"] == 9
 
     def test_new_location_needs_a_name_and_valid_minutes(self, client, mock_api):
         resp = client.post("/calendar/", data={**self._FORM, "location_id": "new"})
@@ -1088,7 +1088,7 @@ class TestEventLocation:
     def test_backend_refusal_is_shown(self, client, mock_api):
         import httpx as _httpx
         response = _httpx.Response(409, json={"detail": "A location named 'Dentist' already exists (id 3)"},
-                                   request=_httpx.Request("POST", "http://api/organizer/locations"))
+                                   request=_httpx.Request("POST", "http://api/organizer/places"))
         mock_api["post"].side_effect = _httpx.HTTPStatusError("409", request=response.request, response=response)
         resp = client.post("/calendar/", data={**self._FORM, "location_id": "new", "new_location_name": "Dentist"})
         assert resp.status_code == 422 and "already exists" in resp.text

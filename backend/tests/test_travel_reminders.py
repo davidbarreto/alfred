@@ -45,7 +45,7 @@ def _leg(id=1, departs=None, arrives=None, mode="flight", **kw):
 
 def _stay(id=1, check_in=None, check_out=None):
     place = PlaceRead(
-        id=1, kind="hotel", name="Hotel Example", city=city_ref("Beta"), maps_url=None, lat=None, lng=None,
+        id=1, kind="hotel", name="Hotel Example", city=city_ref("Beta"), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, created_at=CREATED, updated_at=CREATED,
     )
     return StayRead(
@@ -191,7 +191,7 @@ class TestSettingsService:
     def service(self):
         svc = TravelSettingsService(AsyncMock())
         svc._settings = SimpleNamespace(get_value=AsyncMock(return_value=None), set_value=AsyncMock())
-        svc._locations = SimpleNamespace(get_home=AsyncMock(return_value=None))
+        svc._places = SimpleNamespace(get_home=AsyncMock(return_value=None))
         return svc
 
     async def test_defaults_when_nothing_is_stored(self, service):
@@ -234,7 +234,7 @@ class TestGradeNudge:
     def _ended(visited_grade=None, visited_notes=None):
         from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
-        place = VisitPlace(id=1, kind="museum", name="Museum Example", city=city_ref("Beta"), maps_url=None, lat=None, lng=None)
+        place = VisitPlace(id=1, kind="museum", name="Museum Example", city=city_ref("Beta"), maps_url=None, latitude=None, longitude=None)
         visit = VisitRead(
             id=3, place_id=1, place=place, trip_id=1, trip_name="Example trip", status="visited",
             visit_date=date(2026, 12, 20), visit_time=None, notes=visited_notes, grade=visited_grade,

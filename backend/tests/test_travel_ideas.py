@@ -11,7 +11,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 def _stay(id, city, day):
     place = PlaceRead(
-        id=id, kind="hotel", name=f"Hotel {city}", city=city_ref(city), maps_url=None, lat=None, lng=None,
+        id=id, kind="hotel", name=f"Hotel {city}", city=city_ref(city), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
     return StayRead(
@@ -22,7 +22,7 @@ def _stay(id, city, day):
 
 
 def _visit(id, city, day=None, trip_id=1, status="planned"):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref(city), maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref(city), maps_url=None, latitude=None, longitude=None)
     return VisitRead(
         id=id, place_id=id, place=place, trip_id=trip_id, trip_name=None, status=status,
         visit_date=date(2026, 3, day) if day else None, visit_time=None, notes=None, grade=None,

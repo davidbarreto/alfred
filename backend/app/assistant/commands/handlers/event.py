@@ -61,12 +61,12 @@ def _parse_clock_or_datetime(value: Any, day: date) -> datetime | None:
 async def _planning_fields(arguments: dict[str, Any], service: CalendarEventService) -> dict[str, Any]:
     """The Alfred-only planning columns present in the arguments (an empty availability/routine_id/location clears it).
 
-    location_id takes a location id or name.
+    place_id takes a place id or name.
     """
     fields: dict[str, Any] = {}
-    if "location_id" in arguments:
-        ref = str(arguments["location_id"] or "").strip()
-        fields["location_id"] = await service.find_location_id(ref) if ref else None
+    if "place_id" in arguments:
+        ref = str(arguments["place_id"] or "").strip()
+        fields["place_id"] = await service.find_place_id(ref) if ref else None
     if "availability" in arguments:
         fields["availability"] = str(arguments["availability"] or "").strip().lower() or None
     if "presence" in arguments:

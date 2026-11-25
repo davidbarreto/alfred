@@ -7,8 +7,8 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from app.db.base import Base
-from app.features.travel.places.repository import PlaceRepository
-from app.features.travel.places.schemas import PlaceFilters
+from app.features.travel.places.repository import TravelPlaceRepository
+from app.features.travel.places.schemas import TravelPlaceFilters
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitFilters
 from app.features.travel.trips.repository import TripRepository
@@ -58,7 +58,7 @@ class TestPlaceLocationQuery:
     async def test_selects_city_and_country_of_places(self):
         session = _ExecSession()
         try:
-            await PlaceRepository(session).get_locations()
+            await TravelPlaceRepository(session).get_locations()
         except _Stop:
             pass
         sql = _literal(session.statement)
@@ -69,11 +69,11 @@ class TestPlaceCityJoins:
     async def test_city_and_country_filters_and_search_go_through_the_joined_tables(self):
         session = _CaptureSession()
         try:
-            await PlaceRepository(session).get_places(PlaceFilters(city="Lisbon", country="Portugal", q="Ex"))
+            await TravelPlaceRepository(session).get_places(TravelPlaceFilters(city="Lisbon", country="Portugal", q="Ex"))
         except _Stop:
             pass
         sql = _literal(session.statement)
-        assert "JOIN location.cities ON location.cities.id = travel.places.city_id" in sql
+        assert "JOIN location.cities ON location.cities.id = location.places.city_id" in sql
         assert "lower(location.cities.name) = 'lisbon'" in sql and "lower(location.countries.name) = 'portugal'" in sql
         assert "lower(location.cities.name) LIKE '%%ex%%'" in sql and "lower(location.countries.name) LIKE '%%ex%%'" in sql
 
@@ -106,13 +106,13 @@ class TestTripLocationQueries:
 
 def test_travel_ddl_compiles_for_postgres():
     tables = [t for t in Base.metadata.sorted_tables if t.schema == "travel"]
-    assert {t.name for t in tables} >= {"trips", "legs", "stays", "places", "tags", "trips_tags"}
+    assert {t.name for t in tables} >= {"trips", "legs", "stays", "tags", "trips_tags", "places_tags"}
     for table in tables:
         CreateTable(table).compile(dialect=postgresql.dialect())
 
 
 def test_place_filters_have_plain_defaults():
-    filters = PlaceFilters()
+    filters = TravelPlaceFilters()
     assert (filters.limit, filters.offset, filters.q) == (50, 0, None)
 
 
@@ -135,7 +135,7 @@ class TestPlaceQuery:
     async def _sql(self, **kw):
         session = _CaptureSession()
         try:
-            await PlaceRepository(session).get_places(PlaceFilters(**kw))
+            await TravelPlaceRepository(session).get_places(TravelPlaceFilters(**kw))
         except _Stop:
             pass
         return _literal(session.statement)
@@ -155,7 +155,7 @@ class TestPlaceQuery:
     async def test_grades_query_compiles(self):
         session = _ExecSession()
         try:
-            await PlaceRepository(session).get_grades([1, 2])
+            await TravelPlaceRepository(session).get_grades([1, 2])
         except _Stop:
             pass
         assert "GROUP BY" in _literal(session.statement)

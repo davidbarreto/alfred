@@ -43,8 +43,8 @@ class TripForecastService:
         self._settings = TravelSettingsService(session)
 
     async def _coordinates(self, place) -> tuple[float, float] | None:
-        if place.lat is not None and place.lng is not None:
-            return place.lat, place.lng
+        if place.latitude is not None and place.longitude is not None:
+            return float(place.latitude), float(place.longitude)
         found = await self._client.geocode(f"{place.city.name}, {place.city.country.name}")
         return (found["latitude"], found["longitude"]) if found else None
 
@@ -69,7 +69,7 @@ class TripForecastService:
                               (last.destination_city, to_local(last.arrives_at, last.arrives_tz).date())):
                 if city is None:
                     continue
-                places.setdefault(city.id, SimpleNamespace(city=city, lat=None, lng=None))
+                places.setdefault(city.id, SimpleNamespace(city=city, latitude=None, longitude=None))
                 days.setdefault(city.id, set()).add(day)
         # Origin city first, destination city last; the same city at both ends goes first.
         order = [k for k in places if k not in (first_key, last_key)]

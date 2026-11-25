@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
-from app.features.organizer.locations.repository import LocationRepository
+from app.features.location.places.repository import PlaceRepository
 from app.features.location.cities.repository import CityRepository
 from app.features.location.cities.schemas import CityRef
 from app.features.travel.errors import TravelNotFoundError
@@ -61,7 +61,7 @@ class TravelSettingsService:
         self._settings = SettingService(session)
         self._cities = CityRepository(session)
         self._trips = TripRepository(session)
-        self._locations = LocationRepository(session)
+        self._places = PlaceRepository(session)
 
     async def get(self) -> TravelSettingsRead:
         values: dict[str, int | str | bool | None] = {}
@@ -71,8 +71,8 @@ class TravelSettingsService:
                 values[field] = raw == "1" if raw else default
             else:
                 values[field] = type(default)(raw) if raw else default
-        # The address lives on the Home location (organizer.locations); trips only read it.
-        home = await self._locations.get_home()
+        # The address lives on the Home place (location.places); trips only read it.
+        home = await self._places.get_home()
         values["home_address"] = home.address if home else None
         raw_city = await self._settings.get_value(_key("home_city_id"))
         city = await self._cities.get_city(int(raw_city)) if raw_city else None
@@ -100,8 +100,8 @@ class TravelSettingsService:
         """Before a home setting changes, give each trip that has already started the old value it was planned with.
 
         Only trips whose own column is still NULL get it, and an old value that was never set is not copied: upcoming
-        trips keep following the setting. The home address is not a setting any more: `LocationService` snapshots it
-        when the Home location's address changes.
+        trips keep following the setting. The home address is not a setting any more: location's `PlaceService` snapshots it
+        when the Home place's address changes.
         """
         current = await self.get()
         today = local_today()

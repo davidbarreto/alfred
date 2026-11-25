@@ -24,7 +24,7 @@ from app.features.travel.transaction_links.schemas import (
 )
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.trips.repository import TripRepository
-from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.visits.repository import VisitRepository
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class TransactionLinkService:
     def __init__(self, session: AsyncSession):
         self._repo = TransactionLinkRepository(session)
         self._trip_repo = TripRepository(session)
-        self._place_repo = PlaceRepository(session)
+        self._place_repo = TravelPlaceRepository(session)
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)

@@ -1,0 +1,743 @@
+{
+ "info": {
+  "name": "Alfred - Location places API",
+  "_postman_id": "alfred-location-places-v1",
+  "description": "What a place is (/location/places): create with the Home place's city as the default, names unique per city, list filters, the travel and everyday views of a base place, archive, delete. Cleans up the city and country it creates. Names carry a per-run suffix.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "auth": {
+  "type": "bearer",
+  "bearer": [
+   {
+    "key": "token",
+    "value": "{{api_token}}",
+    "type": "string"
+   }
+  ]
+ },
+ "item": [
+  {
+   "name": "01 - Find Home And Its City",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.environment.set('place_run', String(Date.now()));"
+      ]
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('One home, with a city', () => {",
+       "    const homes = pm.response.json();",
+       "    pm.expect(homes).to.have.lengthOf(1);",
+       "    pm.expect(homes[0].city).to.have.property('id');",
+       "    pm.environment.set('place_home_city_id', homes[0].city.id);",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places?kind=home",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "kind",
+       "value": "home"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "02 - Create Another City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.environment.set('place_other_city_id', pm.response.json().id);",
+       "pm.environment.set('place_other_country_id', pm.response.json().country.id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/cities",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman place city {{place_run}}\",\n  \"country\": \"Postman place land {{place_run}}\"\n}"
+    }
+   }
+  },
+  {
+   "name": "03 - Create Place Without A City (Home's city)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "const json = pm.response.json();",
+       "pm.environment.set('place_id', json.id);",
+       "pm.test('In the home city, defaults filled', () => {",
+       "    pm.expect(json.city.id).to.eql(Number(pm.environment.get('place_home_city_id')));",
+       "    pm.expect(json.kind).to.eql('cafe');",
+       "    pm.expect(json.active).to.be.true;",
+       "    pm.expect([json.latitude, json.longitude]).to.eql([41.1579, -8.6291]);",
+       "    pm.expect(json.opening_hours_text).to.eql('daily 08:00-19:00');",
+       "    pm.expect(json.today).to.have.property('hours');",
+       "    pm.expect(json.maps_link).to.include('https://');",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman cafe {{place_run}}\",\n  \"kind\": \" Cafe \",\n  \"coordinates\": \"41.1579, -8.6291\",\n  \"opening_hours\": \"daily 8-19\"\n}"
+    }
+   }
+  },
+  {
+   "name": "04 - Same Name In Another City (201)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.environment.set('place_elsewhere_id', pm.response.json().id);",
+       "pm.test('In the other city', () => pm.expect(pm.response.json().city.id).to.eql(Number(pm.environment.get('place_other_city_id'))));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"postman CAFE {{place_run}}\",\n  \"kind\": \"museum\",\n  \"city_id\": {{place_other_city_id}}\n}"
+    }
+   }
+  },
+  {
+   "name": "05 - Same Name In The Same City (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says it exists there', () => pm.expect(pm.response.json().detail).to.include('already exists in'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman Cafe {{place_run}}\"\n}"
+    }
+   }
+  },
+  {
+   "name": "06 - Unknown City (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman nowhere {{place_run}}\",\n  \"city_id\": 999999999\n}"
+    }
+   }
+  },
+  {
+   "name": "07 - Unknown Kind (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman castle {{place_run}}\",\n  \"kind\": \"castle\"\n}"
+    }
+   }
+  },
+  {
+   "name": "08 - List By City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Only the other city\\'s place', () => pm.expect(pm.response.json().map((p) => p.id)).to.eql([Number(pm.environment.get('place_elsewhere_id'))]));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places?city_id={{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "{{place_other_city_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "09 - List By Country And Search",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Found by name within the country', () => pm.expect(pm.response.json().map((p) => p.id)).to.include(Number(pm.environment.get('place_elsewhere_id'))));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places?country_id={{place_other_country_id}}&q=postman cafe",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "country_id",
+       "value": "{{place_other_country_id}}"
+      },
+      {
+       "key": "q",
+       "value": "postman cafe"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "10 - Travel View Of The Place",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('No grade, tags or history yet', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect([json.grade, json.grade_count, json.tags, json.visits, json.stays]).to.eql([null, 0, [], [], []]);",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/travel/places/{{place_elsewhere_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "travel",
+      "places",
+      "{{place_elsewhere_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "11 - Everyday View Of The Place",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Not an everyday place', () => pm.expect(pm.response.json().everyday).to.be.false);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "{{place_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "12 - Move It To The Other City (409, the name is taken there)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{place_other_city_id}}\n}"
+    }
+   }
+  },
+  {
+   "name": "13 - Clearing The City Is Refused (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": null\n}"
+    }
+   }
+  },
+  {
+   "name": "14 - Rename And Archive",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Saved', () => { const json = pm.response.json(); pm.expect(json.name).to.eql('Postman renamed cafe ' + pm.environment.get('place_run')); pm.expect(json.active).to.be.false; });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman renamed cafe {{place_run}}\",\n  \"active\": false\n}"
+    }
+   }
+  },
+  {
+   "name": "15 - Archived Places Are Filtered Out",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Not listed', () => pm.expect(pm.response.json().map((p) => p.id)).to.not.include(Number(pm.environment.get('place_id'))));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places?active=true&city_id={{place_home_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "active",
+       "value": "true"
+      },
+      {
+       "key": "city_id",
+       "value": "{{place_home_city_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "16 - Delete Both Places",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17 - Delete The Other Place",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_elsewhere_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_elsewhere_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18 - Deleted Place (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{place_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "19 - Delete The Other City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "20 - Delete The Other Country",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{place_other_country_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{place_other_country_id}}"
+     ]
+    }
+   }
+  }
+ ]
+}

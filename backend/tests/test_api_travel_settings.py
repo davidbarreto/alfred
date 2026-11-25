@@ -51,5 +51,5 @@ def test_put_home_address_is_refused_with_where_it_moved(settings):
     client, service = settings
     response = client.put("/travel/settings", headers=AUTH, json={"home_address": "Rua Exemplo 1"})
     assert response.status_code == 422
-    assert "/organizer/locations" in response.json()["detail"][0]["msg"]
+    assert "/location/places" in response.json()["detail"][0]["msg"]
     service.update.assert_not_awaited()

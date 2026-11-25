@@ -2225,10 +2225,10 @@
    "description": "Where the briefing, the dashboard and the weather command look up the weather.",
    "fields": [
     {
-     "key": "weather.location_id",
-     "field": "location_id",
+     "key": "weather.place_id",
+     "field": "place_id",
      "label": "Weather place",
-     "description": "Where the briefing, the dashboard and the weather command look up the weather. A location needs coordinates; a city is found by name. Empty = the Home location.",
+     "description": "Where the briefing, the dashboard and the weather command look up the weather. A place needs coordinates; a city is found by name. Empty = the Home place.",
      "widget": "place",
      "type": "integer",
      "options": null,

@@ -27,11 +27,11 @@ def _routes(locations=None, location=None, categories=None, travel_times=None, e
     def fake_get(path, params=None):
         if path == "/organizer/calendar-events":
             return events if events is not None else []
-        if path == "/organizer/locations":
+        if path == "/organizer/places":
             return locations if locations is not None else []
         if path.endswith("/travel-times"):
             return travel_times if travel_times is not None else []
-        if path.startswith("/organizer/locations/"):
+        if path.startswith("/organizer/places/"):
             if location is None:
                 raise httpx.HTTPStatusError("404", request=httpx.Request("GET", path), response=httpx.Response(404))
             return location
@@ -230,7 +230,7 @@ class TestWrites:
         resp = client.post("/locations", json={"name": "Market", "opening_hours": "mon 8-20"})
 
         assert resp.status_code == 200 and resp.json()["id"] == 5
-        mock_api["post"].assert_awaited_once_with("/organizer/locations", json={"name": "Market", "opening_hours": "mon 8-20"})
+        mock_api["post"].assert_awaited_once_with("/organizer/places", json={"name": "Market", "opening_hours": "mon 8-20"})
 
     def test_backend_error_message_is_relayed(self, client, mock_api):
         response = httpx.Response(422, json={"detail": "Opening hours: 'funday' is not a day"})
@@ -242,13 +242,31 @@ class TestWrites:
         assert resp.json() == {"error": "Opening hours: 'funday' is not a day"}
 
     def test_update_and_delete(self, client, mock_api):
-        mock_api["patch"].return_value = _location(active=False)
+        mock_api["get"].return_value = _location(active=False)
         mock_api["delete"].return_value = None
 
         assert client.patch("/locations/1", json={"active": False}).status_code == 200
-        mock_api["patch"].assert_awaited_once_with("/organizer/locations/1", json={"active": False})
+        mock_api["patch"].assert_awaited_once_with("/location/places/1", json={"active": False})
+        mock_api["put"].assert_not_awaited()
+        mock_api["get"].assert_awaited_once_with("/organizer/places/1")
         assert client.delete("/locations/1").status_code == 200
-        mock_api["delete"].assert_awaited_once_with("/organizer/locations/1")
+        mock_api["delete"].assert_awaited_once_with("/location/places/1")
+
+    def test_update_sends_what_it_sells_to_the_everyday_api(self, client, mock_api):
+        mock_api["get"].return_value = _location()
+
+        response = client.patch("/locations/1", json={"name": "Market", "category_ids": [2]})
+
+        assert response.status_code == 200
+        mock_api["patch"].assert_awaited_once_with("/location/places/1", json={"name": "Market"})
+        mock_api["put"].assert_awaited_once_with("/organizer/places/1/categories", json={"category_ids": [2]})
+
+    def test_categories_alone_skip_the_place_patch(self, client, mock_api):
+        mock_api["get"].return_value = _location()
+
+        client.patch("/locations/1", json={"category_ids": []})
+
+        mock_api["patch"].assert_not_awaited()
 
 
 def _travel_time(id, origin, destination, mode="metro", minutes=20):
@@ -314,9 +332,9 @@ class TestTravelTimeWrites:
 
         body = {"destination_id": 2, "mode": "metro", "minutes": 50}
         assert client.put("/locations/1/travel-times", json=body).status_code == 200
-        mock_api["put"].assert_awaited_once_with("/organizer/locations/1/travel-times", json=body)
+        mock_api["put"].assert_awaited_once_with("/organizer/places/1/travel-times", json=body)
         assert client.delete("/locations/travel-times/7").status_code == 200
-        mock_api["delete"].assert_awaited_once_with("/organizer/locations/travel-times/7")
+        mock_api["delete"].assert_awaited_once_with("/organizer/travel-times/7")
 
 
 def _calendar_event(id, start, title="Pickup", all_day=False):
@@ -338,7 +356,7 @@ class TestLocationEvents:
         assert 'href="/locations/3/events"' in text and "See all 7" in text
         calls = [c for c in mock_api["get"].await_args_list if c.args[0] == "/organizer/calendar-events"]
         params = calls[0].kwargs["params"]
-        assert params["location_id"] == 3
+        assert params["place_id"] == 3
         assert params["start_from"] == "2026-11-23T00:00:00" and params["start_to"] == "2027-01-22T23:59:59"
 
     def test_no_link_when_everything_fits(self, client, mock_api):

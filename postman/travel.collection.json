@@ -684,12 +684,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_place_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_place_id}}"
           ]
@@ -3372,12 +3372,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_place_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_place_id}}"
           ]
@@ -3686,12 +3686,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_place_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_place_id}}"
           ]
@@ -5222,12 +5222,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_links_place_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_links_place_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_links_place_id}}"
           ]
@@ -6222,12 +6222,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_cities_place_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_cities_place_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_cities_place_id}}"
           ]
@@ -6256,12 +6256,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places/{{travel_cities_place_b_id}}",
+          "raw": "{{base_url}}/location/places/{{travel_cities_place_b_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "places",
             "{{travel_cities_place_b_id}}"
           ]

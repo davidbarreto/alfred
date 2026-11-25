@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from travel_city_helpers import city_ref
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
-from app.features.travel.places.detail import PlaceDetail
-from app.features.travel.places.schemas import PlaceLocations, PlaceRead
-from app.features.travel.places.service import PlaceInUseError
+from app.features.travel.places.detail import TravelPlaceDetail
+from app.features.travel.places.schemas import PlaceLocations, TravelPlaceRead
+from app.features.location.errors import LocationValidationError
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.schemas import TravelTagRead, TravelTagUsage
 from app.features.travel.tags.service import TravelTagNameTakenError
@@ -37,9 +37,9 @@ def _leg(id=1) -> LegRead:
     )
 
 
-def _place(id=3) -> PlaceRead:
-    return PlaceRead(
-        id=id, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
+def _place(id=3) -> TravelPlaceRead:
+    return TravelPlaceRead(
+        id=id, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -84,7 +84,7 @@ def stays():
 
 @pytest.fixture
 def places():
-    client, service = _client("get_place_service")
+    client, service = _client("get_travel_place_service")
     yield client, service
     client.app.dependency_overrides.clear()
 
@@ -293,18 +293,12 @@ class TestPlaces:
 
     def test_update_null_name_is_422(self, places):
         client, service = places
-        service.update_place.side_effect = ValueError("name cannot be null")
+        service.update_place.side_effect = LocationValidationError("name cannot be cleared")
         assert client.patch("/travel/places/3", headers=AUTH, json={"name": None}).status_code == 422
 
-    def test_delete_in_use_is_409(self, places):
-        client, service = places
-        service.delete_place.side_effect = PlaceInUseError(3)
-        assert client.delete("/travel/places/3", headers=AUTH).status_code == 409
-
-    def test_delete(self, places):
-        client, service = places
-        service.delete_place.return_value = True
-        assert client.delete("/travel/places/3", headers=AUTH).status_code == 204
+    def test_delete_moved_to_the_location_api(self, places):
+        client, _ = places
+        assert client.delete("/travel/places/3", headers=AUTH).status_code == 405
 
 
 class TestTags:
@@ -331,7 +325,7 @@ class TestTags:
 
 def _visit(id=11, status="planned", grade=None) -> VisitRead:
     return VisitRead(
-        id=id, place_id=3, place=VisitPlace(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None),
+        id=id, place_id=3, place=VisitPlace(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=date(2026, 12, 18), visit_time=time(20, 0),
         notes=None, grade=grade, created_at=NOW, updated_at=NOW,
     )
@@ -394,7 +388,7 @@ class TestVisits:
 class TestPlaceDetailAndFilters:
     def test_place_detail_returns_history_and_derived_grade(self, places):
         client, service = places
-        service.get_place_detail.return_value = PlaceDetail(
+        service.get_place_detail.return_value = TravelPlaceDetail(
             **_place().model_dump(), visits=[_visit(status="visited", grade=4)], stays=[_stay()],
         )
         body = client.get("/travel/places/3", headers=AUTH).json()

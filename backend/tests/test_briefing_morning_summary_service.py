@@ -570,7 +570,7 @@ class TestBuild:
 
         mock_weather_client.get_daily_forecast.assert_not_awaited()
         assert result.weather is None and result.weather_place is None
-        assert "coordinates to the Home location" in result.weather_note
+        assert "coordinates to the Home place" in result.weather_note
 
     @pytest.mark.asyncio
     async def test_weather_none_when_client_fails(self, mock_session, mock_weather_client, mock_holiday_client):

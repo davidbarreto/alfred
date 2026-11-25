@@ -4,7 +4,8 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
-from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
+from app.features.location.places.service import PlaceService
+from app.features.organizer.travel_times.service import TravelTimeService
 from app.features.planning.schemas import (
     DEFAULT_ASSUMED_ESTIMATE_MINUTES,
     DEFAULT_BACKLOG_STALE_DAYS,
@@ -62,7 +63,7 @@ class PlanningSettingsService:
     def __init__(self, session: AsyncSession) -> None:
         self._settings = SettingService(session)
         # Travel times are rows between locations, not a setting; the old list shape is kept for clients.
-        self._travel_times = LocationTravelTimeService(session)
+        self._travel_times = TravelTimeService(session, PlaceService(session))
 
     async def get(self) -> PlanningSettingsRead:
         raw = {

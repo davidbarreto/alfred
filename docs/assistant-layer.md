@@ -47,7 +47,7 @@ Typed text and Telegram voice go through intent detection (`app/assistant/intent
 
 ## Locations
 
-`location` (`add`, `list`, `show`, `update`, `delete`) resolves a location by id or name, takes shopping category names in `--sells` and travel minutes from existing locations in `--from` (`home:metro=20,foot=35;office:car=10`); `show` includes the travel times. Events link to a location with `event add/update --at <id or name>` (`location_id`; `--location` is the calendar's free text). Like `travel_link suggest`, the web search for opening hours is done by the MCP client and saved only after the user confirms; Alfred never searches. Not in the Telegram menu. Details: [modules/locations.md](modules/locations.md).
+`location` (`add`, `list`, `show`, `update`, `delete`) resolves a location by id or name, takes shopping category names in `--sells` and travel minutes from existing locations in `--from` (`home:metro=20,foot=35;office:car=10`); `show` includes the travel times. Events link to a location with `event add/update --at <id or name>` (`place_id`; `--location` is the calendar's free text). Like `travel_link suggest`, the web search for opening hours is done by the MCP client and saved only after the user confirms; Alfred never searches. Not in the Telegram menu. Details: [modules/places.md](modules/places.md).
 
 ## Recall sources
 

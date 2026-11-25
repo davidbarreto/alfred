@@ -101,8 +101,8 @@ def build_timeline(
                     event_id=event.id,
                     availability=availability,
                     presence=event.presence,
-                    location=graph.name(event.location_id) if event.location_id is not None else event.location,
-                    location_id=event.location_id,
+                    location=graph.name(event.place_id) if event.place_id is not None else event.location,
+                    place_id=event.place_id,
                     tags=event.tags or None,
                     notification_profile=event.notification_profile,
                 ),
@@ -145,11 +145,11 @@ class TravelGraph:
     # One-way minutes assumed when nothing is known; 0 switches the assumption off.
     default_minutes: int = 0
 
-    def name(self, location_id: int | None) -> str:
+    def name(self, place_id: int | None) -> str:
         """None stands for home when there is no Home location."""
-        if location_id is None:
+        if place_id is None:
             return "Home"
-        return self.names.get(location_id, "Home" if location_id == self.home_id else f"Location {location_id}")
+        return self.names.get(place_id, "Home" if place_id == self.home_id else f"Place {place_id}")
 
     def connected(self, origin: int, destination: int) -> bool:
         return (origin, destination) in self.routes or (destination, origin) in self.routes
@@ -191,7 +191,7 @@ def _travel_blocks(
     spans = [_Span(e, *event_start_end(e)) for e in day_events]
     blocks: list[_Block] = []
     warnings: list[str] = []
-    for place in dict.fromkeys(s.event.location_id for s in spans if _is_located(s.event)):
+    for place in dict.fromkeys(s.event.place_id for s in spans if _is_located(s.event)):
         if graph.home_id is None:
             warnings.append(f"No Home location saved: travel from home to {graph.name(place)} is unknown")
         elif place != graph.home_id and not graph.connected(graph.home_id, place):
@@ -204,7 +204,7 @@ def _travel_blocks(
     containers = [s for s in spans if _is_office_event(s.event, office_tag) or _is_located(s.event)]
     for span in spans:
         event = span.event
-        if event.location_id is not None:
+        if event.place_id is not None:
             continue
         if event.travel_minutes > 0:
             blocks.extend(_home_trip(span, event.travel_minutes, assumed=False))
@@ -217,7 +217,7 @@ def _travel_blocks(
 def _is_located(event: EventRead) -> bool:
     """At a location and occupying the user there: in person and not free."""
     return (
-        event.location_id is not None
+        event.place_id is not None
         and event.presence == "in_person"
         and effective_availability(event.availability, event.all_day) != "free"
     )

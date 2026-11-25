@@ -10,7 +10,7 @@ from app.features.location.countries.schemas import CountryRead
 from app.features.travel.cities.repository import TravelCityRepository
 from app.features.travel.cities.schemas import CityDetail, CityPlace, CountryCity, CountryDetail, LocationTrip
 from app.features.travel.default_tags import parse_default_tag_names
-from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.transaction_links.schemas import ChargePart, Cost, LinkedTransaction, LinkedTransactions, LocationCosts
 
@@ -39,7 +39,7 @@ class TravelCityService:
         self._repo = TravelCityRepository(session)
         self._cities = CityRepository(session)
         self._countries = CountryRepository(session)
-        self._place_repo = PlaceRepository(session)
+        self._place_repo = TravelPlaceRepository(session)
         self._cost_repo = TransactionLinkRepository(session)
         self._settings = SettingService(session)
 

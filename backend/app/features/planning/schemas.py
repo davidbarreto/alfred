@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.core.settings.metadata import setting
 from app.features.organizer.activities.schemas import ActivitySuggestion
-from app.features.organizer.locations.schemas import MAX_TRAVEL_TIMES
+from app.features.organizer.travel_times.schemas import MAX_TRAVEL_TIMES
 from app.shared.utils.time_text import WEEKDAYS
 
 _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -33,8 +33,8 @@ class TravelTime(BaseModel):
     """Minutes door to door between two places by one mode, e.g. home to office by metro: 50.
 
     Two-way: the same minutes apply the other way round unless the reverse trip is listed too.
-    `origin` defaults to home; `place` is the destination. Stored as rows between locations
-    (`organizer.location_travel_times`): "home" is the Home location, other names are location names in lowercase.
+    `origin` defaults to home; `place` is the destination. Stored as rows between places
+    (`organizer.travel_times`): "home" is the Home place, other names are everyday place names in lowercase.
     """
 
     origin: str = Field(default=HOME, min_length=1, max_length=60)
@@ -223,9 +223,9 @@ class TimelineItem(BaseModel):
     routine_step_id: int | None = None
     availability: str | None = None
     presence: str | None = None
-    # Events: the linked location's name (else the calendar's location text); routine steps: the step's location.
+    # Events: the linked place's name (else the calendar's location text); routine steps: the step's location.
     location: str | None = None
-    location_id: int | None = None
+    place_id: int | None = None
     # Travel of an event with no location and no travel minutes: the default was assumed (ask the user).
     assumed: bool | None = None
     tags: list[str] | None = None

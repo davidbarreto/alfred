@@ -5,7 +5,8 @@ from fastapi import Query
 from pydantic import BaseModel, Field, computed_field, model_validator
 
 from app.features.location.cities.schemas import CityRef
-from app.features.travel.constants import PlaceKind, VisitStatus
+from app.features.location.places.constants import PlaceKind
+from app.features.travel.constants import VisitStatus
 from app.shared.utils.links import place_maps_url
 
 
@@ -47,15 +48,15 @@ class VisitPlace(BaseModel):
     name: str
     city: CityRef
     maps_url: str | None
-    lat: float | None
-    lng: float | None
+    latitude: float | None
+    longitude: float | None
 
     model_config = {"from_attributes": True}
 
     @computed_field
     @property
     def maps_link(self) -> str:
-        return place_maps_url(self.name, self.city.name, self.maps_url, self.lat, self.lng)
+        return place_maps_url(self.name, self.city.name, self.maps_url, self.latitude, self.longitude)
 
 
 class VisitRead(BaseModel):

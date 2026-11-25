@@ -7,19 +7,15 @@ from fastapi import HTTPException
 
 from app.assistant.commands.handlers.location import handle_location
 from app.assistant.commands.resolver import _parse_tokens, _resolve_fragment
-from app.features.organizer.locations.errors import LocationConflictError, LocationValidationError
-from app.features.organizer.locations.schemas import LocationFilters, LocationRead
+from app.features.location.errors import LocationConflictError, LocationValidationError
+from app.features.organizer.everyday_places.schemas import EverydayPlaceFilters
+from place_read_helpers import everyday_read
 
 _NOW = datetime(2026, 11, 1, tzinfo=timezone.utc)
 
 
 def _read(**kwargs):
-    defaults = dict(
-        id=1, name="Market", kind="supermarket", address=None, maps_url=None, opening_hours=None, notes=None,
-        active=True, created_at=_NOW, updated_at=_NOW,
-    )
-    defaults.update(kwargs)
-    return LocationRead(**defaults)
+    return everyday_read(**{"opening_hours": None, "today": None, "categories": [], **kwargs})
 
 
 @pytest.fixture
@@ -37,7 +33,7 @@ def service():
 def travel_times():
     tts = AsyncMock()
     tts.list_for.return_value = []
-    tts.find_location.side_effect = lambda name: SimpleNamespace(id={"home": 10, "office": 11}[name]) if name in ("home", "office") else None
+    tts.find_place.side_effect = lambda name: SimpleNamespace(id={"home": 10, "office": 11}[name]) if name in ("home", "office") else None
     return tts
 
 
@@ -90,14 +86,14 @@ class TestList:
     async def test_active_only_by_default(self, service, travel_times):
         await handle_location("list", {}, service, travel_times)
 
-        assert service.list.call_args.args[0] == LocationFilters(active=True)
+        assert service.list.call_args.args[0] == EverydayPlaceFilters(active=True)
 
     async def test_all_kind_and_sells(self, service, travel_times):
         service.category_ids_for.return_value = [4]
 
         await handle_location("list", {"all": "yes", "kind": "Pharmacy", "sells": "pharmacy"}, service, travel_times)
 
-        assert service.list.call_args.args[0] == LocationFilters(kind="pharmacy", active=None, category_id=4)
+        assert service.list.call_args.args[0] == EverydayPlaceFilters(kind="pharmacy", active=None, category_id=4)
 
 
     async def test_unknown_kind_filter_is_422(self, service, travel_times):
@@ -124,9 +120,10 @@ class TestShowUpdateDelete:
     async def test_update_clears_an_empty_field_and_archives(self, service, travel_times):
         await handle_location("update", {"location": "Market", "address": "", "active": "false"}, service, travel_times)
 
-        location_id, payload = service.update.call_args.args
+        location_id, payload, category_ids = service.update.call_args.args
         assert location_id == 1
         assert payload.model_dump(exclude_unset=True) == {"address": None, "active": False}
+        assert category_ids is None
 
     async def test_coords_are_parsed_and_an_empty_value_clears_them(self, service, travel_times):
         await handle_location("add", {"name": "Home", "kind": "home", "coordinates": "41.1579, -8.6291"}, service, travel_times)
@@ -143,7 +140,7 @@ class TestShowUpdateDelete:
     async def test_update_sells_replaces_categories(self, service, travel_times):
         await handle_location("update", {"location": "1", "sells": "groceries,bakery"}, service, travel_times)
 
-        assert service.update.call_args.args[1].category_ids == [1, 2]
+        assert service.update.call_args.args[2] == [1, 2]
 
     async def test_delete(self, service, travel_times):
         result = await handle_location("delete", {"location": "Market"}, service, travel_times)

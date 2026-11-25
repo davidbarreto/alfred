@@ -8,8 +8,7 @@ import pytest
 from travel_city_helpers import city_ref
 from app.features.travel.legs.schemas import LegCreate, LegUpdate
 from app.features.travel.legs.service import LegService
-from app.features.travel.places.schemas import PlaceCreate, PlaceUpdate
-from app.features.travel.places.service import PlaceService
+from app.features.travel.places.hooks import TravelPlaceHooks
 from app.features.travel.stays.schemas import StayCreate, StayUpdate
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.tables import TravelTag
@@ -34,7 +33,7 @@ def _embedded(embeddings):
 
 
 def _place(**kw):
-    base = dict(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
+    base = dict(id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None,
                 address=None, notes="Book the terrace", tags=[], created_at=NOW, updated_at=NOW)
     base.update(kw)
     return SimpleNamespace(**base)
@@ -199,39 +198,36 @@ class TestVisits:
 
 
 class TestPlaces:
+    """Place notes are indexed by travel's place hooks, whichever API saved or deleted the place."""
+
     @pytest.fixture
-    def svc(self, embeddings):
-        svc = PlaceService(AsyncMock(), embeddings)
-        svc._repo, svc._tag_repo = AsyncMock(), AsyncMock()
-        svc._city_repo = AsyncMock()
-        svc._web_link_repo = AsyncMock()
-        svc._web_link_repo.get_link_ids.return_value = []
-        svc._repo.get_grades.return_value = {}
-        svc._tag_repo.get_or_create_tags.return_value = []
-        return svc
+    def hooks(self, embeddings):
+        hooks = TravelPlaceHooks(AsyncMock(), embeddings)
+        hooks._links = AsyncMock()
+        hooks._links.get_link_ids.return_value = []
+        return hooks
 
-    async def test_create_rename_delete(self, svc, embeddings):
-        svc._repo.create_place.return_value = _place()
-        await svc.create_place(PlaceCreate(kind="restaurant", name="Cafe Example", city_id=5, notes="Book the terrace"))
+    async def test_a_saved_place_indexes_its_notes(self, hooks, embeddings):
+        await hooks.place_saved(_place(notes="Book the terrace"))
         assert _embedded(embeddings) == ("place_note", 3, "Cafe Example: Book the terrace")
-        embeddings.embed_background.reset_mock()
 
-        svc._repo.update_place.return_value = _place(name="Cafe Renamed")
-        await svc.update_place(3, PlaceUpdate(name="Cafe Renamed"))
-        assert _embedded(embeddings)[2] == "Cafe Renamed: Book the terrace"
-
-        svc._repo.delete_place.return_value = True
-        await svc.delete_place(3)
+    async def test_cleared_notes_drop_the_embedding(self, hooks, embeddings):
+        await hooks.place_saved(_place(notes=" "))
         assert embeddings.delete_by_source.await_args.args == ("place_note", 3)
 
-    async def test_deleting_a_place_drops_its_links_notes(self, svc, embeddings):
-        svc._web_link_repo.get_link_ids.return_value = [4]
-        svc._repo.delete_place.return_value = True
-        await svc.delete_place(3)
+    async def test_deleting_a_place_drops_its_notes_and_its_links_notes_after_the_commit(self, hooks, embeddings):
+        hooks._links.get_link_ids.return_value = [4]
+
+        after = await hooks.before_place_delete(3)
+        embeddings.delete_by_source.assert_not_awaited()
+        await after()
+
         removed = {c.args for c in embeddings.delete_by_source.await_args_list}
         assert removed == {("place_note", 3), ("web_link_note", 4)}
 
-    async def test_a_refused_delete_keeps_the_embedding(self, svc, embeddings):
-        svc._repo.delete_place.return_value = False
-        await svc.delete_place(3)
-        embeddings.delete_by_source.assert_not_awaited()
+    async def test_visits_and_stays_hold_the_place(self, hooks):
+        hooks._count = AsyncMock(side_effect=[2, 1])
+        assert await hooks.place_in_use(_place()) == "it has 2 visit(s) and 1 stay(s)"
+        hooks._count = AsyncMock(return_value=0)
+        assert await hooks.place_in_use(_place()) is None
+

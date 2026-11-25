@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Table, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.features.location.places.tables import Place
 
 # Describe the trip itself (Family, Work). Unrelated to trips.default_tag_names, which holds finance tag names.
 trips_tags = Table(
@@ -19,7 +20,7 @@ trips_tags = Table(
 places_tags = Table(
     "places_tags",
     Base.metadata,
-    Column("place_id", ForeignKey("travel.places.id", ondelete="CASCADE"), primary_key=True),
+    Column("place_id", ForeignKey("location.places.id", ondelete="CASCADE"), primary_key=True),
     Column("tag_id", ForeignKey("travel.tags.id", ondelete="CASCADE"), primary_key=True, index=True),
     schema="travel",
 )
@@ -39,3 +40,7 @@ class TravelTag(Base):
 
 # Names are unique ignoring case so "Family" and "family" can't coexist.
 Index("uq_travel_tags_name_lower", func.lower(TravelTag.name), unique=True)
+
+
+# Travel's tags on the base place: `location` never imports travel, so the relationship is added from this side.
+Place.tags = relationship(TravelTag, secondary=places_tags, lazy="selectin", order_by=TravelTag.name)

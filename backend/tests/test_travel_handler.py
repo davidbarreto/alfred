@@ -9,9 +9,9 @@ from travel_city_helpers import city_ref
 from app.assistant.commands.handlers.travel import TravelServices, handle_travel
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
-from app.features.travel.places.detail import PlaceDetail
-from app.features.travel.places.schemas import PlaceCreate, PlaceRead
-from app.features.travel.places.service import PlaceInUseError
+from app.features.travel.places.detail import TravelPlaceDetail
+from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceRead
+from app.features.location.errors import LocationConflictError
 from app.features.travel.stays.schemas import StayCreate, StayRead
 from app.features.travel.transaction_links.schemas import Cost, LinkedTransactions, TripCosts
 from app.features.travel.transaction_links.service import TransferNotLinkableError
@@ -29,10 +29,10 @@ def _trip(id=1, name="Example trip", **kw):
 
 
 def _place(id=3, name="Hotel Example", kind="hotel", **kw):
-    base = dict(id=id, kind=kind, name=name, city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None, address=None,
+    base = dict(id=id, kind=kind, name=name, city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None, address=None,
                 notes=None, tags=[], grade=None, grade_count=0, created_at=NOW, updated_at=NOW)
     base.update(kw)
-    return PlaceRead(**base)
+    return TravelPlaceRead(**base)
 
 
 def _leg(id=1):
@@ -54,7 +54,7 @@ def _stay(id=7):
 
 def _visit(id=11, status="planned", grade=None):
     return VisitRead(
-        id=id, place_id=3, place=VisitPlace(id=3, kind="museum", name="Museum Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None),
+        id=id, place_id=3, place=VisitPlace(id=3, kind="museum", name="Museum Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=date(2031, 12, 18), visit_time=time(10, 0), notes=None,
         grade=grade, created_at=NOW, updated_at=NOW,
     )
@@ -64,7 +64,7 @@ def _visit(id=11, status="planned", grade=None):
 def services():
     s = TravelServices(
         trips=AsyncMock(), legs=AsyncMock(), stays=AsyncMock(), places=AsyncMock(), visits=AsyncMock(),
-        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(),
+        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(), base_places=AsyncMock(),
     )
     return s
 
@@ -270,7 +270,7 @@ class TestStays:
             "trip_id": "1", "hotel": "Hotel Example", "city": "Lisbon", "country": "Portugal", "check_in": "2031-12-18T15:00",
             "check_out": "2031-12-20T11:00", "tz": "Europe/Lisbon",
         }, services)
-        place: PlaceCreate = services.places.create_place.await_args.args[0]
+        place: TravelPlaceCreate = services.places.create_place.await_args.args[0]
         assert (place.kind, place.name, place.city, place.country) == ("hotel", "Hotel Example", "Lisbon", "Portugal")
         data: StayCreate = services.stays.create_stay.await_args.args[0]
         assert data.place_id == 3 and data.trip_id == 1
@@ -314,7 +314,7 @@ class TestPlaces:
     async def test_add_defaults_the_kind(self, services):
         services.places.create_place.return_value = _place()
         await run("travel_place", "add", {"name": "Cafe Example", "city": "Lisbon", "country": "Portugal", "tags": "Would return"}, services)
-        data: PlaceCreate = services.places.create_place.await_args.args[0]
+        data: TravelPlaceCreate = services.places.create_place.await_args.args[0]
         assert (data.kind, data.tags) == ("other", ["would return"])
 
     async def test_add_with_a_bad_kind_is_a_400(self, services):
@@ -331,7 +331,7 @@ class TestPlaces:
 
     async def test_get_returns_history_and_lifetime_cost(self, services):
         services.places.get_place.return_value = _place()
-        services.places.get_place_detail.return_value = PlaceDetail(
+        services.places.get_place_detail.return_value = TravelPlaceDetail(
             **dict(_place()), visits=[_visit()], stays=[_stay()],
         )
         services.links.get_place_costs.return_value = SimpleNamespace(total=Cost(total_eur="80.00", transaction_count=2))
@@ -348,14 +348,14 @@ class TestPlaces:
         services.places.update_place.return_value = _place()
         await run("travel_place", "update", {"id": "3", "lat": "38,7", "lng": "-9.1"}, services)
         update = services.places.update_place.await_args.args[1]
-        assert (update.lat, update.lng) == (38.7, -9.1)
+        assert update.coordinates == (38.7, -9.1)
 
     async def test_bad_coordinate_is_a_400(self, services):
         with pytest.raises(HTTPException):
             await run("travel_place", "update", {"id": "3", "lat": "north"}, services)
 
     async def test_delete_in_use_is_a_409(self, services):
-        services.places.delete_place.side_effect = PlaceInUseError(3)
+        services.base_places.delete.side_effect = LocationConflictError("'Cafe' can't be deleted: it has 1 visit(s)")
         with pytest.raises(HTTPException) as exc:
             await run("travel_place", "delete", {"id": "3"}, services)
         assert exc.value.status_code == 409
@@ -369,7 +369,7 @@ class TestVisits:
         await run("travel_visit", "add", {
             "place": "Museum Example", "kind": "museum", "city": "Lisbon", "country": "Portugal", "trip": "1", "date": "2031-12-18", "time": "10:00",
         }, services)
-        place: PlaceCreate = services.places.create_place.await_args.args[0]
+        place: TravelPlaceCreate = services.places.create_place.await_args.args[0]
         assert (place.kind, place.city, place.country) == ("museum", "Lisbon", "Portugal")
         visit = services.visits.create_visit.await_args.args[0]
         assert (visit.place_id, visit.trip_id, visit.visit_date, visit.visit_time, visit.status) == (5, 1, date(2031, 12, 18), time(10, 0), "planned")

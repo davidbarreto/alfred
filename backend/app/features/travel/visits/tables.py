@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.features.travel.constants import VISIT_STATUSES, in_clause
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
 from app.features.travel.trips.tables import Trip
 
 
@@ -20,7 +20,7 @@ class Visit(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    place_id: Mapped[int] = mapped_column(ForeignKey("travel.places.id", ondelete="RESTRICT"), nullable=False, index=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("location.places.id", ondelete="RESTRICT"), nullable=False, index=True)
     # No trip = a restaurant in the home city; a planned visit with no trip is the wishlist.
     trip_id: Mapped[Optional[int]] = mapped_column(ForeignKey("travel.trips.id", ondelete="SET NULL"), nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="planned")

@@ -6,7 +6,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import STAY_NOTE, TravelNoteIndex
-from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
 from app.features.travel.trips.repository import TripRepository
@@ -22,7 +22,7 @@ class StayService:
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = StayRepository(session)
         self._trip_repo = TripRepository(session)
-        self._place_repo = PlaceRepository(session)
+        self._place_repo = TravelPlaceRepository(session)
         self._event_links = EventLinkChecker(session)
 
     async def get_stays(self, trip_id: int) -> list[StayRead]:

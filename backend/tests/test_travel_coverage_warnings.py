@@ -31,7 +31,7 @@ def _leg(id, origin, destination, departs, arrives, **kw):
 
 def _stay(id, check_in, check_out, city="Beta"):
     place = PlaceRead(
-        id=1, kind="hotel", name="Hotel Example", city=city_ref(city), maps_url=None, lat=None, lng=None,
+        id=1, kind="hotel", name="Hotel Example", city=city_ref(city), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
     return StayRead(
@@ -41,7 +41,7 @@ def _stay(id, check_in, check_out, city="Beta"):
 
 
 def _visit(id, day, at=None, city="Beta", status="planned"):
-    place = VisitPlace(id=1, kind="restaurant", name="Cafe Example", city=city_ref(city), maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=1, kind="restaurant", name="Cafe Example", city=city_ref(city), maps_url=None, latitude=None, longitude=None)
     return VisitRead(
         id=id, place_id=1, place=place, trip_id=1, trip_name="T", status=status, visit_date=date(2026, 3, day) if day else None,
         visit_time=at, notes=None, grade=None, created_at=NOW, updated_at=NOW,

@@ -1,6 +1,6 @@
 import pytest
 
-from app.features.organizer.locations.coordinates import coordinates_from_maps_url, parse_coordinates
+from app.features.location.places.coordinates import coordinates_from_maps_url, parse_coordinates
 
 
 class TestParseCoordinates:

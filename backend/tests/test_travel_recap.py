@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.dialects import postgresql
 
 from travel_city_helpers import city_ref
-from app.features.travel.places.repository import PlaceRepository
-from app.features.travel.places.schemas import PlaceFilters, PlaceRead
+from app.features.travel.places.repository import TravelPlaceRepository
+from app.features.travel.places.schemas import TravelPlaceFilters, TravelPlaceRead
 from app.features.travel.recap.builder import build_recap
 from app.features.travel.recap.schemas import TripRecap
 from app.features.travel.recap.service import TripRecapService
@@ -22,8 +22,8 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 def _place(name="Hotel Example", city="Lisbon", country="Portugal", kind="hotel"):
-    return PlaceRead(
-        id=3, kind=kind, name=name, city=city_ref(city, country), maps_url=None, lat=None, lng=None, address=None, notes=None,
+    return TravelPlaceRead(
+        id=3, kind=kind, name=name, city=city_ref(city, country), maps_url=None, latitude=None, longitude=None, address=None, notes=None,
         created_at=NOW, updated_at=NOW,
     )
 
@@ -40,7 +40,7 @@ def _stay(id=7, grade=None, notes=None, place=None, check_in=datetime(2031, 12, 
 def _visit(id=11, status="visited", grade=None, notes=None, name="Cafe Example", city="Porto", country="Portugal", day=date(2031, 12, 19)):
     return VisitRead(
         id=id, place_id=20 + id, place=VisitPlace(id=20 + id, kind="restaurant", name=name, city=city_ref(city, country),
-                                                 maps_url=None, lat=None, lng=None),
+                                                 maps_url=None, latitude=None, longitude=None),
         trip_id=1, trip_name="Example trip", status=status, visit_date=day, visit_time=time(20, 0), notes=notes, grade=grade,
         created_at=NOW, updated_at=NOW,
     )
@@ -190,8 +190,8 @@ class TestFilterSql:
         assert "lower(location.countries.name) = 'portugal'" in sql and " OR " in sql
 
     async def test_ungraded_places_are_those_without_any_grade(self):
-        sql = await _sql(lambda s: PlaceRepository(s).get_places(PlaceFilters(ungraded=True)))
+        sql = await _sql(lambda s: TravelPlaceRepository(s).get_places(TravelPlaceFilters(ungraded=True)))
         assert "NOT IN" in sql and "UNION ALL" in sql
 
     def test_new_filter_defaults_are_plain_values(self):
-        assert (TripFilters().city, TripFilters().country, PlaceFilters().ungraded) == (None, None, False)
+        assert (TripFilters().city, TripFilters().country, TravelPlaceFilters().ungraded) == (None, None, False)

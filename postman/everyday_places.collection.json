@@ -1,8 +1,8 @@
 {
  "info": {
-  "name": "Alfred - Locations API",
-  "_postman_id": "alfred-locations-v1",
-  "description": "Run in order: create a shop with text hours and a seeded category → name clash, bad hours and unknown category → get, list filters → update hours as an object → archive → categories → command lookup by name → home uniqueness → cleanup. Names carry a per-run suffix, so reruns against the same database pass. Steps 17a-17e change Home's address and restore it, and the restore copies the test address into trips that have already started (the home snapshot): run against a scratch database only, as CI does.",
+  "name": "Alfred - Everyday places API",
+  "_postman_id": "alfred-everyday-places-v1",
+  "description": "The everyday role of places (/organizer/places; the place itself is /location/places). Run in order: create a shop with text hours and a seeded category → name clash, bad hours and unknown category → get, list filters → update hours as an object → archive → categories → everyday membership (remove, re-add, Home stays) → command lookup by name → home uniqueness → cleanup. Names carry a per-run suffix, so reruns against the same database pass. Steps 17a-17e change Home's address and restore it, and the restore copies the test address into trips that have already started (the home snapshot): run against a scratch database only, as CI does.",
   "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
  },
  "auth": {
@@ -98,6 +98,7 @@
      "script": {
       "exec": [
        "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.test('Everyday from the start, in the home city', () => { const json = pm.response.json(); pm.expect(json.everyday).to.be.true; pm.expect(json.city).to.have.property('id'); });",
        "pm.test('Hours parsed, categories linked, today computed', () => {",
        "    const json = pm.response.json();",
        "    pm.expect(json.name).to.eql('Postman market ' + pm.environment.get('location_run'));",
@@ -127,13 +128,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -170,13 +171,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -213,13 +214,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -256,13 +257,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -299,13 +300,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -337,13 +338,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}"
      ]
     }
@@ -370,13 +371,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?category_id={{location_category_id}}",
+     "raw": "{{base_url}}/organizer/places?category_id={{location_category_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
@@ -405,13 +406,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?kind=SUPERMARKET",
+     "raw": "{{base_url}}/organizer/places?kind=SUPERMARKET",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
@@ -440,13 +441,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?kind=office",
+     "raw": "{{base_url}}/organizer/places?kind=office",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
@@ -470,7 +471,6 @@
        "    pm.expect(json.opening_hours).to.eql({ mon: [['09:00', '17:00']], hol: [['09:00', '13:00']] });",
        "    pm.expect(json.opening_hours_text).to.eql('mon 09:00-17:00; holidays 09:00-13:00');",
        "    pm.expect(json.notes).to.eql('Cash only');",
-       "    pm.expect(json.categories.map((c) => c.name)).to.eql(['grocery']);",
        "});"
       ],
       "type": "text/javascript"
@@ -486,13 +486,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -533,13 +533,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -576,13 +576,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -623,13 +623,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -666,13 +666,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -710,13 +710,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     },
@@ -749,13 +749,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?active=true",
+     "raw": "{{base_url}}/organizer/places?active=true",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
@@ -784,13 +784,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?active=false",
+     "raw": "{{base_url}}/organizer/places?active=false",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
@@ -819,13 +819,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}/categories",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}/categories",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}",
       "categories"
      ]
@@ -855,13 +855,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}/categories",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}/categories",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}",
       "categories"
      ]
@@ -874,6 +874,183 @@
        "language": "json"
       }
      }
+    }
+   }
+  },
+  {
+   "name": "16a - Take It Off The Everyday List (204)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16b - Still A Place, Not Everyday",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('everyday is false', () => pm.expect(pm.response.json().everyday).to.be.false);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16c - Not On The Everyday List",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Not listed', () => pm.expect(pm.response.json().map((l) => l.id)).to.not.include(Number(pm.environment.get('location_id'))));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places?active=false",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16d - Base Place Still Exists",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Same place, archived', () => { const json = pm.response.json(); pm.expect(json.id).to.eql(Number(pm.environment.get('location_id'))); pm.expect(json.active).to.be.false; });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16e - Add It Back (PUT is idempotent)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Everyday again', () => pm.expect(pm.response.json().everyday).to.be.true);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "{{location_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "16f - Unknown Place Membership (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/999999999",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "999999999"
+     ]
     }
    }
   },
@@ -948,19 +1125,49 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations?kind=home",
+     "raw": "{{base_url}}/organizer/places?kind=home",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ],
      "query": [
       {
        "key": "kind",
        "value": "home"
       }
+     ]
+    }
+   }
+  },
+  {
+   "name": "17a1 - Home Is Always Everyday (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says why', () => pm.expect(pm.response.json().detail).to.include('always'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places/{{location_real_home_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places",
+      "{{location_real_home_id}}"
      ]
     }
    }
@@ -988,13 +1195,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}",
+     "raw": "{{base_url}}/location/places/{{location_real_home_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_real_home_id}}"
      ]
     },
@@ -1046,7 +1253,7 @@
      "script": {
       "exec": [
        "pm.test('Status is 422', () => pm.response.to.have.status(422));",
-       "pm.test('Says where it moved', () => pm.expect(JSON.stringify(pm.response.json().detail)).to.include('/organizer/locations'));"
+       "pm.test('Says where it moved', () => pm.expect(JSON.stringify(pm.response.json().detail)).to.include('/location/places'));"
       ],
       "type": "text/javascript"
      }
@@ -1104,13 +1311,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}",
+     "raw": "{{base_url}}/location/places/{{location_real_home_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_real_home_id}}"
      ]
     },
@@ -1154,13 +1361,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}/travel-times",
+     "raw": "{{base_url}}/organizer/places/{{location_real_home_id}}/travel-times",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_real_home_id}}",
       "travel-times"
      ]
@@ -1203,13 +1410,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_real_home_id}}/travel-times",
+     "raw": "{{base_url}}/organizer/places/{{location_real_home_id}}/travel-times",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_real_home_id}}",
       "travel-times"
      ]
@@ -1247,13 +1454,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}/travel-times",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}/travel-times",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}",
       "travel-times"
      ]
@@ -1290,13 +1497,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}/travel-times",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}/travel-times",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}",
       "travel-times"
      ]
@@ -1353,13 +1560,13 @@
     "method": "DELETE",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     }
@@ -1382,13 +1589,12 @@
     "method": "DELETE",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/travel-times/{{location_travel_time_id}}",
+     "raw": "{{base_url}}/organizer/travel-times/{{location_travel_time_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
       "travel-times",
       "{{location_travel_time_id}}"
      ]
@@ -1418,13 +1624,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -1461,13 +1667,13 @@
      }
     ],
     "url": {
-     "raw": "{{base_url}}/organizer/locations",
+     "raw": "{{base_url}}/organizer/places",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations"
+      "places"
      ]
     },
     "body": {
@@ -1498,13 +1704,13 @@
     "method": "DELETE",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_home_id}}",
+     "raw": "{{base_url}}/location/places/{{location_home_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_home_id}}"
      ]
     }
@@ -1527,13 +1733,13 @@
     "method": "DELETE",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/location/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
-      "organizer",
-      "locations",
+      "location",
+      "places",
       "{{location_id}}"
      ]
     }
@@ -1556,13 +1762,13 @@
     "method": "GET",
     "header": [],
     "url": {
-     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "raw": "{{base_url}}/organizer/places/{{location_id}}",
      "host": [
       "{{base_url}}"
      ],
      "path": [
       "organizer",
-      "locations",
+      "places",
       "{{location_id}}"
      ]
     }

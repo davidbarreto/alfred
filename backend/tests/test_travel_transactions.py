@@ -349,7 +349,7 @@ class TestCostSql:
 
     async def test_by_kind_groups_legs_stays_and_visits(self):
         sql = await _sql(lambda r: r.get_trip_costs_by_kind(1))
-        assert "'lodging'" in sql and "travel.legs.mode" in sql and "travel.places.kind" in sql and "GROUP BY" in sql
+        assert "'lodging'" in sql and "travel.legs.mode" in sql and "location.places.kind" in sql and "GROUP BY" in sql
 
     async def test_place_total_covers_visits_and_stays(self):
         sql = await _sql(lambda r: r.get_place_total(3))

@@ -2,7 +2,7 @@ from datetime import date, time
 
 import pytest
 
-from app.features.organizer.locations.hours import (
+from app.features.location.places.hours import (
     DayHours,
     HoursError,
     format_hours,

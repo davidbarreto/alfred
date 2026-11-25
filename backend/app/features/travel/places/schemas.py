@@ -1,30 +1,41 @@
-from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Query
-from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.features.location.cities.schemas import CityRef
-from app.features.travel.constants import PlaceKind, VisitStatus
-from app.shared.utils.links import place_maps_url
+from app.features.location.places.constants import PlaceKind
+from app.features.location.places.schemas import (
+    Coordinates,
+    PlaceRead,
+    blank_to_none,
+    clean_coordinates,
+    clean_kind,
+    clean_name,
+)
+from app.features.travel.constants import VisitStatus
 from app.features.travel.tags.schemas import normalize_tags
 
 
-class PlaceCreate(BaseModel):
-    """The city is `city_id`, or `city` + `country` (+ `country_code`), found or created by name."""
+class TravelPlaceCreate(BaseModel):
+    """A new place with its travel tags in one call. The city is `city_id`, or `city` + `country` (+ `country_code`),
+    found or created by name."""
 
     kind: PlaceKind
-    name: str = Field(min_length=1, max_length=200)
+    name: str
     city_id: int | None = None
     city: str | None = Field(default=None, min_length=1, max_length=100)
     country: str | None = Field(default=None, min_length=1, max_length=100)
     country_code: str | None = Field(default=None, min_length=2, max_length=2)
     maps_url: str | None = None
-    lat: float | None = Field(default=None, ge=-90, le=90)
-    lng: float | None = Field(default=None, ge=-180, le=180)
+    coordinates: Coordinates | None = None
     address: str | None = None
     notes: str | None = None
     tags: list[str] = Field(default_factory=list)
+
+    _name = field_validator("name")(clean_name)
+    _kind = field_validator("kind", mode="before")(clean_kind)
+    _text = field_validator("address", "maps_url", "notes")(blank_to_none)
+    _coords = field_validator("coordinates", mode="before")(clean_coordinates)
 
     @field_validator("tags")
     @classmethod
@@ -32,27 +43,31 @@ class PlaceCreate(BaseModel):
         return normalize_tags(tags) or []
 
     @model_validator(mode="after")
-    def _one_city_form(self) -> "PlaceCreate":
+    def _one_city_form(self) -> "TravelPlaceCreate":
         named = self.city is not None and self.country is not None
         if (self.city_id is not None) == named or (self.city is None) != (self.country is None):
             raise ValueError("Send city_id, or city and country")
         return self
 
 
-class PlaceUpdate(BaseModel):
+class TravelPlaceUpdate(BaseModel):
     kind: PlaceKind | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = None
     # Either form re-points the place; a lone city or country keeps the other from the place's current city.
     city_id: int | None = None
     city: str | None = Field(default=None, min_length=1, max_length=100)
     country: str | None = Field(default=None, min_length=1, max_length=100)
     country_code: str | None = Field(default=None, min_length=2, max_length=2)
     maps_url: str | None = None
-    lat: float | None = Field(default=None, ge=-90, le=90)
-    lng: float | None = Field(default=None, ge=-180, le=180)
+    coordinates: Coordinates | None = None
     address: str | None = None
     notes: str | None = None
     tags: list[str] | None = None
+
+    _name = field_validator("name")(clean_name)
+    _kind = field_validator("kind", mode="before")(clean_kind)
+    _text = field_validator("address", "maps_url", "notes")(blank_to_none)
+    _coords = field_validator("coordinates", mode="before")(clean_coordinates)
 
     @field_validator("tags")
     @classmethod
@@ -60,43 +75,27 @@ class PlaceUpdate(BaseModel):
         return normalize_tags(tags)
 
     @model_validator(mode="after")
-    def _one_city_form(self) -> "PlaceUpdate":
+    def _one_city_form(self) -> "TravelPlaceUpdate":
         if self.city_id is not None and (self.city is not None or self.country is not None):
             raise ValueError("Send city_id, or city and country, not both")
         return self
 
 
-class PlaceRead(BaseModel):
-    id: int
-    kind: PlaceKind
-    name: str
-    city: CityRef
-    maps_url: str | None
-    lat: float | None
-    lng: float | None
-    address: str | None
-    notes: str | None
+class TravelPlaceRead(PlaceRead):
+    """A place as travel sees it: the base place plus its travel tags and derived grade."""
+
     tags: list[str] = []
     # Derived, never stored: the average over this place's graded visits and stays.
     grade: float | None = None
     grade_count: int = 0
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
 
     @field_validator("tags", mode="before")
     @classmethod
-    def _tag_names(cls, value):
+    def _tag_names(cls, value: Any) -> list[str]:
         return [getattr(tag, "name", tag) for tag in value]
 
-    @computed_field
-    @property
-    def maps_link(self) -> str:
-        return place_maps_url(self.name, self.city.name, self.maps_url, self.lat, self.lng)
 
-
-class PlaceFilters:
+class TravelPlaceFilters:
     def __init__(
         self,
         q: Annotated[str | None, Query(description="Substring of name, city, country or address")] = None,

@@ -28,7 +28,7 @@ def _leg(id, origin, destination, departs, arrives, **kw):
 
 def _place(name="Hotel Example", city="Lisbon"):
     return PlaceRead(
-        id=1, kind="hotel", name=name, city=city_ref(city), maps_url=None, lat=None, lng=None,
+        id=1, kind="hotel", name=name, city=city_ref(city), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, created_at=NOW, updated_at=NOW,
     )
 
@@ -129,7 +129,7 @@ class TestBuildTimeline:
 
     def test_hotel_coordinates_win_over_the_name(self):
         stay = _stay(5, _dt(2, 14), _dt(4, 10))
-        stay.place.lat, stay.place.lng = 38.7, -9.1
+        stay.place.latitude, stay.place.longitude = 38.7, -9.1
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
         arrival = next(i for i in build_timeline([leg], [stay]) if i.kind == "arrival")
         assert "destination=38.7%2C-9.1" in arrival.links["directions"]

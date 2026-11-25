@@ -134,9 +134,9 @@
         return { value: sortChecklist(items) };
       }
       case "place": {
-        // "location:5", "city:3" or "" (Home): the row's value covers both fields.
+        // "place:5", "city:3" or "" (Home): the row's value covers both fields.
         const [kind, id] = input.value.split(":");
-        return { value: { location_id: kind === "location" ? Number(id) : null, city_id: kind === "city" ? Number(id) : null } };
+        return { value: { place_id: kind === "place" ? Number(id) : null, city_id: kind === "city" ? Number(id) : null } };
       }
       default:
         return { value: undefined };
@@ -227,7 +227,7 @@
       }
       case "city": state.get(row).picker?.reset(extra ?? null); break;
       case "place":
-        input.value = value?.location_id != null ? `location:${value.location_id}` : value?.city_id != null ? `city:${value.city_id}` : "";
+        input.value = value?.place_id != null ? `place:${value.place_id}` : value?.city_id != null ? `city:${value.city_id}` : "";
         break;
       case "json": {
         state.get(row).json = value;
@@ -511,7 +511,7 @@
     } else if (row.dataset.widget === "place") {
       const select = control(row);
       const labelOf = (v) => {
-        const option = [...select.options].find((o) => o.value === (v?.location_id != null ? `location:${v.location_id}` : v?.city_id != null ? `city:${v.city_id}` : ""));
+        const option = [...select.options].find((o) => o.value === (v?.place_id != null ? `place:${v.place_id}` : v?.city_id != null ? `city:${v.city_id}` : ""));
         return option ? option.textContent.trim() : "not set";
       };
       lines.push(`${labelOf(state.get(row).loaded)} → ${labelOf(readValue(row).value)}`);

@@ -42,9 +42,9 @@
           <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link</span>
             <input name="maps_url" value="{{ place.maps_url or '' }}" class="input input-sm input-bordered w-64"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Latitude (optional)</span>
-            <input name="lat" type="number" step="any" min="-90" max="90" value="{{ place.lat if place.lat is not none else '' }}" class="input input-sm input-bordered w-32"></label>
+            <input name="lat" type="number" step="any" min="-90" max="90" value="{{ place.latitude if place.latitude is not none else '' }}" class="input input-sm input-bordered w-32"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Longitude (optional)</span>
-            <input name="lng" type="number" step="any" min="-180" max="180" value="{{ place.lng if place.lng is not none else '' }}" class="input input-sm input-bordered w-32"></label>
+            <input name="lng" type="number" step="any" min="-180" max="180" value="{{ place.longitude if place.longitude is not none else '' }}" class="input input-sm input-bordered w-32"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">Tags (comma separated)</span>
             <input name="tags" value="{{ place.tags | join(', ') }}" class="input input-sm input-bordered w-56"></label>
           <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Address</span>
@@ -122,7 +122,8 @@ document.getElementById('edit-place').addEventListener('submit', async (event) =
   body.city = form.elements.city.value.trim();
   body.country = form.elements.country.value.trim();
   if (form.elements.country_code.value) body.country_code = form.elements.country_code.value;
-  for (const name of ['lat', 'lng']) body[name] = form.elements[name].value === '' ? null : Number(form.elements[name].value);
+  const [lat, lng] = ['lat', 'lng'].map(name => form.elements[name].value);
+  body.coordinates = lat === '' || lng === '' ? null : [Number(lat), Number(lng)];
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
   const { ok, data } = await send('PATCH', '/travel/places/{{ place.id }}', body);
   if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }

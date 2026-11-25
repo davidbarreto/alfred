@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.tags.tables import FinanceTag, transactions_tags
 from app.features.finance.transactions.tables import Transaction
 from app.features.travel.legs.tables import Leg
-from app.features.travel.places.tables import Place
+from app.features.location.places.tables import Place
 from app.features.travel.stays.tables import Stay
 from app.features.travel.transaction_links.tables import LINK_TABLES, legs_transactions, stays_transactions, visits_transactions
 from app.features.travel.visits.tables import Visit

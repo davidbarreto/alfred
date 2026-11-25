@@ -36,7 +36,7 @@ def _orm(**overrides) -> SimpleNamespace:
         id=1, provider_id="g-1", title="Class", description=None, location=None, start_datetime=_START,
         end_datetime=_END, all_day=False, host=None, invitees=[], tags=[], recurrence_rule=None, timezone=None,
         notification_profile=None, availability=None, presence="in_person", travel_minutes=0, routine_id=None,
-        location_id=None,
+        place_id=None,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -53,8 +53,8 @@ def service(provider):
     svc._repo = AsyncMock()
     svc._repo.get_event.return_value = _orm()
     svc._repo.update_event.return_value = _orm(availability="blocked", travel_minutes=25)
-    svc._locations = AsyncMock()
-    svc._locations.get.side_effect = lambda location_id: _LOCATIONS.get(location_id)
+    svc._places = AsyncMock()
+    svc._places.get_row.side_effect = lambda place_id: _LOCATIONS.get(place_id)
     return svc
 
 
@@ -99,8 +99,8 @@ class TestTable:
         assert "ck_calendar_events_travel_minutes" in checks
 
     def test_location_foreign_key_sets_null_on_delete(self):
-        fk = next(iter(CalendarEvent.__table__.c.location_id.foreign_keys))
-        assert fk.target_fullname == "organizer.locations.id"
+        fk = next(iter(CalendarEvent.__table__.c.place_id.foreign_keys))
+        assert fk.target_fullname == "location.places.id"
         assert fk.ondelete == "SET NULL"
 
     def test_routine_foreign_key_sets_null_on_delete(self):
@@ -206,130 +206,132 @@ class TestUpdateKeepsPlanningFieldsLocal:
 class TestLocation:
     async def test_linking_keeps_text_the_user_typed_and_skips_google(self, service, provider):
         service._repo.get_event.return_value = _orm(location="Meeting room 3")
-        service._repo.update_event.return_value = _orm(location_id=5, location="Meeting room 3")
-        result = await service.update_event(1, EventUpdate(location_id=5))
+        service._repo.update_event.return_value = _orm(place_id=5, location="Meeting room 3")
+        result = await service.update_event(1, EventUpdate(place_id=5))
         provider.update.assert_not_called()
-        assert result.location_id == 5
-        assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": 5}
+        assert result.place_id == 5
+        assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"place_id": 5}
 
     async def test_linking_without_google_still_works_and_fills_nothing(self):
         svc = CalendarEventService(provider=None, session=AsyncMock())
         svc._repo = AsyncMock()
         svc._repo.get_event.return_value = _orm()
-        svc._repo.update_event.return_value = _orm(location_id=5)
-        svc._locations = AsyncMock()
-        svc._locations.get.side_effect = lambda location_id: _LOCATIONS.get(location_id)
-        await svc.update_event(1, EventUpdate(location_id=5))
-        assert svc._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": 5}
+        svc._repo.update_event.return_value = _orm(place_id=5)
+        svc._places = AsyncMock()
+        svc._places.get_row.side_effect = lambda place_id: _LOCATIONS.get(place_id)
+        await svc.update_event(1, EventUpdate(place_id=5))
+        assert svc._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"place_id": 5}
 
     async def test_location_can_be_cleared(self, service, provider):
-        service._repo.get_event.return_value = _orm(location_id=5, location="Rua Nova 10, 4000-001 Porto")
-        await service.update_event(1, EventUpdate(location_id=None))
+        service._repo.get_event.return_value = _orm(place_id=5, location="Rua Nova 10, 4000-001 Porto")
+        await service.update_event(1, EventUpdate(place_id=None))
         provider.update.assert_not_called()
-        assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": None}
+        assert service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"place_id": None}
 
     async def test_google_never_receives_the_location_id(self, service, provider):
         provider.update.return_value = _GOOGLE_RECORD
         provider.create.return_value = _GOOGLE_RECORD
-        service._repo.create_event.return_value = _orm(location_id=5)
+        service._repo.create_event.return_value = _orm(place_id=5)
 
-        await service.update_event(1, EventUpdate(title="Renamed", location_id=5, travel_minutes=10))
-        await service.create_event(EventCreate(title="x", start_datetime=_START, end_datetime=_END, location_id=5))
+        await service.update_event(1, EventUpdate(title="Renamed", place_id=5, travel_minutes=10))
+        await service.create_event(EventCreate(title="x", start_datetime=_START, end_datetime=_END, place_id=5))
 
         assert set(provider.update.call_args.args[1]) == {"title", "location"}
         sent = provider.create.call_args.args[0]
-        assert not {"location_id", "travel_minutes", "availability", "presence", "routine_id", "tags"} & set(sent)
-        assert service._repo.create_event.call_args.args[0].location_id == 5
+        assert not {"place_id", "travel_minutes", "availability", "presence", "routine_id", "tags"} & set(sent)
+        assert service._repo.create_event.call_args.args[0].place_id == 5
 
     async def test_unknown_location_is_422(self, service, provider):
-        service._locations.get.return_value = None
+        service._places.get_row.side_effect = lambda place_id: None
         with pytest.raises(HTTPException) as exc:
-            await service.update_event(1, EventUpdate(location_id=99))
+            await service.update_event(1, EventUpdate(place_id=99))
         assert exc.value.status_code == 422
         with pytest.raises(HTTPException):
-            await service.create_event(EventCreate(title="x", start_datetime=_START, end_datetime=_END, location_id=99))
+            await service.create_event(EventCreate(title="x", start_datetime=_START, end_datetime=_END, place_id=99))
         provider.create.assert_not_called()
 
-    async def test_find_location_id_by_id_or_name(self, service):
-        service._locations.get_by_name.return_value = SimpleNamespace(id=6, name="School")
-        assert await service.find_location_id("5") == 5
-        assert await service.find_location_id(" school ") == 6
-        service._locations.get_by_name.return_value = None
+    async def test_find_place_id_goes_through_the_everyday_lookup(self, service, monkeypatch):
+        everyday = AsyncMock()
+        everyday.find.side_effect = lambda ref: SimpleNamespace(id=6, name="School") if "school" in ref else None
+        monkeypatch.setattr(
+            "app.features.organizer.calendar_events.service.EverydayPlaceService", lambda session, places: everyday
+        )
+        assert await service.find_place_id(" school ") == 6
         with pytest.raises(HTTPException) as exc:
-            await service.find_location_id("Nowhere")
+            await service.find_place_id("Nowhere")
         assert exc.value.status_code == 422
 
     async def test_every_occurrence_of_a_series_is_at_its_location(self, service):
-        service._repo.get_events.return_value = [_orm(id=7, recurrence_rule="FREQ=WEEKLY;BYDAY=WE", location_id=5)]
+        service._repo.get_events.return_value = [_orm(id=7, recurrence_rule="FREQ=WEEKLY;BYDAY=WE", place_id=5)]
         from app.features.organizer.calendar_events.schemas import EventFilters
 
         occurrences = await service.get_events(
-            EventFilters(start_from=datetime(2026, 10, 19), start_to=datetime(2026, 11, 5), location_id=5)
+            EventFilters(start_from=datetime(2026, 10, 19), start_to=datetime(2026, 11, 5), place_id=5)
         )
 
-        assert len(occurrences) == 3 and {o.location_id for o in occurrences} == {5}
-        assert service._repo.get_events.call_args.args[0].location_id == 5
+        assert len(occurrences) == 3 and {o.place_id for o in occurrences} == {5}
+        assert service._repo.get_events.call_args.args[0].place_id == 5
 
 
 class TestCalendarTextFollowsTheLocation:
     async def test_create_fills_the_address_on_one_line(self, service, provider):
         provider.create.return_value = _GOOGLE_RECORD
-        service._repo.create_event.return_value = _orm(location_id=5)
+        service._repo.create_event.return_value = _orm(place_id=5)
 
-        await service.create_event(EventCreate(title="Office", start_datetime=_START, end_datetime=_END, location_id=5))
+        await service.create_event(EventCreate(title="Office", start_datetime=_START, end_datetime=_END, place_id=5))
 
         assert provider.create.call_args.args[0]["location"] == "Rua Nova 10, 4000-001 Porto"
         assert service._repo.create_event.call_args.args[0].location == "Rua Nova 10, 4000-001 Porto"
 
     async def test_create_uses_the_name_without_an_address(self, service, provider):
         provider.create.return_value = _GOOGLE_RECORD
-        service._repo.create_event.return_value = _orm(location_id=6)
-        await service.create_event(EventCreate(title="Pickup", start_datetime=_START, end_datetime=_END, location_id=6))
+        service._repo.create_event.return_value = _orm(place_id=6)
+        await service.create_event(EventCreate(title="Pickup", start_datetime=_START, end_datetime=_END, place_id=6))
         assert provider.create.call_args.args[0]["location"] == "School"
 
     @pytest.mark.parametrize("extra", [{"location": "Gate B"}, {"invitees": ["someone@example.com"]}])
     async def test_create_keeps_typed_text_and_meetings_with_invitees(self, service, provider, extra):
         provider.create.return_value = _GOOGLE_RECORD
-        service._repo.create_event.return_value = _orm(location_id=5)
+        service._repo.create_event.return_value = _orm(place_id=5)
         await service.create_event(
-            EventCreate(title="x", start_datetime=_START, end_datetime=_END, location_id=5, **extra)
+            EventCreate(title="x", start_datetime=_START, end_datetime=_END, place_id=5, **extra)
         )
         assert provider.create.call_args.args[0].get("location") == extra.get("location")
 
     async def test_linking_an_event_with_no_text_writes_it_to_google(self, service, provider):
         provider.update.return_value = _GOOGLE_RECORD
 
-        await service.update_event(1, EventUpdate(location_id=6))
+        await service.update_event(1, EventUpdate(place_id=6))
 
         assert provider.update.call_args.args[1] == {"location": "School"}
         persisted = service._repo.update_event.call_args.args[1].model_dump(exclude_unset=True)
-        assert persisted["location_id"] == 6 and persisted["location"] == "School"
+        assert persisted["place_id"] == 6 and persisted["location"] == "School"
 
     async def test_relinking_replaces_the_previous_locations_text(self, service, provider):
         provider.update.return_value = _GOOGLE_RECORD
-        service._repo.get_event.return_value = _orm(location_id=5, location="rua nova 10,  4000-001 porto")
+        service._repo.get_event.return_value = _orm(place_id=5, location="rua nova 10,  4000-001 porto")
 
-        await service.update_event(1, EventUpdate(location_id=6))
+        await service.update_event(1, EventUpdate(place_id=6))
 
         assert provider.update.call_args.args[1] == {"location": "School"}
 
     async def test_full_form_post_that_only_relinks_fills_the_text(self, service, provider):
         """The portal posts the unchanged old text with the new link: the text still follows the location."""
         provider.update.return_value = _GOOGLE_RECORD
-        service._repo.get_event.return_value = _orm(location_id=6, location="School")
+        service._repo.get_event.return_value = _orm(place_id=6, location="School")
 
-        await service.update_event(1, EventUpdate(title="Class", location="School", location_id=5))
+        await service.update_event(1, EventUpdate(title="Class", location="School", place_id=5))
 
         assert provider.update.call_args.args[1]["location"] == "Rua Nova 10, 4000-001 Porto"
 
     async def test_text_edited_in_the_same_update_wins(self, service, provider):
         provider.update.return_value = _GOOGLE_RECORD
-        await service.update_event(1, EventUpdate(location="Back entrance", location_id=5))
+        await service.update_event(1, EventUpdate(location="Back entrance", place_id=5))
         assert provider.update.call_args.args[1] == {"location": "Back entrance"}
 
     async def test_events_with_invitees_keep_their_text(self, service, provider):
         service._repo.get_event.return_value = _orm(invitees=[SimpleNamespace(email="someone@example.com")])
-        await service.update_event(1, EventUpdate(location_id=5))
+        await service.update_event(1, EventUpdate(place_id=5))
         provider.update.assert_not_called()
 
 
@@ -348,7 +350,7 @@ class TestSyncLeavesPlanningFieldsAlone:
         await svc.sync()
 
         update = svc._repo.update_event.call_args.args[1]
-        assert not {"availability", "presence", "travel_minutes", "routine_id", "location_id"} & set(
+        assert not {"availability", "presence", "travel_minutes", "routine_id", "place_id"} & set(
             update.model_dump(exclude_unset=True)
         )
 
@@ -408,14 +410,14 @@ class TestHandler:
         }
 
     async def test_at_takes_a_location_name_or_id_and_empty_clears(self, mock_service):
-        mock_service.find_location_id.return_value = 5
-        await handle_event("add", {"title": "Pickup", "start": "2026-10-21T17:00:00", "location_id": "School"},
+        mock_service.find_place_id.return_value = 5
+        await handle_event("add", {"title": "Pickup", "start": "2026-10-21T17:00:00", "place_id": "School"},
                            mock_service)
-        mock_service.find_location_id.assert_awaited_with("School")
-        assert mock_service.create_event.call_args.args[0].location_id == 5
+        mock_service.find_place_id.assert_awaited_with("School")
+        assert mock_service.create_event.call_args.args[0].place_id == 5
 
-        await handle_event("update", {"id": "4", "location_id": ""}, mock_service)
-        assert mock_service.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"location_id": None}
+        await handle_event("update", {"id": "4", "place_id": ""}, mock_service)
+        assert mock_service.update_event.call_args.args[1].model_dump(exclude_unset=True) == {"place_id": None}
 
     @pytest.mark.parametrize("args", [{"availability": "busy"}, {"presence": "abroad"}, {"travel_minutes": "-5"}, {"travel_minutes": "far"}])
     async def test_invalid_values_are_400(self, mock_service, args):
@@ -428,9 +430,9 @@ class TestRegistry:
     def test_update_action_exposes_every_editable_field(self):
         keys = set(COMMAND_DEFINITIONS["event"]["update"]["flags"].values())
         assert {
-            "availability", "presence", "travel_minutes", "routine_id", "location_id", "title", "start", "end", "tags",
+            "availability", "presence", "travel_minutes", "routine_id", "place_id", "title", "start", "end", "tags",
         } <= keys
-        assert COMMAND_DEFINITIONS["event"]["add"]["flags"]["--at"] == "location_id"
+        assert COMMAND_DEFINITIONS["event"]["add"]["flags"]["--at"] == "place_id"
 
     def test_details_name_enum_values_units_and_scope(self):
         for action in ("add", "update"):

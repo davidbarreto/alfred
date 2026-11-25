@@ -9,7 +9,7 @@ from app.features.travel.visits.calendar_sync import VisitCalendarSync, event_de
 
 
 def _place(**kw):
-    base = dict(name="Cafe Example", city=city_ref("Lisbon"), address=None, maps_url=None, lat=None, lng=None)
+    base = dict(name="Cafe Example", city=city_ref("Lisbon"), address=None, maps_url=None, latitude=None, longitude=None)
     base.update(kw)
     return SimpleNamespace(**base)
 

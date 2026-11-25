@@ -6,7 +6,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.notes_index import VISIT_NOTE, TravelNoteIndex
 from app.features.travel.event_links import EventLinkChecker
-from app.features.travel.places.repository import PlaceRepository
+from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.calendar_sync import VisitCalendarSync
 from app.features.travel.visits.repository import VisitRepository
@@ -27,7 +27,7 @@ class VisitService:
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = VisitRepository(session)
         self._trip_repo = TripRepository(session)
-        self._place_repo = PlaceRepository(session)
+        self._place_repo = TravelPlaceRepository(session)
 
     async def get_visits(self, filters: VisitFilters) -> list[VisitRead]:
         visits = await self._repo.get_visits(filters)

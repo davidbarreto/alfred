@@ -7,11 +7,13 @@ from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 
 from travel_city_helpers import city_ref
+from app.features.location.places.tables import Place
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegUpdate
 from app.features.travel.legs.service import LegService
-from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceUpdate
-from app.features.travel.places.service import PlaceInUseError, PlaceService
+from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceFilters, TravelPlaceUpdate
+from app.features.location.errors import LocationValidationError
+from app.features.travel.places.service import TravelPlaceService
 from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.stays.schemas import StayCreate, StayUpdate
 from app.features.travel.stays.service import StayService
@@ -48,7 +50,7 @@ def _leg(**kw):
 
 def _place(**kw):
     base = dict(
-        id=3, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
+        id=3, kind="hotel", name="Hotel Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, tags=[], created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
@@ -426,13 +428,14 @@ class TestStayService:
 
 @pytest.fixture
 def places():
-    svc = PlaceService(AsyncMock())
+    base = AsyncMock()
+    base.add.return_value = Place(id=3)
+    svc = TravelPlaceService(AsyncMock(), base)
     svc._repo = AsyncMock()
     svc._repo.get_grades.return_value = {}
+    svc._repo.get_place.return_value = _place()
     svc._city_repo = AsyncMock()
     svc._cities = AsyncMock()
-    svc._web_link_repo = AsyncMock()
-    svc._web_link_repo.get_link_ids.return_value = []
     svc._tag_repo = AsyncMock()
     svc._tag_repo.get_or_create_tags.return_value = []
     return svc
@@ -444,61 +447,65 @@ class TestPlaceService:
         found = await places.get_locations()
         assert (found.cities, found.countries) == (["Alpha"], ["Examplia"])
 
-    async def test_create(self, places):
-        places._repo.create_place.return_value = _place()
-        result = await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city_id=5))
+    async def test_create_goes_through_the_base_place_with_its_tags(self, places):
+        places._tag_repo.get_or_create_tags.return_value = [TravelTag(name="would return")]
+
+        result = await places.create_place(TravelPlaceCreate(kind="hotel", name="Hotel Example", city_id=5, tags=["Would return"]))
+
+        sent = places._places.add.await_args.args[0]
+        assert (sent.kind, sent.name, sent.city_id) == ("hotel", "Hotel Example", 5)
+        assert [t.name for t in places._places.add.return_value.tags] == ["would return"]
+        places._places.saved.assert_awaited_once_with(3, created=True)
         assert result.name == "Hotel Example"
 
     async def test_create_by_names_resolves_the_country_and_city(self, places):
         places._cities.resolve_country.return_value = SimpleNamespace(id=2)
         places._cities.resolve_city.return_value = SimpleNamespace(id=8)
-        places._repo.create_place.return_value = _place()
-        await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city="Alpha", country="Examplia", country_code="EX"))
+        await places.create_place(TravelPlaceCreate(kind="hotel", name="Hotel Example", city="Alpha", country="Examplia", country_code="EX"))
         places._cities.resolve_country.assert_awaited_once_with("Examplia", "EX")
-        fields, _ = places._repo.create_place.await_args.args
-        assert fields["city_id"] == 8 and not {"city", "country", "country_code"} & fields.keys()
+        assert places._places.add.await_args.args[0].city_id == 8
 
     async def test_create_with_an_unknown_city_id_is_not_found(self, places):
         places._city_repo.get_city.return_value = None
         with pytest.raises(TravelNotFoundError):
-            await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city_id=99))
-        places._repo.create_place.assert_not_awaited()
+            await places.create_place(TravelPlaceCreate(kind="hotel", name="Hotel Example", city_id=99))
+        places._places.add.assert_not_awaited()
 
     async def test_update_with_a_lone_city_keeps_the_current_country(self, places):
-        places._repo.get_place.return_value = _place()
-        places._repo.update_place.return_value = _place()
         places._cities.resolve_country.return_value = SimpleNamespace(id=2)
         places._cities.resolve_city.return_value = SimpleNamespace(id=8)
-        await places.update_place(3, PlaceUpdate(city="Alpha"))
+        await places.update_place(3, TravelPlaceUpdate(city="Alpha"))
         places._cities.resolve_country.assert_awaited_once_with("Testland", None)
-        assert places._repo.update_place.await_args.args[1] == {"city_id": 8}
+        assert places._places.update.await_args.args[1].model_dump(exclude_unset=True) == {"city_id": 8}
 
     async def test_update_with_a_lone_country_keeps_the_current_city_name(self, places):
-        places._repo.get_place.return_value = _place()
-        places._repo.update_place.return_value = _place()
         places._cities.resolve_country.return_value = SimpleNamespace(id=2)
         places._cities.resolve_city.return_value = SimpleNamespace(id=8)
-        await places.update_place(3, PlaceUpdate(country="Newland"))
+        await places.update_place(3, TravelPlaceUpdate(country="Newland"))
         assert places._cities.resolve_city.await_args.args[0] == "Lisbon"
 
     async def test_update_without_a_city_field_does_not_touch_the_city(self, places):
-        places._repo.update_place.return_value = _place()
-        await places.update_place(3, PlaceUpdate(name="Renamed"))
+        await places.update_place(3, TravelPlaceUpdate(name="Renamed"))
         places._cities.resolve_city.assert_not_awaited()
-        assert "city_id" not in places._repo.update_place.await_args.args[1]
+        assert places._places.update.await_args.args[1].model_dump(exclude_unset=True) == {"name": "Renamed"}
 
-    async def test_update_rejects_nulling_name(self, places):
-        with pytest.raises(ValueError, match="name"):
-            await places.update_place(3, PlaceUpdate.model_validate({"name": None}))
+    async def test_tags_alone_leave_the_base_place_untouched(self, places):
+        await places.update_place(3, TravelPlaceUpdate(tags=["Family"]))
+        places._places.update.assert_not_awaited()
+        places._repo.set_tags.assert_awaited_once()
 
-    async def test_delete_with_stays_is_refused(self, places):
-        places._repo.delete_place.side_effect = IntegrityError("x", {}, Exception())
-        with pytest.raises(PlaceInUseError):
-            await places.delete_place(3)
+    async def test_nulling_name_is_refused_by_the_base_place(self, places):
+        places._places.update.side_effect = LocationValidationError("name cannot be cleared")
+        with pytest.raises(LocationValidationError, match="name"):
+            await places.update_place(3, TravelPlaceUpdate.model_validate({"name": None}))
+
+    async def test_update_unknown_is_none(self, places):
+        places._repo.get_place.return_value = None
+        assert await places.update_place(3, TravelPlaceUpdate(name="Renamed")) is None
 
     async def test_list(self, places):
         places._repo.get_places.return_value = [_place()]
-        assert len(await places.get_places(PlaceFilters())) == 1
+        assert len(await places.get_places(TravelPlaceFilters())) == 1
 
 
 @pytest.fixture

@@ -58,8 +58,8 @@ VALUES = {
         "family": ["1mo", "15d", "7d", "5d", "1d"], "relative": ["15d", "7d", "1d"], "friend": ["7d", "1d"], "other": ["3d"],
     }, "birthday_lookahead_days": 7, "birthday_dashboard_days": 30},
     "/core/weather-settings": {
-        "location_id": None, "city_id": 3, "place_label": "Lisbon, Portugal",
-        "choices": {"locations": [{"id": 1, "label": "Office"}], "cities": [{"id": 3, "label": "Lisbon, Portugal"}]},
+        "place_id": None, "city_id": 3, "place_label": "Lisbon, Portugal",
+        "choices": {"places": [{"id": 1, "label": "Office"}], "cities": [{"id": 3, "label": "Lisbon, Portugal"}]},
     },
     "/core/assistant-settings": {
         "user_name": "Sam", "persona_additions": "SECRET-PERSONA-TEXT", "base_persona": "# Alfred",
@@ -120,8 +120,8 @@ class TestBuildSections:
 
     def test_place_row_covers_both_fields_and_hides_the_city_row(self):
         rows = _rows(build_sections(CATALOG, VALUES))
-        assert rows["weather.location_id"]["value"] == {"location_id": None, "city_id": 3}
-        assert rows["weather.location_id"]["place_label"] == "Lisbon, Portugal"
+        assert rows["weather.place_id"]["value"] == {"place_id": None, "city_id": 3}
+        assert rows["weather.place_id"]["place_label"] == "Lisbon, Portugal"
         assert "weather.city_id" not in rows
 
     def test_tuning_sections_and_groups_are_marked_and_last(self):
@@ -196,7 +196,7 @@ class TestSettingsPage:
 
     def test_place_picker_selects_the_current_place(self, page):
         assert '<option value="city:3" selected>Lisbon, Portugal</option>' in page.text
-        assert '<option value="location:1" >Office</option>' in page.text
+        assert '<option value="place:1" >Office</option>' in page.text
         assert "In use: Lisbon, Portugal" in page.text
 
     def test_tuning_rows_carry_the_flag_and_the_switch_is_there(self, page):
@@ -275,13 +275,13 @@ class TestPlanWrites:
         assert plan == {"assistant": [("/core/assistant-settings", {"persona_additions": "More."})]}
 
     def test_place_writes_both_fields(self):
-        plan = plan_writes(CATALOG, {"weather": {"location_id": {"location_id": 1, "city_id": None}}})
-        assert plan == {"weather": [("/core/weather-settings", {"location_id": 1, "city_id": None})]}
+        plan = plan_writes(CATALOG, {"weather": {"place_id": {"place_id": 1, "city_id": None}}})
+        assert plan == {"weather": [("/core/weather-settings", {"place_id": 1, "city_id": None})]}
 
-    @pytest.mark.parametrize("value", [{"location_id": 1, "nope": 2}, 5])
+    @pytest.mark.parametrize("value", [{"place_id": 1, "nope": 2}, 5])
     def test_place_refuses_other_shapes(self, value):
         with pytest.raises(SaveError):
-            plan_writes(CATALOG, {"weather": {"location_id": value}})
+            plan_writes(CATALOG, {"weather": {"place_id": value}})
 
     def test_hidden_field_is_never_sent_alone(self):
         with pytest.raises(SaveError):
@@ -380,10 +380,10 @@ class TestSave:
         mock_api["get"].side_effect = _get()
         mock_api["put"].side_effect = self._put()
 
-        body = client.post("/settings/save", json={"weather": {"location_id": {"location_id": 1, "city_id": None}}}).json()
+        body = client.post("/settings/save", json={"weather": {"place_id": {"place_id": 1, "city_id": None}}}).json()
 
-        assert mock_api["put"].await_args.kwargs["json"] == {"location_id": 1, "city_id": None}
-        assert body["weather"]["values"]["location_id"] == {"location_id": 1, "city_id": None}
+        assert mock_api["put"].await_args.kwargs["json"] == {"place_id": 1, "city_id": None}
+        assert body["weather"]["values"]["place_id"] == {"place_id": 1, "city_id": None}
         assert "place_label" in body["weather"]["values"]
 
     def test_returns_the_saved_persona_additions_but_not_the_base(self, client, mock_api):

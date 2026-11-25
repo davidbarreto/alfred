@@ -7,9 +7,10 @@ from freezegun import freeze_time
 from pydantic import ValidationError
 
 from travel_city_helpers import city_ref
+from app.features.location.places.tables import Place
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
-from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceUpdate
-from app.features.travel.places.service import PlaceService
+from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceFilters, TravelPlaceUpdate
+from app.features.travel.places.service import TravelPlaceService
 from app.features.travel.tags.tables import TravelTag
 from app.features.travel.trips.service import TripService
 from app.features.travel.settings_schemas import TravelSettingsRead
@@ -21,7 +22,7 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 def _place(**kw):
     base = dict(
-        id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, lat=None, lng=None,
+        id=3, kind="restaurant", name="Cafe Example", city=city_ref("Lisbon"), maps_url=None, latitude=None, longitude=None,
         address=None, notes=None, tags=[TravelTag(name="Would return")], created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
@@ -108,7 +109,9 @@ class TestVisitService:
 
 @pytest.fixture
 def places():
-    svc = PlaceService(AsyncMock())
+    base = AsyncMock()
+    base.add.return_value = Place(id=3)
+    svc = TravelPlaceService(AsyncMock(), base)
     svc._repo = AsyncMock()
     svc._city_repo = AsyncMock()
     svc._tag_repo = AsyncMock()
@@ -121,24 +124,24 @@ class TestPlaceService:
     async def test_list_attaches_the_derived_grade(self, places):
         places._repo.get_places.return_value = [_place(id=3), _place(id=4)]
         places._repo.get_grades.return_value = {3: (4.5, 2)}
-        reads = await places.get_places(PlaceFilters())
+        reads = await places.get_places(TravelPlaceFilters())
         assert (reads[0].grade, reads[0].grade_count) == (4.5, 2)
         assert (reads[1].grade, reads[1].grade_count) == (None, 0)
         assert reads[0].tags == ["Would return"]
 
     async def test_create_resolves_tags(self, places):
         places._tag_repo.get_or_create_tags.return_value = [TravelTag(name="Family")]
-        places._repo.create_place.return_value = _place()
+        places._repo.get_place.return_value = _place()
         places._repo.get_grades.return_value = {}
-        await places.create_place(PlaceCreate(kind="cafe", name="X", city_id=5, tags=["Family"]))
-        fields, tags = places._repo.create_place.await_args.args
-        assert "tags" not in fields and tags[0].name == "Family"
+        await places.create_place(TravelPlaceCreate(kind="cafe", name="X", city_id=5, tags=["Family"]))
+        assert not hasattr(places._places.add.await_args.args[0], "tags")
+        assert places._places.add.return_value.tags[0].name == "Family"
 
     async def test_update_without_tags_leaves_them_alone(self, places):
-        places._repo.update_place.return_value = _place()
+        places._repo.get_place.return_value = _place()
         places._repo.get_grades.return_value = {}
-        await places.update_place(3, PlaceUpdate(notes="n"))
-        assert places._repo.update_place.await_args.args[2] is None
+        await places.update_place(3, TravelPlaceUpdate(notes="n"))
+        places._repo.set_tags.assert_not_awaited()
         places._tag_repo.get_or_create_tags.assert_not_awaited()
 
     async def test_detail_includes_visits_and_stays(self, places):

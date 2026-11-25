@@ -22,8 +22,11 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.organizer.shopping_products.service import ShoppingProductService
 from app.features.organizer.holidays.service import HolidayService
-from app.features.organizer.locations.service import LocationService
-from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
+from app.features.location.hooks import PlaceHooks
+from app.features.location.places.service import PlaceService
+from app.features.organizer.everyday_places.hooks import OrganizerPlaceHooks
+from app.features.organizer.everyday_places.service import EverydayPlaceService
+from app.features.organizer.travel_times.service import TravelTimeService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.tags.service import TagService
@@ -138,7 +141,8 @@ from app.features.travel.cities.hooks import TravelLocationHooks
 from app.features.travel.cities.service import TravelCityService
 from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
-from app.features.travel.places.service import PlaceService
+from app.features.travel.places.hooks import TravelPlaceHooks
+from app.features.travel.places.service import TravelPlaceService
 from app.features.travel.checklist.service import ChecklistService
 from app.features.travel.other_events import TripSnoozeService
 from app.features.travel.trips.forecast_service import TripForecastService
@@ -239,16 +243,23 @@ def get_shopping_category_service(session: AsyncSession = Depends(get_session)) 
 def get_shopping_product_service(session: AsyncSession = Depends(get_session)) -> ShoppingProductService:
     return ShoppingProductService(session)
 
-def get_location_service(session: AsyncSession = Depends(get_session)) -> LocationService:
+def get_place_hooks(session: AsyncSession) -> list[PlaceHooks]:
+    """What organizer and travel do when a place changes; `location` never imports them."""
+    return [OrganizerPlaceHooks(session), TravelPlaceHooks(session, EmbeddingService(session, get_embedding_provider()))]
+
+def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
     trips = TripRepository(session)
 
     async def keep_old_home_address(old: str, today: date) -> int:
         return await trips.snapshot_home_value("home_address", old, today)
 
-    return LocationService(session, get_planning_holiday_provider(), keep_old_home_address)
+    return PlaceService(session, get_place_hooks(session), get_planning_holiday_provider(), keep_old_home_address)
 
-def get_location_travel_time_service(session: AsyncSession = Depends(get_session)) -> LocationTravelTimeService:
-    return LocationTravelTimeService(session)
+def get_everyday_place_service(session: AsyncSession = Depends(get_session)) -> EverydayPlaceService:
+    return EverydayPlaceService(session, get_place_service(session))
+
+def get_travel_time_service(session: AsyncSession = Depends(get_session)) -> TravelTimeService:
+    return TravelTimeService(session, get_place_service(session))
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)
@@ -705,7 +716,7 @@ def get_day_plan_service(session: AsyncSession = Depends(get_session)) -> DayPla
         activity_service=ActivityService(session),
         trip_service=TripService(session),
         holiday_provider=get_planning_holiday_provider(),
-        travel_time_service=LocationTravelTimeService(session),
+        travel_time_service=TravelTimeService(session, PlaceService(session)),
     )
 
 def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> MetricEntryService:
@@ -729,8 +740,8 @@ def get_leg_service(session: AsyncSession = Depends(get_session)) -> LegService:
 def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayService:
     return StayService(session, EmbeddingService(session, get_embedding_provider()))
 
-def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
-    return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
+def get_travel_place_service(session: AsyncSession = Depends(get_session)) -> TravelPlaceService:
+    return TravelPlaceService(session, get_place_service(session), EmbeddingService(session, get_embedding_provider()))
 
 def get_location_hooks(session: AsyncSession) -> TravelLocationHooks:
     """What travel does when a city or country is created or deleted; `location` never imports travel."""
@@ -770,7 +781,8 @@ def get_calendar_import_service(session: AsyncSession = Depends(get_session)) ->
 def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelServices:
     return TravelServices(
         trips=get_trip_service(session), legs=get_leg_service(session), stays=get_stay_service(session),
-        places=get_place_service(session), visits=get_visit_service(session),
+        places=get_travel_place_service(session), base_places=get_place_service(session),
+        visits=get_visit_service(session),
         links=TransactionLinkService(session), default_tags=TripDefaultTagService(session),
         recap=TripRecapService(session),
         web_links=get_web_link_service(session), cities=get_city_service(session),
@@ -829,8 +841,8 @@ TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 ShoppingServiceDep = Annotated[ShoppingService, Depends(get_shopping_service)]
 ShoppingCategoryServiceDep = Annotated[ShoppingCategoryService, Depends(get_shopping_category_service)]
 ShoppingProductServiceDep = Annotated[ShoppingProductService, Depends(get_shopping_product_service)]
-LocationServiceDep = Annotated[LocationService, Depends(get_location_service)]
-LocationTravelTimeServiceDep = Annotated[LocationTravelTimeService, Depends(get_location_travel_time_service)]
+EverydayPlaceServiceDep = Annotated[EverydayPlaceService, Depends(get_everyday_place_service)]
+TravelTimeServiceDep = Annotated[TravelTimeService, Depends(get_travel_time_service)]
 HolidayServiceDep = Annotated[HolidayService, Depends(get_holiday_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
@@ -934,6 +946,7 @@ TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
 StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
+TravelPlaceServiceDep = Annotated[TravelPlaceService, Depends(get_travel_place_service)]
 CityServiceDep = Annotated[CityService, Depends(get_city_service)]
 CountryServiceDep = Annotated[CountryService, Depends(get_country_service)]
 TravelCityServiceDep = Annotated[TravelCityService, Depends(get_travel_city_service)]

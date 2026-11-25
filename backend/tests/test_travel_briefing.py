@@ -25,7 +25,7 @@ def _item(kind, hour, title):
 
 
 def _visit(id, at, status="planned", day=DAY):
-    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref("Beta"), maps_url=None, lat=None, lng=None)
+    place = VisitPlace(id=id, kind="museum", name=f"Museum {id}", city=city_ref("Beta"), maps_url=None, latitude=None, longitude=None)
     return VisitRead(id=id, place_id=id, place=place, trip_id=1, trip_name="T", status=status, visit_date=day,
                      visit_time=at, notes=None, grade=None, created_at=NOW, updated_at=NOW)
 

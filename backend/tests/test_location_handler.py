@@ -128,6 +128,18 @@ class TestShowUpdateDelete:
         assert location_id == 1
         assert payload.model_dump(exclude_unset=True) == {"address": None, "active": False}
 
+    async def test_coords_are_parsed_and_an_empty_value_clears_them(self, service, travel_times):
+        await handle_location("add", {"name": "Home", "kind": "home", "coordinates": "41.1579, -8.6291"}, service, travel_times)
+        assert service.create.call_args.args[0].coordinates == (41.1579, -8.6291)
+
+        await handle_location("update", {"location": "1", "coordinates": ""}, service, travel_times)
+        assert service.update.call_args.args[1].model_dump(exclude_unset=True) == {"coordinates": None}
+
+    async def test_bad_coords_are_refused(self, service, travel_times):
+        with pytest.raises(HTTPException) as exc:
+            await handle_location("add", {"name": "Home", "coordinates": "north"}, service, travel_times)
+        assert exc.value.status_code in (400, 422)
+
     async def test_update_sells_replaces_categories(self, service, travel_times):
         await handle_location("update", {"location": "1", "sells": "groceries,bakery"}, service, travel_times)
 

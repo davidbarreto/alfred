@@ -170,6 +170,14 @@ class TestDetailPage:
         assert '<option value="work" selected>work</option>' in text
         assert '<option value="other">other</option>' in text
 
+    def test_edit_form_shows_the_coordinates(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location(latitude=41.1579, longitude=-8.6291))
+        assert 'name="coordinates" value="41.1579, -8.6291"' in client.get("/locations/1").text
+
+    def test_edit_form_without_coordinates_is_empty(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(location=_location())
+        assert 'name="coordinates" value=""' in client.get("/locations/1").text
+
     def test_title_shows_the_kind_icon(self, client, mock_api):
         mock_api["get"].side_effect = _routes(location=_location(kind="cafe", name="Corner cafe"))
         assert '<i class="ti ti-coffee"></i> Corner cafe' in client.get("/locations/1").text

@@ -22,6 +22,11 @@
       <input name="maps_url" type="url" value="{{ loc.maps_url or '' if loc else '' }}" placeholder="https://maps.app.goo.gl/..."
              class="input input-sm input-bordered w-full">
     </label>
+    <label class="space-y-1 sm:col-span-2">
+      <span class="block text-xs text-gray-500">Coordinates <span class="text-gray-400">(latitude, longitude as Google Maps copies them; empty = read from the Maps link if it has any. The weather is looked up here)</span></span>
+      <input name="coordinates" value="{{ (loc.latitude ~ ', ' ~ loc.longitude) if loc and loc.get('latitude') is not none else '' }}" placeholder="41.1579, -8.6291"
+             class="input input-sm input-bordered w-full sm:w-64">
+    </label>
   </div>
   <label class="space-y-1 block">
     <span class="block text-xs text-gray-500">Opening hours <span class="text-gray-400">(one line per group of days; empty or a missing day means unknown)</span></span>

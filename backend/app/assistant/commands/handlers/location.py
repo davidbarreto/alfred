@@ -17,7 +17,7 @@ from app.features.planning.schemas import parse_travel_times
 
 logger = logging.getLogger(__name__)
 
-_TEXT_FIELDS = ("name", "kind", "address", "maps_url", "opening_hours", "notes")
+_TEXT_FIELDS = ("name", "kind", "address", "maps_url", "coordinates", "opening_hours", "notes")
 
 
 def _required(arguments: dict[str, Any], key: str) -> str:

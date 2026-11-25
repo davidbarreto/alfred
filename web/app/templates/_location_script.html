@@ -14,6 +14,7 @@ function locationBody(form) {
     name: data.get('name'),
     address: data.get('address') || null,
     maps_url: data.get('maps_url') || null,
+    coordinates: (data.get('coordinates') || '').trim() || null,
     opening_hours: data.get('opening_hours') || null,
     notes: data.get('notes') || null,
   };

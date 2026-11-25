@@ -18,6 +18,7 @@ from app.features.organizer.locations.schemas import (
     LocationUpdate,
 )
 from app.features.organizer.locations.constants import HOME_KIND
+from app.features.organizer.locations.coordinates import coordinates_from_maps_url
 from app.features.organizer.locations.tables import Location
 from app.features.organizer.locations.travel_time_repository import LocationTravelTimeRepository
 from app.features.organizer.locations.travel_time_service import route_label
@@ -61,6 +62,12 @@ def _today(location: Location, now: datetime, holiday: str | None) -> LocationTo
     )
 
 
+def _coordinate_fields(coordinates: tuple[float, float] | None, maps_url: str | None) -> dict:
+    """latitude/longitude to store: the typed ones, else the Maps link's, else none."""
+    lat_lon = coordinates or coordinates_from_maps_url(maps_url)
+    return {"latitude": lat_lon[0], "longitude": lat_lon[1]} if lat_lon else {"latitude": None, "longitude": None}
+
+
 def _read(location: Location, now: datetime, holiday: str | None) -> LocationRead:
     return LocationRead(
         id=location.id,
@@ -68,6 +75,8 @@ def _read(location: Location, now: datetime, holiday: str | None) -> LocationRea
         kind=location.kind,
         address=location.address,
         maps_url=location.maps_url,
+        latitude=float(location.latitude) if location.latitude is not None else None,
+        longitude=float(location.longitude) if location.longitude is not None else None,
         opening_hours=location.opening_hours,
         opening_hours_text=format_hours(location.opening_hours),
         notes=location.notes,
@@ -163,8 +172,9 @@ class LocationService:
 
     async def create(self, data: LocationCreate) -> LocationRead:
         await self._check_clashes(data.name, data.kind, None)
-        fields = data.model_dump(exclude={"category_ids"})
+        fields = data.model_dump(exclude={"category_ids", "coordinates"})
         fields["opening_hours"] = _hours(data.opening_hours)
+        fields.update(_coordinate_fields(data.coordinates, data.maps_url))
         categories = await self._categories(data.category_ids)
         location = await self._repo.create(fields, categories)
         logger.info("Location created: id=%d name=%r kind=%s", location.id, location.name, location.kind)
@@ -186,6 +196,11 @@ class LocationService:
         categories = await self._categories(category_ids) if category_ids is not None else None
         if "opening_hours" in changes:
             changes["opening_hours"] = _hours(changes["opening_hours"])
+        if "coordinates" in changes:
+            changes.update(_coordinate_fields(changes.pop("coordinates"), changes.get("maps_url", current.maps_url)))
+        elif current.latitude is None and changes.get("maps_url"):
+            # No coordinates yet: a new Maps link that carries some fills them.
+            changes.update(_coordinate_fields(None, changes["maps_url"]))
         await self._keep_old_home(old_home, new_home)
         location = await self._repo.update(location_id, changes, categories)
         assert location is not None

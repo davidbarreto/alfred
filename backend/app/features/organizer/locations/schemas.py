@@ -5,6 +5,10 @@ from fastapi import HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.features.organizer.locations.constants import DEFAULT_KIND, LOCATION_KINDS, LocationKind
+from app.features.organizer.locations.coordinates import parse_coordinates
+
+# Latitude, longitude. Text like "41.1579, -8.6291" is accepted too; left empty, the Maps link's are used if it has any.
+Coordinates = tuple[Annotated[float, Field(ge=-90, le=90)], Annotated[float, Field(ge=-180, le=180)]]
 
 
 def _clean_name(value: Optional[str]) -> Optional[str]:
@@ -29,11 +33,21 @@ def _blank_to_none(value: Optional[str]) -> Optional[str]:
     return value.strip() or None
 
 
+def _coordinates(value: Any) -> Any:
+    """ "41.1579, -8.6291" (as Google Maps copies them) or [lat, lon]; blank or null clears them."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if isinstance(value, str):
+        return parse_coordinates(value)
+    return value
+
+
 class LocationCreate(BaseModel):
     name: str
     kind: LocationKind = DEFAULT_KIND
     address: Optional[str] = None
     maps_url: Optional[str] = None
+    coordinates: Optional[Coordinates] = None
     # Text ("mon-fri 08:00-20:00; sun closed; holidays closed") or the stored object; the service parses it.
     opening_hours: Optional[str | dict[str, Any]] = None
     notes: Optional[str] = None
@@ -43,6 +57,7 @@ class LocationCreate(BaseModel):
     _name = field_validator("name")(_clean_name)
     _kind = field_validator("kind", mode="before")(_clean_kind)
     _text = field_validator("address", "maps_url", "notes")(_blank_to_none)
+    _coords = field_validator("coordinates", mode="before")(_coordinates)
 
 
 class LocationUpdate(BaseModel):
@@ -50,6 +65,8 @@ class LocationUpdate(BaseModel):
     kind: Optional[LocationKind] = None
     address: Optional[str] = None
     maps_url: Optional[str] = None
+    # Null or blank clears them (the Maps link's are used again if it has any).
+    coordinates: Optional[Coordinates] = None
     # A blank text or null clears the hours (unknown again).
     opening_hours: Optional[str | dict[str, Any]] = None
     notes: Optional[str] = None
@@ -60,6 +77,7 @@ class LocationUpdate(BaseModel):
     _name = field_validator("name")(_clean_name)
     _kind = field_validator("kind", mode="before")(_clean_kind)
     _text = field_validator("address", "maps_url", "notes")(_blank_to_none)
+    _coords = field_validator("coordinates", mode="before")(_coordinates)
 
 
 class LocationCategoriesUpdate(BaseModel):
@@ -90,6 +108,8 @@ class LocationRead(BaseModel):
     kind: str
     address: Optional[str]
     maps_url: Optional[str]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     opening_hours: Optional[dict[str, list[list[str]]]]
     opening_hours_text: str = ""
     notes: Optional[str]

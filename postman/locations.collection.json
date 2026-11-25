@@ -508,6 +508,143 @@
    }
   },
   {
+   "name": "10a - Set Coordinates As Typed Text",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Latitude and longitude are stored', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect([json.latitude, json.longitude]).to.eql([41.1579, -8.6291]);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"coordinates\": \"41.1579, -8.6291\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "10b - Bad Coordinates (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"coordinates\": \"95, 10\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "10c - Cleared Coordinates Come From The Maps Link",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('The link\\'s coordinates are used', () => {",
+       "    const json = pm.response.json();",
+       "    pm.expect([json.latitude, json.longitude]).to.eql([38.7223, -9.1393]);",
+       "});"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/organizer/locations/{{location_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "locations",
+      "{{location_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"coordinates\": null,\n  \"maps_url\": \"https://www.google.com/maps/@38.7223,-9.1393,15z\"\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    }
+   }
+  },
+  {
    "name": "11 - Clearing The Kind Is Refused (422)",
    "event": [
     {

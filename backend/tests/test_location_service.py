@@ -32,6 +32,8 @@ def _location(**kwargs):
     location.kind = kwargs.get("kind", "supermarket")
     location.address = kwargs.get("address", None)
     location.maps_url = kwargs.get("maps_url", None)
+    location.latitude = kwargs.get("latitude", None)
+    location.longitude = kwargs.get("longitude", None)
     location.opening_hours = kwargs.get("opening_hours", None)
     location.notes = kwargs.get("notes", None)
     location.active = kwargs.get("active", True)
@@ -177,6 +179,89 @@ class TestUpdate:
         service._repo.get.return_value = None
 
         assert await service.update(9, LocationUpdate(notes="x")) is None
+
+
+_PIN_URL = "https://www.google.com/maps/place/X/@41.15,-8.62,17z/data=!3m1!4b1!8m2!3d41.1579!4d-8.6291"
+
+
+class TestCoordinates:
+    async def test_typed_coordinates_are_stored(self, service):
+        service._repo.create.return_value = _location(latitude=41.1579, longitude=-8.6291)
+
+        result = await service.create(LocationCreate(name="Home", kind="home", coordinates="41.1579, -8.6291"))
+
+        fields, _ = service._repo.create.call_args.args
+        assert (fields["latitude"], fields["longitude"]) == (41.1579, -8.6291)
+        assert "coordinates" not in fields
+        assert (result.latitude, result.longitude) == (41.1579, -8.6291)
+
+    async def test_create_fills_them_from_the_maps_link(self, service):
+        service._repo.create.return_value = _location()
+
+        await service.create(LocationCreate(name="Cafe", maps_url=_PIN_URL))
+
+        fields, _ = service._repo.create.call_args.args
+        assert (fields["latitude"], fields["longitude"]) == (41.1579, -8.6291)
+
+    async def test_typed_coordinates_win_over_the_link(self, service):
+        service._repo.create.return_value = _location()
+
+        await service.create(LocationCreate(name="Cafe", maps_url=_PIN_URL, coordinates=[38.7, -9.1]))
+
+        fields, _ = service._repo.create.call_args.args
+        assert (fields["latitude"], fields["longitude"]) == (38.7, -9.1)
+
+    async def test_none_without_coordinates_or_a_link_that_has_them(self, service):
+        service._repo.create.return_value = _location()
+
+        await service.create(LocationCreate(name="Cafe", maps_url="https://maps.app.goo.gl/AbC"))
+
+        fields, _ = service._repo.create.call_args.args
+        assert (fields["latitude"], fields["longitude"]) == (None, None)
+
+    async def test_update_without_coordinates_fills_them_from_a_new_link(self, service):
+        service._repo.get.return_value = _location()
+        service._repo.update.return_value = _location()
+
+        await service.update(1, LocationUpdate(maps_url=_PIN_URL))
+
+        _, changes, _ = service._repo.update.call_args.args
+        assert (changes["latitude"], changes["longitude"]) == (41.1579, -8.6291)
+
+    async def test_a_new_link_keeps_coordinates_already_set(self, service):
+        service._repo.get.return_value = _location(latitude=1.0, longitude=2.0)
+        service._repo.update.return_value = _location()
+
+        await service.update(1, LocationUpdate(maps_url=_PIN_URL))
+
+        _, changes, _ = service._repo.update.call_args.args
+        assert "latitude" not in changes
+
+    async def test_clearing_them_falls_back_to_the_link(self, service):
+        service._repo.get.return_value = _location(latitude=1.0, longitude=2.0, maps_url=_PIN_URL)
+        service._repo.update.return_value = _location()
+
+        await service.update(1, LocationUpdate(coordinates=""))
+
+        _, changes, _ = service._repo.update.call_args.args
+        assert (changes["latitude"], changes["longitude"]) == (41.1579, -8.6291)
+
+    async def test_clearing_them_without_a_link(self, service):
+        service._repo.get.return_value = _location(latitude=1.0, longitude=2.0)
+        service._repo.update.return_value = _location()
+
+        await service.update(1, LocationUpdate(coordinates=None))
+
+        _, changes, _ = service._repo.update.call_args.args
+        assert changes == {"latitude": None, "longitude": None}
+
+    def test_bad_coordinates_are_refused(self):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            LocationCreate(name="X", coordinates="north")
+        with pytest.raises(ValidationError):
+            LocationCreate(name="X", coordinates=[95, 0])
 
 
 class TestToday:

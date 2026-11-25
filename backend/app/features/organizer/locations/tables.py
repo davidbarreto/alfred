@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, List, Optional
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint, func,
-    text,
+    Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Table, Text,
+    UniqueConstraint, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,6 +35,7 @@ class Location(Base):
         CheckConstraint(
             "kind IN ({})".format(", ".join(f"'{v}'" for v in LOCATION_KINDS)), name="ck_locations_kind"
         ),
+        CheckConstraint("(latitude IS NULL) = (longitude IS NULL)", name="ck_locations_coordinates"),
         {"schema": "organizer"},
     )
 
@@ -43,6 +45,9 @@ class Location(Base):
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     maps_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Both or neither; typed on the form or read from the Maps link. The weather is looked up here.
+    latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
+    longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     # Per weekday plus "hol" (see hours.py); null = unknown every day.
     opening_hours: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

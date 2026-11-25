@@ -179,7 +179,7 @@ _ACTIVITY_DETAILS = (
     "categories are tags (comma-separated plain names). Use a recurring task instead when skipping it counts as a miss."
 )
 LOCATION_FIELD_FLAGS = {
-    "--kind": "kind", "--address": "address", "--maps": "maps_url", "--hours": "opening_hours",
+    "--kind": "kind", "--address": "address", "--maps": "maps_url", "--coords": "coordinates", "--hours": "opening_hours",
     "--sells": "sells", "--notes": "notes", "--active": "active", "--from": "travel_from",
 }
 _LOCATION_DETAILS = (
@@ -192,7 +192,9 @@ _LOCATION_DETAILS = (
     "list --kind work instead of guessing its name. sells is a comma-separated list of shopping "
     "category names (what the shop is good for). hours is text such as 'mon-fri 08:00-20:00; sat 09:00-13:00, "
     "15:00-19:00; sun closed; holidays closed': days are mon..sun, ranges (mon-fri), lists (mon,wed), daily or "
-    "holidays; a missing day means unknown. maps is a Maps link for the user. An empty value clears an optional field. "
+    "holidays; a missing day means unknown. maps is a Maps link for the user. coords is 'latitude, longitude' such as "
+    "'41.1579, -8.6291' (the weather is looked up at a location's coordinates; when empty they are read from the Maps "
+    "link if it has any). An empty value clears an optional field. "
     "When the user adds or edits a shop you may search the web for its opening hours: show what you found with the "
     "source and save them only after the user confirms. Alfred itself never searches. Never estimate travel minutes "
     "from addresses: ask the user. from sets door-to-door minutes to this location as origin:mode=minutes[,mode=minutes][;...], "

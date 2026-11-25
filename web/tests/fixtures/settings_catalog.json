@@ -27,7 +27,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.sleep_time",
@@ -51,7 +52,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.work_target_minutes",
@@ -75,7 +77,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.preferred_work_windows",
@@ -99,7 +102,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.workdays",
@@ -129,7 +133,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.work_tag",
@@ -153,7 +158,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.office_tag",
@@ -177,7 +183,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.office_days_per_week",
@@ -201,7 +208,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.office_min_minutes",
@@ -225,7 +233,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.conventions",
@@ -249,7 +258,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.default_travel_minutes",
@@ -273,7 +283,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.walk_tolerance_minutes",
@@ -297,7 +308,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.backlog_stale_days",
@@ -321,7 +333,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.due_lookahead_days",
@@ -345,7 +358,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.study_items_per_plan",
@@ -369,7 +383,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.assumed_estimate_minutes",
@@ -393,7 +408,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "planning.shopping_run_minutes",
@@ -417,7 +433,8 @@
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": [
@@ -455,7 +472,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.event_lookahead_hours",
@@ -479,7 +497,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overload_overdue_threshold",
@@ -503,7 +522,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overload_urgent_threshold",
@@ -527,7 +547,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overload_max_listed",
@@ -551,7 +572,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overload_urgent_interval_hours",
@@ -575,7 +597,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overdue_grace_hours_high",
@@ -599,7 +622,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overdue_grace_hours_medium",
@@ -623,7 +647,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.overdue_grace_hours_low",
@@ -647,7 +672,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.undated_escalation_days_high",
@@ -671,7 +697,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.undated_escalation_days_medium",
@@ -695,7 +722,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.undated_escalation_days_low",
@@ -719,7 +747,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.catchup_tasks_per_day",
@@ -743,7 +772,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.catchup_stale_days",
@@ -767,7 +797,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.catchup_missed_habit_threshold",
@@ -791,7 +822,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.urgency_reset_days",
@@ -815,7 +847,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "reminders.undated_task_snooze_days",
@@ -839,7 +872,8 @@
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": []
@@ -871,7 +905,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.home_to_airport_min",
@@ -895,7 +930,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.max_visits_per_day",
@@ -919,7 +955,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.visit_duration_min",
@@ -943,7 +980,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.unpaid_leg_days",
@@ -967,7 +1005,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.leave_home_lead_min",
@@ -991,7 +1030,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.check_in_opens_hours",
@@ -1015,7 +1055,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.tight_connection_min",
@@ -1039,7 +1080,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.long_wait_hours",
@@ -1063,7 +1105,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.checklist_nudge_days",
@@ -1087,7 +1130,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.snooze_other_events",
@@ -1111,7 +1155,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.rain_mm",
@@ -1135,7 +1180,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.charge_link_lead_days",
@@ -1159,7 +1205,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.charge_link_tail_days",
@@ -1183,7 +1230,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.home_address",
@@ -1207,7 +1255,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "travel.home_city_id",
@@ -1231,7 +1280,8 @@
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": [
@@ -1269,7 +1319,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.holiday_lookahead_days",
@@ -1293,7 +1344,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_tasks_today",
@@ -1317,7 +1369,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_tasks_upcoming",
@@ -1341,7 +1394,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_events_today",
@@ -1365,7 +1419,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_events_upcoming",
@@ -1389,7 +1444,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_shopping_items",
@@ -1413,7 +1469,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "briefing.max_recurring_items",
@@ -1437,7 +1494,8 @@
      "read_path": "/briefing/settings",
      "write_path": "/briefing/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": []
@@ -1469,7 +1527,83 @@
      "read_path": "/finance/settings",
      "write_path": "/finance/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
+    },
+    {
+     "key": "finance.import_knn_limit",
+     "field": "import_knn_limit",
+     "label": "Similar past transactions",
+     "description": "How many past transactions vote on an imported row's category.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 50.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 7,
+     "unit": "transactions",
+     "group": "Statement import matching",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/finance/settings",
+     "write_path": "/finance/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "finance.import_knn_threshold",
+     "field": "import_knn_threshold",
+     "label": "Similar from",
+     "description": "Similarity a past transaction needs to vote.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.72,
+     "unit": null,
+     "group": "Statement import matching",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/finance/settings",
+     "write_path": "/finance/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "finance.import_knn_min_vote",
+     "field": "import_knn_min_vote",
+     "label": "Suggest a category from",
+     "description": "Share of the votes a category needs to be suggested.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.7,
+     "unit": null,
+     "group": "Statement import matching",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/finance/settings",
+     "write_path": "/finance/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
     }
    ],
    "links": [
@@ -1507,7 +1641,149 @@
      "read_path": "/study/settings",
      "write_path": "/study/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
+    }
+   ],
+   "links": []
+  },
+  {
+   "namespace": "cs",
+   "title": "CS coach",
+   "description": "How weak problem tags are picked.",
+   "fields": [
+    {
+     "key": "cs.weak_tag_min_attempts",
+     "field": "weak_tag_min_attempts",
+     "label": "Weak tag needs at least",
+     "description": "Attempts a tag needs before it can count as weak.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 100.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 3,
+     "unit": "attempts",
+     "group": "Weak tags",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/cs/settings",
+     "write_path": "/cs/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "cs.weak_tag_max_solve_rate",
+     "field": "weak_tag_max_solve_rate",
+     "label": "Weak below solve rate",
+     "description": "A tag solved at least this often is never called weak.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.85,
+     "unit": null,
+     "group": "Weak tags",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/cs/settings",
+     "write_path": "/cs/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "cs.weak_tags_shown",
+     "field": "weak_tags_shown",
+     "label": "Weak tags listed",
+     "description": null,
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 20.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 5,
+     "unit": "tags",
+     "group": "Weak tags",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/cs/settings",
+     "write_path": "/cs/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    }
+   ],
+   "links": []
+  },
+  {
+   "namespace": "metrics",
+   "title": "Metrics",
+   "description": "How the metrics stats are computed.",
+   "fields": [
+    {
+     "key": "metrics.trend_days",
+     "field": "trend_days",
+     "label": "Trend window",
+     "description": "Recent days compared with the same number of days before them.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 7.0,
+     "max": 365.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 30,
+     "unit": "days",
+     "group": "Stats",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/metrics/settings",
+     "write_path": "/metrics/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "metrics.min_samples",
+     "field": "min_samples",
+     "label": "Samples for a reliable group",
+     "description": "A group with fewer entries is flagged and never ranked best.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 100.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 5,
+     "unit": "entries",
+     "group": "Stats",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/metrics/settings",
+     "write_path": "/metrics/settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
     }
    ],
    "links": []
@@ -1539,7 +1815,8 @@
      "read_path": "/language/settings",
      "write_path": "/language/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "language.leech_threshold",
@@ -1563,7 +1840,8 @@
      "read_path": "/language/settings",
      "write_path": "/language/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "language.timed_task_seconds",
@@ -1587,7 +1865,8 @@
      "read_path": "/language/settings",
      "write_path": "/language/settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": [
@@ -1663,7 +1942,8 @@
      "read_path": "/organizer/calendar-notification-settings",
      "write_path": "/organizer/calendar-notification-settings/{entry}",
      "entry_field": "offsets",
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "organizer.contact_birthday_cascades",
@@ -1712,7 +1992,8 @@
      "read_path": "/organizer/contact-birthday-settings",
      "write_path": "/organizer/contact-birthday-settings/{entry}",
      "entry_field": "offsets",
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "organizer.birthday_lookahead_days",
@@ -1736,7 +2017,8 @@
      "read_path": "/organizer/contact-birthday-settings",
      "write_path": "/organizer/contact-birthday-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "organizer.birthday_dashboard_days",
@@ -1760,7 +2042,8 @@
      "read_path": "/organizer/contact-birthday-settings",
      "write_path": "/organizer/contact-birthday-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": []
@@ -1794,7 +2077,8 @@
      "entry_field": null,
      "covers": [
       "city_id"
-     ]
+     ],
+     "advanced": false
     },
     {
      "key": "weather.city_id",
@@ -1818,7 +2102,8 @@
      "read_path": "/core/weather-settings",
      "write_path": "/core/weather-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": [
@@ -1828,6 +2113,289 @@
      "description": "Set on each location's page; Home's are used when no place is chosen."
     }
    ]
+  },
+  {
+   "namespace": "chat",
+   "title": "Chat",
+   "description": "Tuning for chat replies, recall, memory extraction and command detection.",
+   "fields": [
+    {
+     "key": "chat.history_limit",
+     "field": "history_limit",
+     "label": "Messages of history",
+     "description": "Earlier messages of the conversation sent with each chat reply.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 0.0,
+     "max": 50.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 10,
+     "unit": "messages",
+     "group": "Chat replies",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.memory_limit",
+     "field": "memory_limit",
+     "label": "Memories per reply",
+     "description": "Memories, notes and tasks found by meaning and added to the reply's context.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 0.0,
+     "max": 20.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 5,
+     "unit": "items",
+     "group": "Chat replies",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.memory_threshold",
+     "field": "memory_threshold",
+     "label": "Memory match from",
+     "description": "Similarity a memory needs to be added to the context.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.6,
+     "unit": null,
+     "group": "Chat replies",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.temperature",
+     "field": "temperature",
+     "label": "Temperature",
+     "description": "Higher is more varied, lower more predictable. Falls back to LLM_CHAT_TEMPERATURE.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 2.0,
+     "max_length": null,
+     "step": 0.05,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.35,
+     "unit": null,
+     "group": "Chat replies",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.recall_threshold",
+     "field": "recall_threshold",
+     "label": "Recall match from",
+     "description": "Similarity a result needs to be returned by recall.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.5,
+     "unit": null,
+     "group": "Recall",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.recall_limit",
+     "field": "recall_limit",
+     "label": "Recall results",
+     "description": null,
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 50.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 8,
+     "unit": "results",
+     "group": "Recall",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.memory_dedup_threshold",
+     "field": "memory_dedup_threshold",
+     "label": "Same memory from",
+     "description": "An extracted memory this similar to an existing one bumps it instead of being added.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.85,
+     "unit": null,
+     "group": "Memory extraction",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.memory_importance_bump",
+     "field": "memory_importance_bump",
+     "label": "Importance bump",
+     "description": "Added to a memory's importance when it comes up again.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.1,
+     "unit": null,
+     "group": "Memory extraction",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.intent_threshold",
+     "field": "intent_threshold",
+     "label": "Command match from",
+     "description": "An embedding score at or above this runs the command directly. Falls back to INTENT_THRESHOLD.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.7,
+     "unit": null,
+     "group": "Intent detection",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.intent_shortlist_floor",
+     "field": "intent_shortlist_floor",
+     "label": "Shortlist from",
+     "description": "Between this and the command match, the top intents go to the LLM to pick; below it the message is plain chat. Falls back to INTENT_SHORTLIST_FLOOR.",
+     "widget": "number",
+     "type": "number",
+     "options": null,
+     "min": 0.0,
+     "max": 1.0,
+     "max_length": null,
+     "step": 0.01,
+     "nullable": false,
+     "has_default": true,
+     "default": 0.4,
+     "unit": null,
+     "group": "Intent detection",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    },
+    {
+     "key": "chat.intent_shortlist_k",
+     "field": "intent_shortlist_k",
+     "label": "Shortlist size",
+     "description": "Falls back to INTENT_SHORTLIST_K.",
+     "widget": "number",
+     "type": "integer",
+     "options": null,
+     "min": 1.0,
+     "max": 20.0,
+     "max_length": null,
+     "step": null,
+     "nullable": false,
+     "has_default": true,
+     "default": 5,
+     "unit": "intents",
+     "group": "Intent detection",
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/chat-settings",
+     "write_path": "/core/chat-settings",
+     "entry_field": null,
+     "covers": null,
+     "advanced": true
+    }
+   ],
+   "links": []
   },
   {
    "namespace": "assistant",
@@ -1856,7 +2424,8 @@
      "read_path": "/core/assistant-settings",
      "write_path": "/core/assistant-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     },
     {
      "key": "assistant.persona_additions",
@@ -1880,7 +2449,8 @@
      "read_path": "/core/assistant-settings",
      "write_path": "/core/assistant-settings",
      "entry_field": null,
-     "covers": null
+     "covers": null,
+     "advanced": false
     }
    ],
    "links": []

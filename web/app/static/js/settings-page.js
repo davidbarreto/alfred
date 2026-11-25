@@ -3,6 +3,7 @@
  *
  * Search: every row is on the page, so the filter runs here. It matches the label, key and description (data-search),
  * hides sections with no match, updates the counts in the section nav and keeps the query in ?q=.
+ * Tuning rows (data-advanced) show only with "Show tuning" on (remembered in localStorage), or when a search matches.
  *
  * Editing: each row holds the value the page loaded (data-value, JSON). readValue() turns the control back into the
  * value its API expects; a row whose value differs from the loaded one is "changed". One Save for the page: the bar
@@ -21,21 +22,28 @@
 
   const search = document.getElementById("settings-search");
   const noMatch = document.getElementById("settings-no-match");
+  const tuningSwitch = document.getElementById("show-tuning");
+  const TUNING_KEY = "settings.showTuning";
+  try { tuningSwitch.checked = localStorage.getItem(TUNING_KEY) === "1"; } catch (e) { /* storage blocked */ }
 
   function applySearch(query) {
     const q = query.trim().toLowerCase();
+    const showTuning = tuningSwitch.checked;
     let shownSections = 0;
     sections.forEach((section) => {
       let shown = 0;
       section.querySelectorAll("[data-setting-row], [data-link-row]").forEach((row) => {
-        const match = !q || row.dataset.search.includes(q);
+        const match = q ? row.dataset.search.includes(q) : (showTuning || !row.hasAttribute("data-advanced"));
         row.classList.toggle("hidden", !match);
         if (match && row.hasAttribute("data-setting-row")) shown += 1;
       });
       section.querySelectorAll("[data-group]").forEach((group) => {
         group.classList.toggle("hidden", !group.querySelector("[data-setting-row]:not(.hidden)"));
       });
-      const visible = !q || section.querySelector("[data-setting-row]:not(.hidden), [data-link-row]:not(.hidden)");
+      // A section shows while it has a visible row; without a search a non-tuning section always shows (its load
+      // error, if any, stays readable).
+      const visible = Boolean(section.querySelector("[data-setting-row]:not(.hidden), [data-link-row]:not(.hidden)"))
+        || (!q && !section.hasAttribute("data-advanced"));
       section.classList.toggle("hidden", !visible);
       if (visible) shownSections += 1;
       document.querySelectorAll(`[data-nav="${section.dataset.section}"]`).forEach((link) => {
@@ -54,7 +62,11 @@
   if (search) {
     search.value = new URL(window.location.href).searchParams.get("q") || "";
     search.addEventListener("input", () => applySearch(search.value));
-    if (search.value) applySearch(search.value);
+    tuningSwitch.addEventListener("change", () => {
+      try { localStorage.setItem(TUNING_KEY, tuningSwitch.checked ? "1" : "0"); } catch (e) { /* storage blocked */ }
+      applySearch(search.value);
+    });
+    applySearch(search.value);
   }
 
   // ── Values ──────────────────────────────────────────────────────────────

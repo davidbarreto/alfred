@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, cast, get_args
 
 from app.db.session import async_session
+from app.features.core.chat_settings.schemas import ChatSettingsRead
+from app.features.core.chat_settings.service import ChatSettingsService
 from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.schemas import MemoryCategory, MemoryCreate, MemoryUpdate
@@ -18,8 +20,6 @@ from app.shared.protocols.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
-_DEDUP_THRESHOLD = 0.85
-_IMPORTANCE_BUMP = 0.1
 _VALID_CATEGORIES: frozenset[str] = frozenset(get_args(MemoryCategory))
 
 
@@ -73,8 +73,9 @@ class MemoryExtractionService:
             )
             memory_service = MemoryService(session)
             embedding_service = EmbeddingService(session, self._embedding_provider)
+            tuning = await ChatSettingsService(session).get()
             for candidate in candidates:
-                await self._upsert_memory(candidate, message_id, memory_service, embedding_service)
+                await self._upsert_memory(candidate, message_id, memory_service, embedding_service, tuning)
 
     async def _upsert_memory(
         self,
@@ -82,6 +83,7 @@ class MemoryExtractionService:
         message_id: int,
         memory_service: MemoryService,
         embedding_service: EmbeddingService,
+        tuning: ChatSettingsRead,
     ) -> None:
         content = str(candidate.get("content", "")).strip()
         raw_category = str(candidate.get("category", ""))
@@ -113,7 +115,7 @@ class MemoryExtractionService:
                 query=content,
                 source_types=["memory"],
                 limit=1,
-                threshold=_DEDUP_THRESHOLD,
+                threshold=tuning.memory_dedup_threshold,
                 feature="memory_dedup",
             )
         )
@@ -122,7 +124,7 @@ class MemoryExtractionService:
             existing_id = similar[0].source_id
             existing = await memory_service.get(existing_id)
             if existing:
-                new_importance = min(1.0, existing.importance + _IMPORTANCE_BUMP)
+                new_importance = min(1.0, existing.importance + tuning.memory_importance_bump)
                 await memory_service.update(existing_id, MemoryUpdate(importance=new_importance, expires_at=expires_at))
                 logger.debug("Memory importance bumped: id=%d importance=%.2f", existing_id, new_importance)
                 return

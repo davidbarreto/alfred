@@ -7,7 +7,9 @@ from app.config import get_settings
 from app.features.metrics.entries.service import STALE_AFTER
 from app.features.metrics.series.repository import MetricSeriesRepository
 from app.features.metrics.stats.repository import GroupBy, MetricStatsRepository, StatRow
-from app.features.metrics.stats.schemas import MIN_SAMPLES, TREND_DAYS, DailyPoint, GroupStat, MetricDaily, MetricStats, MetricTrend
+from app.features.metrics.settings.schemas import DEFAULT_MIN_SAMPLES
+from app.features.metrics.settings.service import MetricsSettingsService
+from app.features.metrics.stats.schemas import DailyPoint, GroupStat, MetricDaily, MetricStats, MetricTrend
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +34,13 @@ def _label(group_by: GroupBy | None, key: str | None) -> str:
     return key
 
 
-def _group_stat(row: StatRow, group_by: GroupBy | None, measured: bool) -> GroupStat:
-    """Build a GroupStat; count series have no measure, so only `n` is meaningful there."""
+def _group_stat(
+    row: StatRow, group_by: GroupBy | None, measured: bool, min_samples: int = DEFAULT_MIN_SAMPLES
+) -> GroupStat:
+    """Build a GroupStat; count series have no measure, so only `n` is meaningful there.
+
+    A group with fewer than `min_samples` entries is returned but flagged, and never ranked as "best".
+    """
     return GroupStat(
         key=row.key if row.key is not None else "all",
         label=_label(group_by, row.key),
@@ -43,7 +50,7 @@ def _group_stat(row: StatRow, group_by: GroupBy | None, measured: bool) -> Group
         mean=row.mean if measured else None,
         min=row.min if measured else None,
         max=row.max if measured else None,
-        low_confidence=row.n < MIN_SAMPLES,
+        low_confidence=row.n < min_samples,
     )
 
 
@@ -59,6 +66,7 @@ class MetricStatsService:
     def __init__(self, session: AsyncSession):
         self._repo = MetricStatsRepository(session)
         self._series = MetricSeriesRepository(session)
+        self._settings = MetricsSettingsService(session)
 
     async def get_stats(self, name: str, tag: str | None = None, days: int | None = None) -> MetricStats | None:
         series = await self._series.get_series_by_name(name)
@@ -70,28 +78,29 @@ class MetricStatsService:
         tz = get_settings().timezone
         now = _now()
         since = now - timedelta(days=days) if days else None
+        tuning = await self._settings.get()
 
         async def grouped(group_by: GroupBy) -> list[GroupStat]:
             rows = await self._repo.get_stats(
                 series.id, kind, tz, _MAX_DURATION_S, group_by=group_by, since=since, tag=tag
             )
-            return [_group_stat(row, group_by, measured) for row in rows]
+            return [_group_stat(row, group_by, measured, tuning.min_samples) for row in rows]
 
         async def overall(window_since: datetime | None, window_until: datetime | None = None) -> GroupStat:
             rows = await self._repo.get_stats(
                 series.id, kind, tz, _MAX_DURATION_S, since=window_since, until=window_until, tag=tag
             )
-            return _group_stat(rows[0], None, measured)
+            return _group_stat(rows[0], None, measured, tuning.min_samples)
 
         by_tag = sorted(await grouped("tag"), key=lambda g: (-g.n, g.label))
         by_hour = sorted(await grouped("hour"), key=lambda g: int(g.key))
         by_weekday = sorted(await grouped("weekday"), key=lambda g: int(g.key))
         by_weather = sorted(await grouped("weather"), key=lambda g: _WEATHER_ORDER.get(g.key, 9))
-        trend_start = now - timedelta(days=TREND_DAYS)
+        trend_start = now - timedelta(days=tuning.trend_days)
         trend = MetricTrend(
-            days=TREND_DAYS,
+            days=tuning.trend_days,
             recent=await overall(trend_start),
-            previous=await overall(now - timedelta(days=2 * TREND_DAYS), trend_start),
+            previous=await overall(now - timedelta(days=2 * tuning.trend_days), trend_start),
         )
         excluded = await self._repo.count_over_cap(series.id, _MAX_DURATION_S, since) if kind == "duration" else 0
         logger.debug("Metric stats: series=%r kind=%s tag=%r days=%s", series.name, kind, tag, days)
@@ -99,7 +108,7 @@ class MetricStatsService:
             series=series.name,
             kind=kind,
             unit=series.unit,
-            sample_threshold=MIN_SAMPLES,
+            sample_threshold=tuning.min_samples,
             excluded_over_cap=excluded,
             overall=await overall(since),
             by_tag=by_tag,

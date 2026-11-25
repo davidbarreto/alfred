@@ -35,6 +35,7 @@ class LlmProvider(Protocol):
     messages: OpenAI-style list of {"role": "user"|"assistant", "content": "..."}
     system:   optional system prompt, passed separately so providers that
               handle it natively (Anthropic) can do so correctly
+    temperature: overrides the provider's own for this call (the chat reads it from the chat.temperature setting)
     """
 
     @property
@@ -47,6 +48,7 @@ class LlmProvider(Protocol):
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
+        temperature: float | None = None,
     ) -> LlmResponse: ...
 
     def stream(
@@ -54,4 +56,5 @@ class LlmProvider(Protocol):
         messages: list[dict[str, str]],
         system: str | None = None,
         meta: StreamMeta | None = None,
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]: ...

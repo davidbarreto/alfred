@@ -3,6 +3,7 @@ import datetime
 import pytest
 from unittest.mock import AsyncMock
 
+from app.features.cs.settings.schemas import CsSettingsRead
 from app.features.cs.stats.schemas import DailyActivity, StatsSummary, TagBreakdown
 from app.features.cs.stats.service import (
     StatsService,
@@ -67,6 +68,8 @@ def service(mock_session):
     svc = StatsService(session=mock_session)
     svc._repo = AsyncMock()
     svc._repo.get_daily_activity.return_value = []
+    svc._settings = AsyncMock()
+    svc._settings.get.return_value = CsSettingsRead()
     return svc
 
 
@@ -99,6 +102,17 @@ class TestGetSummary:
         weak_names = [t.tag for t in summary.weakest_tags]
         assert "graph" not in weak_names
         assert weak_names[0] == "dp"
+
+    async def test_min_attempts_comes_from_the_settings(self, service):
+        service._settings.get.return_value = CsSettingsRead(weak_tag_min_attempts=1)
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
+        service._repo.get_total_solved.return_value = 10
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        service._repo.get_tag_breakdown.return_value = [("graph", 2, 0, 5), ("dp", 5, 1, 6), ("greedy", 4, 3, 4)]
+        summary = await service.get_summary()
+        assert "graph" in [t.tag for t in summary.weakest_tags]
 
     async def test_weakest_tags_sorted_ascending_by_solve_rate(self, service):
         service._repo.get_solved_dates.return_value = []

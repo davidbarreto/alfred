@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
+from app.features.finance.settings.schemas import FinanceSettingsRead
 from app.features.finance.imports.schemas import (
     ImportCommitGroupedRequest,
     ImportCommitGroupedRow,
@@ -119,6 +120,8 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._installment_plans = AsyncMock()
     service._trip_tags = AsyncMock()
     service._trip_tags.windows_for.return_value = TripTagWindows([])
+    service._finance_settings = AsyncMock()
+    service._finance_settings.get.return_value = FinanceSettingsRead(cycle_start_day=1)
     service._repo.list_rules.return_value = []
     service._repo.add_rule = MagicMock()
     # session.add() is sync on a real AsyncSession; AsyncMock would otherwise turn it

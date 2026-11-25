@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from unittest.mock import AsyncMock
@@ -48,6 +49,16 @@ class TestHandleRecall:
         result = await handle_recall("search", {"query": "something obscure"}, mock_embedding_service)
 
         assert result == []
+
+    async def test_limit_and_threshold_come_from_the_chat_settings(self, mock_embedding_service):
+        mock_embedding_service.search.return_value = []
+        chat_settings = AsyncMock()
+        chat_settings.get.return_value = SimpleNamespace(recall_limit=3, recall_threshold=0.7)
+
+        await handle_recall("search", {"query": "x"}, mock_embedding_service, chat_settings=chat_settings)
+
+        request = mock_embedding_service.search.call_args[0][0]
+        assert (request.limit, request.threshold) == (6, 0.7)
 
     async def test_passes_query_to_embedding_service(self, mock_embedding_service):
         mock_embedding_service.search.return_value = []

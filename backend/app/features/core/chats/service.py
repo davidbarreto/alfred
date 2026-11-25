@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.features.core.chat_settings.service import ChatSettingsService
 from app.features.core.chats.context import build_daily_context
 from app.features.core.chats.schemas import ChatParseMode, ChatRequest
 from app.features.core.prompts import (
@@ -48,9 +49,6 @@ from app.shared.utils.timezone import local_now
 _LANGUAGE_PENDING_KEY = "language:pending"
 _CHUNK_LOOP_MODES = {"practice", "review"}
 
-_HISTORY_LIMIT = 10
-_MEMORY_LIMIT = 5
-_MEMORY_THRESHOLD = 0.6
 
 
 def _is_language_command(detected_intents: list[str] | None) -> bool:
@@ -239,15 +237,16 @@ class ChatService:
         self._production_service = production_service
         self._language_session_service = language_session_service
         self._assistant_settings = AssistantSettingsService(session)
+        self._chat_settings = ChatSettingsService(session)
 
-    async def _fetch_history(self, session_id: int) -> list[MessageRead]:
+    async def _fetch_history(self, session_id: int, limit: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
         if session and session.source and session.external_id:
             return await self._message_service.list(
-                MessageFilters(source=session.source, external_id=session.external_id, limit=_HISTORY_LIMIT + 1)
+                MessageFilters(source=session.source, external_id=session.external_id, limit=limit + 1)
             )
         return await self._message_service.list(
-            MessageFilters(session_id=session_id, limit=_HISTORY_LIMIT + 1)
+            MessageFilters(session_id=session_id, limit=limit + 1)
         )
 
     async def _advance_language_loop(self, pending_wm: WorkingMemoryRead) -> NextPracticePrompt | None:
@@ -359,7 +358,8 @@ class ChatService:
 
     async def chat(self, request: ChatRequest) -> tuple[str, NextPracticePrompt | None]:
         logger.info("Chat: session_id=%s", request.session_id)
-        messages = await self._fetch_history(request.session_id)
+        tuning = await self._chat_settings.get()
+        messages = await self._fetch_history(request.session_id, tuning.history_limit)
         if not messages:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -414,8 +414,8 @@ class ChatService:
                 EmbeddingSearchRequest(
                     query=current_message.content,
                     source_types=["memory", "note", "task"],
-                    limit=_MEMORY_LIMIT,
-                    threshold=_MEMORY_THRESHOLD,
+                    limit=tuning.memory_limit,
+                    threshold=tuning.memory_threshold,
                     feature="chat",
                 )
             )
@@ -432,7 +432,9 @@ class ChatService:
 
         t0 = time.monotonic()
         try:
-            llm_response = await self._llm_provider.complete(messages, system=system_prompt)
+            llm_response = await self._llm_provider.complete(
+                messages, system=system_prompt, temperature=tuning.temperature
+            )
         except Exception as exc:
             logger.error("Chat: LLM call failed session_id=%s error=%s", request.session_id, exc)
             raise HTTPException(
@@ -493,7 +495,8 @@ class ChatService:
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
         logger.info("StreamChat: session_id=%s", request.session_id)
-        messages = await self._fetch_history(request.session_id)
+        tuning = await self._chat_settings.get()
+        messages = await self._fetch_history(request.session_id, tuning.history_limit)
         if not messages:
             yield f"[error: No messages found in session. Call POST /core/messages first.]"
             return
@@ -537,8 +540,8 @@ class ChatService:
                 EmbeddingSearchRequest(
                     query=current_message.content,
                     source_types=["memory", "note", "task"],
-                    limit=_MEMORY_LIMIT,
-                    threshold=_MEMORY_THRESHOLD,
+                    limit=tuning.memory_limit,
+                    threshold=tuning.memory_threshold,
                     feature="chat_stream",
                 )
             )
@@ -555,7 +558,9 @@ class ChatService:
         raw_text = ""
         meta = StreamMeta()
         try:
-            async for chunk in self._llm_provider.stream(messages_list, system=system_prompt, meta=meta):
+            async for chunk in self._llm_provider.stream(
+                messages_list, system=system_prompt, meta=meta, temperature=tuning.temperature
+            ):
                 raw_text += chunk
                 yield chunk
         except Exception as exc:

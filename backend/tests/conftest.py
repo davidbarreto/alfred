@@ -80,3 +80,18 @@ async def db_session():
                 await outer.rollback()
     finally:
         await engine.dispose()
+
+
+@pytest.fixture
+def chat_tuning(monkeypatch):
+    """Chat settings (chat.*) on their defaults, for code that reads them through a real-looking session."""
+    from app.features.core.chat_settings.schemas import ChatSettingsRead
+    from app.features.core.chat_settings.service import ChatSettingsService
+
+    settings = ChatSettingsRead(
+        history_limit=10, memory_limit=5, memory_threshold=0.6, temperature=0.35, recall_threshold=0.5, recall_limit=8,
+        memory_dedup_threshold=0.85, memory_importance_bump=0.1, intent_threshold=0.7, intent_shortlist_floor=0.4,
+        intent_shortlist_k=5,
+    )
+    monkeypatch.setattr(ChatSettingsService, "get", AsyncMock(return_value=settings))
+    return settings

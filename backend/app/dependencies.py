@@ -64,6 +64,9 @@ from app.features.core.settings.catalog_service import SettingsCatalogService
 from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.briefing.settings_service import BriefingSettingsService
 from app.features.language.settings_service import LanguageSettingsService
+from app.features.core.chat_settings.service import ChatSettingsService
+from app.features.cs.settings.service import CsSettingsService
+from app.features.metrics.settings.service import MetricsSettingsService
 from app.features.core.api_requests.service import ApiRequestService
 from app.features.core.pause.service import GlobalPauseService
 from app.features.core.urgency_reset.service import UrgencyResetService
@@ -494,6 +497,15 @@ def get_briefing_settings_service(session: AsyncSession = Depends(get_session)) 
 def get_language_settings_service(session: AsyncSession = Depends(get_session)) -> LanguageSettingsService:
     return LanguageSettingsService(session)
 
+def get_chat_settings_service(session: AsyncSession = Depends(get_session)) -> ChatSettingsService:
+    return ChatSettingsService(session)
+
+def get_cs_settings_service(session: AsyncSession = Depends(get_session)) -> CsSettingsService:
+    return CsSettingsService(session)
+
+def get_metrics_settings_service(session: AsyncSession = Depends(get_session)) -> MetricsSettingsService:
+    return MetricsSettingsService(session)
+
 def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
     return ReminderService(session=session, task_service=get_task_service(session))
 
@@ -855,6 +867,9 @@ SettingsCatalogServiceDep = Annotated[SettingsCatalogService, Depends(get_settin
 WeatherSettingsServiceDep = Annotated[WeatherSettingsService, Depends(get_weather_settings_service)]
 BriefingSettingsServiceDep = Annotated[BriefingSettingsService, Depends(get_briefing_settings_service)]
 LanguageSettingsServiceDep = Annotated[LanguageSettingsService, Depends(get_language_settings_service)]
+ChatSettingsServiceDep = Annotated[ChatSettingsService, Depends(get_chat_settings_service)]
+CsSettingsServiceDep = Annotated[CsSettingsService, Depends(get_cs_settings_service)]
+MetricsSettingsServiceDep = Annotated[MetricsSettingsService, Depends(get_metrics_settings_service)]
 GlobalPauseServiceDep = Annotated[GlobalPauseService, Depends(get_global_pause_service)]
 ApiRequestServiceDep = Annotated[ApiRequestService, Depends(get_api_request_service)]
 UrgencyResetServiceDep = Annotated[UrgencyResetService, Depends(get_urgency_reset_service)]

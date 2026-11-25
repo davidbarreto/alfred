@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.accounts.tables import Account
@@ -63,13 +64,6 @@ LLM_CALL_FEATURE = "finance_import_categorization"
 # grouped (multi-account) preview/commit flow instead of the single-account one.
 GROUPED_PROVIDERS = frozenset({"revolut", "wise"})
 
-_KNN_LIMIT = 7
-# Cosine similarity thresholds (0..1). Raised from 0.55/0.6 -- the lower values were
-# letting semantically-unrelated past transactions vote on a category often enough to
-# feel like noise; both gates are now stricter so a kNN suggestion only fires when the
-# match is genuinely close.
-_KNN_THRESHOLD = 0.72
-_KNN_MIN_VOTE = 0.7
 
 _NOISE_PATTERNS = [
     re.compile(r"^COMPRA \d+\s+"),
@@ -209,6 +203,7 @@ class ImportService:
         self._fx = exchange_rate_service
         self._llm = llm_provider
         self._files = file_storage
+        self._finance_settings = FinanceSettingsService(session)
 
     async def _trip_tag_windows(self, rows) -> TripTagWindows:
         """Default tags of the trips around the rows' dates, loaded once per commit."""
@@ -590,6 +585,9 @@ class ImportService:
     async def _apply_knn(
         self, rows: list[ImportPreviewRow], categories: dict[int, str]
     ) -> None:
+        # Cosine similarity gates (0..1), finance.import_knn_* settings: a past transaction votes only when it is
+        # close enough, and a category is suggested only with a clear share of the votes.
+        tuning = await self._finance_settings.get()
         for row in rows:
             if row.status != "new" or row.type == "transfer":
                 continue
@@ -603,8 +601,8 @@ class ImportService:
                     EmbeddingSearchRequest(
                         query=cleaned,
                         source_types=[TRANSACTION_SOURCE_TYPE],
-                        limit=_KNN_LIMIT,
-                        threshold=_KNN_THRESHOLD,
+                        limit=tuning.import_knn_limit,
+                        threshold=tuning.import_knn_threshold,
                         feature="finance_category_match",
                     )
                 )
@@ -626,7 +624,7 @@ class ImportService:
                 continue
             best_category, best_weight = max(votes.items(), key=lambda item: item[1])
             confidence = best_weight / total
-            if confidence >= _KNN_MIN_VOTE:
+            if confidence >= tuning.import_knn_min_vote:
                 row.category_id = best_category
                 row.category_name = categories.get(best_category)
                 row.suggestion_source = "knn"

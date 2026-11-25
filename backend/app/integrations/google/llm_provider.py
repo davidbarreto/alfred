@@ -64,12 +64,13 @@ class GoogleLlmProvider:
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
+        temperature: float | None = None,
     ) -> LlmResponse:
         logger.debug("GoogleLLM: calling model=%s messages=%d", self._model_name, len(messages))
         contents = self._build_contents(messages)
         config = types.GenerateContentConfig(
             system_instruction=system,
-            temperature=self._temperature,
+            temperature=self._temperature if temperature is None else temperature,
         )
 
         response = await self._client.aio.models.generate_content(
@@ -94,12 +95,13 @@ class GoogleLlmProvider:
         messages: list[dict[str, str]],
         system: str | None = None,
         meta: StreamMeta | None = None,
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
         logger.debug("GoogleLLM: streaming model=%s messages=%d", self._model_name, len(messages))
         contents = self._build_contents(messages)
         config = types.GenerateContentConfig(
             system_instruction=system,
-            temperature=self._temperature,
+            temperature=self._temperature if temperature is None else temperature,
         )
         finish_reason: str | None = None
         async for chunk in await self._client.aio.models.generate_content_stream(

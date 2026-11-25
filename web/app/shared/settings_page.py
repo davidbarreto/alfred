@@ -62,7 +62,8 @@ def _row(field: dict, values: dict) -> dict:
 
 
 def _groups(rows: list[dict]) -> list[dict]:
-    """Rows grouped by fieldset, in order of first appearance; rows without a group come first."""
+    """Rows grouped by fieldset, in order of first appearance; rows without a group come first and tuning groups
+    (every row `advanced`) last."""
     groups: list[dict] = []
     for row in rows:
         name = row.get("group")
@@ -71,7 +72,9 @@ def _groups(rows: list[dict]) -> list[dict]:
             group = {"name": name, "rows": []}
             groups.insert(0, group) if name is None else groups.append(group)
         group["rows"].append(row)
-    return groups
+    for group in groups:
+        group["advanced"] = all(r.get("advanced") for r in group["rows"])
+    return sorted(groups, key=lambda g: g["advanced"])
 
 
 def build_sections(
@@ -99,6 +102,8 @@ def build_sections(
             "links": namespace.get("links", []),
             "groups": _groups(rows),
             "count": len(rows),
+            # Only tuning knobs (chat, CS coach, metrics): hidden until "Show tuning" is on.
+            "advanced": bool(rows) and all(r.get("advanced") for r in rows),
             "load_error": failed,
         })
     return sections

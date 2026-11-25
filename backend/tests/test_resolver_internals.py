@@ -16,6 +16,8 @@ from app.assistant.commands.resolver import (
 from app.assistant.intents.intent_service import IntentResult
 from app.assistant.commands.schemas import CommandDetail
 
+pytestmark = pytest.mark.usefixtures("chat_tuning")
+
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
 
@@ -667,6 +669,19 @@ class TestDetectCommandsWithIntent:
         assert cmd.command == "add"
         assert cmd.confidence == 0.85
         assert cmd.args == {}
+
+    async def test_threshold_comes_from_the_chat_settings(self, chat_tuning):
+        from app.features.core.chat_settings.service import ChatSettingsService
+
+        intent_result = IntentResult(intent="task.add", confidence=0.85)
+        strict = chat_tuning.model_copy(update={"intent_threshold": 0.9, "intent_shortlist_floor": 0.95})
+        with (
+            patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)),
+            patch.object(ChatSettingsService, "get", AsyncMock(return_value=strict)),
+        ):
+            commands = await detect_commands("Buy milk tomorrow", session=AsyncMock())
+
+        assert commands == []
 
     async def test_intent_below_threshold_returns_empty(self):
         mock_session = AsyncMock()

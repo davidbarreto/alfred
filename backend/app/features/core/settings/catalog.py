@@ -16,6 +16,8 @@ from pydantic.fields import FieldInfo
 
 from app.features.briefing.settings_schemas import BriefingSettingsRead, BriefingSettingsUpdate
 from app.features.briefing.settings_service import DEFAULTS as BRIEFING_DEFAULTS
+from app.features.core.chat_settings.schemas import ChatSettingsRead, ChatSettingsUpdate
+from app.features.core.chat_settings.service import defaults as chat_defaults
 from app.features.core.assistant_settings.schemas import AssistantSettingsRead, AssistantSettingsUpdate
 from app.features.core.reminders.schemas import ReminderSettingsRead, ReminderSettingsUpdate
 from app.features.core.reminders.settings_service import defaults as reminder_defaults
@@ -27,10 +29,14 @@ from app.features.core.settings.catalog_schemas import (
     SettingsNamespaceRead,
     StoredSettingRead,
 )
+from app.features.cs.settings.schemas import CsSettingsRead, CsSettingsUpdate
+from app.features.cs.settings.service import DEFAULTS as CS_DEFAULTS
 from app.features.finance.settings.schemas import FinanceSettingsRead, FinanceSettingsUpdate
 from app.features.finance.settings.service import DEFAULTS as FINANCE_DEFAULTS
 from app.features.language.settings_schemas import LanguageSettingsRead, LanguageSettingsUpdate
 from app.features.language.settings_service import DEFAULTS as LANGUAGE_DEFAULTS
+from app.features.metrics.settings.schemas import MetricsSettingsRead, MetricsSettingsUpdate
+from app.features.metrics.settings.service import DEFAULTS as METRICS_DEFAULTS
 from app.features.organizer.calendar_events.notification_settings.schemas import CalendarNotificationCascadesRead
 from app.features.organizer.calendar_events.notification_settings.service import (
     DEFAULT_CASCADES as CALENDAR_CASCADES,
@@ -127,6 +133,17 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
         ),),
     ),
     CatalogNamespace(
+        "cs", "CS coach", "How weak problem tags are picked.",
+        (CatalogSource(CsSettingsUpdate, CsSettingsRead, "/cs/settings", "/cs/settings", lambda: CS_DEFAULTS),),
+    ),
+    CatalogNamespace(
+        "metrics", "Metrics", "How the metrics stats are computed.",
+        (CatalogSource(
+            MetricsSettingsUpdate, MetricsSettingsRead, "/metrics/settings", "/metrics/settings",
+            lambda: METRICS_DEFAULTS,
+        ),),
+    ),
+    CatalogNamespace(
         "language", "Language", "How language reviews are scheduled, for every track.",
         (CatalogSource(
             LanguageSettingsUpdate, LanguageSettingsRead, "/language/settings", "/language/settings",
@@ -161,6 +178,12 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
         (SettingsLinkRead(
             label="Location coordinates", href="/locations",
             description="Set on each location's page; Home's are used when no place is chosen.",
+        ),),
+    ),
+    CatalogNamespace(
+        "chat", "Chat", "Tuning for chat replies, recall, memory extraction and command detection.",
+        (CatalogSource(
+            ChatSettingsUpdate, ChatSettingsRead, "/core/chat-settings", "/core/chat-settings", chat_defaults,
         ),),
     ),
     CatalogNamespace(
@@ -240,6 +263,7 @@ def _field(
         write_path=extra.get("write_path", source.write_path),
         entry_field=extra.get("entry_field"),
         covers=extra.get("covers"),
+        advanced=bool(extra.get("advanced")),
     )
 
 

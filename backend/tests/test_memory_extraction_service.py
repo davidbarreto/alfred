@@ -8,6 +8,8 @@ from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.memories.schemas import MemoryRead
 from app.shared.protocols.llm import LlmResponse
 
+pytestmark = pytest.mark.usefixtures("chat_tuning")
+
 
 def _make_llm_provider(response_text: str) -> MagicMock:
     provider = MagicMock()

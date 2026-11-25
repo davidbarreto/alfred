@@ -72,6 +72,195 @@
           }
         },
         {
+          "name": "01a - Settings - Get",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json();",
+                  "pm.environment.set('finance_knn_threshold_original', s.import_knn_threshold);",
+                  "pm.test('Fields', () => ['cycle_start_day', 'import_knn_limit', 'import_knn_threshold', 'import_knn_min_vote'].forEach(f => pm.expect(s[f]).to.be.a('number')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "01b - Settings - Update",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Saved', () => pm.expect(pm.response.json().import_knn_threshold).to.eql(0.8));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"import_knn_threshold\": 0.8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "01c - Settings - Out Of Range (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"import_knn_threshold\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "01d - Settings - Restore",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"import_knn_threshold\": \"{{finance_knn_threshold_original}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "01e - Settings - No Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "settings"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
           "name": "02 - List Accounts",
           "event": [
             {

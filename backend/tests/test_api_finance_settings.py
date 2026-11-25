@@ -27,7 +27,7 @@ class TestGetFinanceSettings:
     def test_returns_current_settings(self, client):
         response = client.get("/finance/settings", headers=AUTH)
         assert response.status_code == 200
-        assert response.json() == {"cycle_start_day": 1}
+        assert response.json()["cycle_start_day"] == 1
 
     def test_requires_auth(self, client):
         assert client.get("/finance/settings").status_code == 403
@@ -37,7 +37,7 @@ class TestUpdateFinanceSettings:
     def test_updates_and_returns_200(self, client, mock_service):
         response = client.put("/finance/settings", json={"cycle_start_day": 25}, headers=AUTH)
         assert response.status_code == 200
-        assert response.json() == {"cycle_start_day": 25}
+        assert response.json()["cycle_start_day"] == 25
         mock_service.update.assert_awaited_once()
 
     def test_rejects_out_of_range_day(self, client):

@@ -6,10 +6,6 @@ from pydantic import BaseModel
 
 from app.features.metrics.series.schemas import SeriesKind
 
-# A group with fewer samples than this is returned but flagged, and never ranked as "best".
-MIN_SAMPLES = 5
-TREND_DAYS = 30
-
 
 class GroupStat(BaseModel):
     """Aggregates of one group. Percentiles are null for count series (there is nothing to measure)."""

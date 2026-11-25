@@ -87,6 +87,7 @@ from app.api.routes.core.reminder_settings import router as core_reminder_settin
 from app.api.routes.core.assistant_settings import router as core_assistant_settings_router
 from app.api.routes.core.settings_catalog import router as core_settings_catalog_router
 from app.api.routes.core.weather_settings import router as core_weather_settings_router
+from app.api.routes.core.chat_settings import router as core_chat_settings_router
 from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.core.urgency_reset import router as core_urgency_reset_router
 from app.api.routes.core.api_requests import router as core_api_requests_router
@@ -102,6 +103,8 @@ from app.api.routes.cs.platforms import router as cs_platforms_router
 from app.api.routes.cs.problems import router as cs_problems_router
 from app.api.routes.cs.submissions import router as cs_submissions_router
 from app.api.routes.cs.stats import router as cs_stats_router
+from app.api.routes.cs.settings import router as cs_settings_router
+from app.api.routes.metrics.settings import router as metrics_settings_router
 from app.api.routes.cs.recommendations import router as cs_recommendations_router
 from app.api.routes.organizer.activities import router as activities_router
 from app.api.routes.organizer.routines import router as routines_router
@@ -234,6 +237,7 @@ app.include_router(core_reminder_settings_router)
 app.include_router(core_assistant_settings_router)
 app.include_router(core_settings_catalog_router)
 app.include_router(core_weather_settings_router)
+app.include_router(core_chat_settings_router)
 app.include_router(core_pause_router)
 app.include_router(core_urgency_reset_router)
 app.include_router(core_api_requests_router)
@@ -248,6 +252,8 @@ app.include_router(language_conversation_router)
 app.include_router(cs_platforms_router)
 app.include_router(cs_problems_router)
 app.include_router(cs_submissions_router)
+app.include_router(cs_settings_router)
+app.include_router(metrics_settings_router)
 app.include_router(cs_stats_router)
 app.include_router(cs_recommendations_router)
 app.include_router(routines_router)

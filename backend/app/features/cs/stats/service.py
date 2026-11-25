@@ -4,6 +4,7 @@ import math
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.cs.settings.service import CsSettingsService
 from app.features.cs.normalization import ALL_KNOWN_TAGS
 from app.features.cs.stats.repository import StatsRepository
 from app.features.cs.stats.schemas import (
@@ -19,12 +20,7 @@ from app.shared.utils.timezone import local_today
 logger = logging.getLogger(__name__)
 
 _DAILY_ACTIVITY_DAYS = 90
-_MIN_ATTEMPTS_FOR_WEAK_TAG = 3
-_WEAKEST_TAGS_LIMIT = 5
 _WILSON_Z = 1.96  # 95% confidence
-# Backstop so a tightly-clustered set of strong tags can't manufacture a fake
-# "weakest" outlier just for being someone's relative minimum.
-_MAX_SOLVE_RATE_FOR_WEAK_TAG = 0.85
 
 
 def _wilson_lower_bound(solved: int, attempted: int, z: float = _WILSON_Z) -> float:
@@ -105,6 +101,7 @@ class StatsService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._repo = StatsRepository(session)
+        self._settings = CsSettingsService(session)
 
     async def get_candidate_problems(
         self, tag_names: list[str] | None = None, limit: int = 10
@@ -161,7 +158,10 @@ class StatsService:
         # average and below an absolute competence floor — otherwise a tightly
         # clustered set of 90%+ tags would fill the list just for being the
         # relative minimum among otherwise-strong tags.
-        eligible_tags = [t for t in by_tag if t.attempted >= _MIN_ATTEMPTS_FOR_WEAK_TAG]
+        # cs.weak_tag_max_solve_rate is a backstop so a tightly-clustered set of strong tags can't manufacture a
+        # fake "weakest" outlier just for being someone's relative minimum.
+        tuning = await self._settings.get()
+        eligible_tags = [t for t in by_tag if t.attempted >= tuning.weak_tag_min_attempts]
         eligible_attempted = sum(t.attempted for t in eligible_tags)
         overall_solve_rate = (
             sum(t.solved for t in eligible_tags) / eligible_attempted if eligible_attempted else 0.0
@@ -170,14 +170,14 @@ class StatsService:
             (
                 t
                 for t in eligible_tags
-                if t.solve_rate < _MAX_SOLVE_RATE_FOR_WEAK_TAG
+                if t.solve_rate < tuning.weak_tag_max_solve_rate
                 and _wilson_lower_bound(t.solved, t.attempted) < overall_solve_rate
             ),
             key=lambda t: (
                 _wilson_lower_bound(t.solved, t.attempted),
                 -(t.avg_attempts_per_solve or 0),
             ),
-        )[:_WEAKEST_TAGS_LIMIT]
+        )[:tuning.weak_tags_shown]
         untried_tags = sorted(set(ALL_KNOWN_TAGS) - {t.tag for t in by_tag})
 
         logger.debug(

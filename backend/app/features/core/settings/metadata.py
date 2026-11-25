@@ -28,6 +28,7 @@ def setting(
     write_path: str | None = None,
     entry_field: str | None = None,
     covers: list[str] | None = None,
+    advanced: bool = False,
     default: Any = None,
     **constraints: Any,
 ) -> Any:
@@ -41,12 +42,14 @@ def setting(
     `{entry}` placeholder the value is a JSON object written one entry at a time, as `{entry_field: value}`.
     `covers` names other fields of the same schema this control sets too (the weather place sets location_id and
     city_id); those are declared with widget="hidden".
+    `advanced` marks a tuning knob rather than a preference: the page hides it until "Show tuning" is on.
     """
     extra = {
         name: value
         for name, value in {
             "widget": widget, "unit": unit, "group": group, "confirm_note": confirm_note, "href": href, "step": step,
             "key": key, "write_path": write_path, "entry_field": entry_field, "covers": covers,
+            "advanced": advanced or None,
         }.items()
         if value is not None
     }

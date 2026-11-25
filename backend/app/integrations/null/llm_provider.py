@@ -24,6 +24,7 @@ class NullLlmProvider:
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
+        temperature: float | None = None,
     ) -> LlmResponse:
         return LlmResponse(text=_CANNED_TEXT, tokens_input=0, tokens_output=0, finish_reason="STOP")
 
@@ -32,6 +33,7 @@ class NullLlmProvider:
         messages: list[dict[str, str]],
         system: str | None = None,
         meta: StreamMeta | None = None,
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
         if meta is not None:
             meta.set_finish_reason("STOP")

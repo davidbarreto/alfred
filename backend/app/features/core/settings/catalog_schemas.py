@@ -33,6 +33,8 @@ class SettingFieldRead(BaseModel):
     entry_field: str | None = None
     # Other fields this control sets with its own (they have widget "hidden").
     covers: list[str] | None = None
+    # A tuning knob: the page shows it only with "Show tuning" on (or when a search matches it).
+    advanced: bool = False
 
 
 class SettingsLinkRead(BaseModel):

@@ -3510,6 +3510,195 @@
       }
     },
     {
+      "name": "89p7a - Settings - Get",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const s = pm.response.json();",
+              "pm.environment.set('chat_temperature_original', s.temperature);",
+              "pm.test('Fields', () => ['history_limit', 'memory_limit', 'memory_threshold', 'temperature', 'recall_threshold', 'recall_limit', 'memory_dedup_threshold', 'memory_importance_bump', 'intent_threshold', 'intent_shortlist_floor', 'intent_shortlist_k'].forEach(f => pm.expect(s[f]).to.be.a('number')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/chat-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chat-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89p7b - Settings - Update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved', () => pm.expect(pm.response.json().temperature).to.eql(0.5));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/chat-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chat-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature\": 0.5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p7c - Settings - Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/chat-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chat-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature\": 3\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p7d - Settings - Restore",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/chat-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chat-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature\": \"{{chat_temperature_original}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p7e - Settings - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/chat-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chat-settings"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
       "name": "89q - Catch-up - Suggestions",
       "event": [
         {

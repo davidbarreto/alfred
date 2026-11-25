@@ -6,11 +6,11 @@ from typing import List, Dict, Any, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.chat_settings.service import ChatSettingsService
 from app.assistant.commands.registry import COMMAND_REGISTRY, NL_TRIGGER_INDEX
 from app.assistant.commands.schemas import CommandDetail
 from app.assistant.intents.intent_service import detect_intent, get_top_intent_candidates
 from app.assistant.intents.shortlist_service import resolve_via_shortlist
-from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
 from app.shared.protocols.llm import LlmProvider
@@ -290,7 +290,8 @@ async def detect_commands(
 
     logger.debug("detect_commands: no slash commands or nl triggers, falling back to intent detection text=%r", text[:100])
     intent_result = await detect_intent(text, session)
-    threshold = get_settings().intent_threshold
+    tuning = await ChatSettingsService(session).get()
+    threshold = tuning.intent_threshold
     cmd_type, cmd_action = _split_intent(intent_result.intent)
 
     if intent_result.intent != "unknown" and intent_result.confidence >= threshold:
@@ -306,10 +307,9 @@ async def detect_commands(
             args={},
         )]
 
-    settings = get_settings()
-    if llm_provider is not None and intent_result.confidence >= settings.intent_shortlist_floor:
-        candidates = await get_top_intent_candidates(text, session, limit=settings.intent_shortlist_k)
-        candidates = [c for c in candidates if c.confidence >= settings.intent_shortlist_floor]
+    if llm_provider is not None and intent_result.confidence >= tuning.intent_shortlist_floor:
+        candidates = await get_top_intent_candidates(text, session, limit=tuning.intent_shortlist_k)
+        candidates = [c for c in candidates if c.confidence >= tuning.intent_shortlist_floor]
         if candidates:
             logger.debug(
                 "detect_commands: shortlisting %d candidate(s) for text=%r: %s",

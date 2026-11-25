@@ -105,7 +105,8 @@ Every card heading carries a Tabler icon. The morning briefing page keeps only t
 
 - **Search** filters the rows by label, key and description, hides empty sections, updates the counts in the section nav and keeps `?q=`.
 - **Saving**: an edited row is marked; the bar at the bottom counts the changes; *Review and save* lists `key: old → new` per section (with a field's `confirm_note`), and *Save* posts only the changed fields to `POST /settings/save`. That route forwards one PUT per namespace (one per profile or relationship for the notification cascades, from the JSON editor) and answers per namespace, so a failing section keeps its rows marked and shows the backend's message while the others stay saved. It is not atomic across sections. Read-only and link rows, and `planning.travel_times`, are never sent.
-- A "modified" badge shows when a value differs from the catalog default (the tooltip shows the default).
+- A "modified" badge shows when a value differs from the catalog default (the tooltip shows the default, so a tuning value can be set back by hand; there is no reset button).
+- **Show tuning** (page head, remembered in `localStorage`): fields marked `advanced` in the catalog (chat, CS coach and metrics sections, statement import matching) are hidden until it is on; a search that matches one shows it anyway. Their fieldsets carry a *tuning* badge and come last in their card.
 - Stored keys no field covers are listed read-only (first 5, all on `/settings/stored`).
 
 Feature pages keep a one-line summary and a link to `/settings#<namespace>`: `/plan`, `/tasks/insights` (Overload), `/travel`; `/finance/settings` redirects there; `/persona` keeps the persona additions and links to the name.

@@ -14,6 +14,8 @@ from app.api.routes.commands import (
 )
 from app.assistant.intents.intent_service import IntentResult
 
+pytestmark = pytest.mark.usefixtures("chat_tuning")
+
 AUTH = {"Authorization": "Bearer test-api-token"}
 
 

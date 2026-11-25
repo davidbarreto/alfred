@@ -76,6 +76,7 @@ from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
 from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.weather_settings.service import WeatherSettingsService
+from app.features.core.chat_settings.service import ChatSettingsService
 from app.features.core.catchup.service import CatchupService
 
 logger = logging.getLogger(__name__)
@@ -195,7 +196,10 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Recall service not available",
             )
-        return await handle_recall(command, arguments, embedding_service, note_service=note_service)
+        return await handle_recall(
+            command, arguments, embedding_service, note_service=note_service,
+            chat_settings=ChatSettingsService(session) if session is not None else None,
+        )
 
     if cmd_type == "weather":
         return await handle_weather(

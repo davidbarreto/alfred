@@ -32,7 +32,14 @@ VALUES = {
         "home_city_id": 3, "home_city": _CITY, "max_visits_per_day": 4, "visit_duration_min": 90,
         "unpaid_leg_days": 30, "snooze_other_events": True,
     },
-    "/finance/settings": {"cycle_start_day": 1},
+    "/finance/settings": {"cycle_start_day": 1, "import_knn_limit": 7, "import_knn_threshold": 0.72, "import_knn_min_vote": 0.7},
+    "/cs/settings": {"weak_tag_min_attempts": 3, "weak_tag_max_solve_rate": 0.85, "weak_tags_shown": 5},
+    "/metrics/settings": {"trend_days": 30, "min_samples": 5},
+    "/core/chat-settings": {
+        "history_limit": 10, "memory_limit": 5, "memory_threshold": 0.6, "temperature": 0.5, "recall_threshold": 0.5,
+        "recall_limit": 8, "memory_dedup_threshold": 0.85, "memory_importance_bump": 0.1, "intent_threshold": 0.7,
+        "intent_shortlist_floor": 0.4, "intent_shortlist_k": 5,
+    },
     "/briefing/settings": {
         "lookahead_days": 3, "holiday_lookahead_days": 7, "max_tasks_today": 8, "max_tasks_upcoming": 4,
         "max_events_today": 8, "max_events_upcoming": 4, "max_shopping_items": 6, "max_recurring_items": 5,
@@ -113,6 +120,16 @@ class TestBuildSections:
         assert rows["weather.location_id"]["place_label"] == "Lisbon, Portugal"
         assert "weather.city_id" not in rows
 
+    def test_tuning_sections_and_groups_are_marked_and_last(self):
+        sections = build_sections(CATALOG, VALUES)
+        assert _section(sections, "chat")["advanced"] is True
+        finance = _section(sections, "finance")
+        assert finance["advanced"] is False
+        assert [g["advanced"] for g in finance["groups"]] == [False, True]
+
+    def test_temperature_modified_against_the_env_default(self):
+        assert _rows(build_sections(CATALOG, VALUES))["chat.temperature"]["modified"] is True
+
     def test_link_rows_never_carry_their_value(self):
         row = _rows(build_sections(CATALOG, VALUES))["assistant.persona_additions"]
         assert row["value"] is None
@@ -144,7 +161,8 @@ class TestSettingsPage:
 
     def test_renders_every_section_with_nav(self, page):
         assert page.status_code == 200
-        for namespace in ("planning", "reminders", "travel", "briefing", "finance", "study", "language", "organizer", "weather", "assistant"):
+        for namespace in ("planning", "reminders", "travel", "briefing", "finance", "study", "cs", "metrics", "language",
+                          "organizer", "weather", "chat", "assistant"):
             assert f'id="{namespace}"' in page.text
             assert f'href="#{namespace}"' in page.text
 
@@ -165,6 +183,12 @@ class TestSettingsPage:
         assert '<option value="city:3" selected>Lisbon, Portugal</option>' in page.text
         assert '<option value="location:1" >Office</option>' in page.text
         assert "In use: Lisbon, Portugal" in page.text
+
+    def test_tuning_rows_carry_the_flag_and_the_switch_is_there(self, page):
+        assert 'id="show-tuning"' in page.text
+        assert re.search(r'data-key="chat.temperature"[^>]*data-advanced', page.text, re.S)
+        assert re.search(r'<section id="chat"[^>]*data-advanced', page.text)
+        assert not re.search(r'data-key="travel.airport_buffer_min"[^>]*data-advanced', page.text.split('data-value=')[0])
 
     def test_modified_badge_shows_only_when_different(self, page):
         row = re.search(r'data-key="travel.airport_buffer_min".*?data-modified class="([^"]*)"', page.text, re.S)
@@ -322,7 +346,7 @@ class TestSave:
         }).json()
 
         assert body["travel"] == {"ok": False, "error": "airport_buffer_min: at most 600"}
-        assert body["finance"] == {"ok": True, "values": {"cycle_start_day": 25}}
+        assert body["finance"]["ok"] is True and body["finance"]["values"]["cycle_start_day"] == 25
 
     def test_city_change_returns_the_city(self, client, mock_api):
         mock_api["get"].side_effect = _get()

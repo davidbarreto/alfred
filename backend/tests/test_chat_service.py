@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 
+from app.features.core.chat_settings.schemas import ChatSettingsRead
 from app.features.core.chats.schemas import ChatRequest
 from app.features.core.chats.service import (
     ChatService,
@@ -127,6 +128,15 @@ def _make_batch(track_id: int, chunks: list[ChunkRead]) -> DailyBatchRead:
     return DailyBatchRead(track_id=track_id, track_code="pt", chunks=chunks, total_due=len(chunks))
 
 
+def _chat_settings(**overrides) -> ChatSettingsRead:
+    values = dict(
+        history_limit=10, memory_limit=5, memory_threshold=0.6, temperature=0.35, recall_threshold=0.5, recall_limit=8,
+        memory_dedup_threshold=0.85, memory_importance_bump=0.1, intent_threshold=0.7, intent_shortlist_floor=0.4,
+        intent_shortlist_k=5,
+    )
+    return ChatSettingsRead(**{**values, **overrides})
+
+
 def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock, MagicMock]:
     session = AsyncMock()
     session.add = MagicMock()
@@ -162,6 +172,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     )
     service._assistant_settings = AsyncMock()
     service._assistant_settings.persona.return_value = "You are Alfred. The user's name is Sam."
+    service._chat_settings = AsyncMock()
+    service._chat_settings.get.return_value = _chat_settings()
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
 
@@ -172,6 +184,17 @@ class TestChatServiceResponse:
         result, next_practice = await service.chat(ChatRequest(session_id=1))
         assert result == "Hello from Alfred!"
         assert next_practice is None
+
+    async def test_chat_settings_shape_the_call(self):
+        service, llm_provider, embedding_service, message_service, _ = _make_service()
+        service._chat_settings.get.return_value = _chat_settings(temperature=0.9, history_limit=3, memory_limit=2)
+        message_service.list.return_value = [_make_message("Hello")]
+
+        await service.chat(ChatRequest(session_id=1))
+
+        assert llm_provider.complete.call_args.kwargs["temperature"] == 0.9
+        assert message_service.list.call_args.args[0].limit == 4
+        assert embedding_service.search.call_args.args[0].limit == 2
 
     async def test_uses_last_user_message_as_agent_input(self):
         service, llm_provider, _, message_service, _ = _make_service()
@@ -932,7 +955,7 @@ class TestChatServiceMemoryExtraction:
     async def test_stream_chat_schedules_extraction(self):
         service, llm_provider, _, message_service, memory_extraction_service = _make_service()
 
-        async def _fake_stream(messages, system=None, meta=None):
+        async def _fake_stream(messages, system=None, meta=None, temperature=None):
             yield "ok"
 
         llm_provider.stream = _fake_stream
@@ -948,7 +971,7 @@ class TestChatServiceMemoryExtraction:
     async def test_stream_chat_skips_extraction_when_language_pending(self):
         service, llm_provider, _, message_service, memory_extraction_service = _make_service()
 
-        async def _fake_stream(messages, system=None, meta=None):
+        async def _fake_stream(messages, system=None, meta=None, temperature=None):
             yield "ok"
 
         llm_provider.stream = _fake_stream

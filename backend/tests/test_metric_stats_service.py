@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.features.metrics.settings.schemas import MetricsSettingsRead
 from app.features.metrics.series.tables import MetricSeries
 from app.features.metrics.stats import service as stats_service
 from app.features.metrics.stats.repository import DailyRow, StatRow
@@ -78,6 +79,8 @@ class TestGetStats:
         svc._repo = AsyncMock()
         svc._series = AsyncMock()
         svc._series.get_series_by_name.return_value = _series()
+        svc._settings = AsyncMock()
+        svc._settings.get.return_value = MetricsSettingsRead()
         return svc
 
     async def test_unknown_series(self, service):
@@ -118,6 +121,17 @@ class TestGetStats:
         previous_start = datetime(2026, 8, 22, 9, 0, tzinfo=timezone.utc)
         assert (recent_start, None) in windows and (previous_start, recent_start) in windows
 
+    async def test_trend_window_and_sample_threshold_come_from_the_settings(self, service):
+        service._settings.get.return_value = MetricsSettingsRead(trend_days=10, min_samples=2)
+        service._repo.get_stats.side_effect = _by_group()
+        service._repo.count_over_cap.return_value = 0
+
+        stats = await service.get_stats("commute-work")
+
+        windows = [c.kwargs.get("since") for c in service._repo.get_stats.await_args_list if c.kwargs.get("group_by") is None]
+        assert datetime(2026, 10, 11, 9, 0, tzinfo=timezone.utc) in windows
+        assert (stats.trend.days, stats.sample_threshold) == (10, 2)
+
     async def test_days_and_tag_filters_reach_every_query(self, service):
         service._repo.get_stats.side_effect = _by_group(tag=[_row("bus")], hour=[_row("8")])
         service._repo.count_over_cap.return_value = 0
@@ -156,6 +170,8 @@ class TestGetDaily:
         svc._repo = AsyncMock()
         svc._series = AsyncMock()
         svc._series.get_series_by_name.return_value = _series("value", "water")
+        svc._settings = AsyncMock()
+        svc._settings.get.return_value = MetricsSettingsRead()
         return svc
 
     async def test_unknown_series(self, service):

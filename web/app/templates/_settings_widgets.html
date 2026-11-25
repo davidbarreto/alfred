@@ -132,7 +132,7 @@
 <div class="action-row flex items-start gap-3 py-3" data-setting-row
      data-namespace="{{ section.namespace }}" data-field="{{ row.field }}" data-key="{{ row.key }}"
      data-widget="{{ row.widget }}" data-type="{{ row.type }}" data-nullable="{{ 'true' if row.nullable else 'false' }}"
-     data-label="{{ row.label }}" data-search="{{ row.search }}"
+     data-label="{{ row.label }}" data-search="{{ row.search }}" {% if row.advanced %}data-advanced{% endif %}
      {% if row.confirm_note %}data-confirm-note="{{ row.confirm_note }}"{% endif %}
      {% if row.options %}data-options='{{ row.options | tojson }}'{% endif %}
      {% if row.has_default %}data-default='{{ row.default | tojson }}'{% endif %}

@@ -3,6 +3,8 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
+from app.features.core.chat_settings.schemas import DEFAULT_RECALL_LIMIT, DEFAULT_RECALL_THRESHOLD
+from app.features.core.chat_settings.service import ChatSettingsService
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.notes.service import NoteService
@@ -10,8 +12,6 @@ from app.features.travel.notes_index import NOTE_SOURCE_TYPES
 
 logger = logging.getLogger(__name__)
 
-_RECALL_THRESHOLD = 0.5
-_RECALL_LIMIT = 8
 
 # "note_title" is a second, title-only embedding kept alongside the full
 # "note" embedding (see app.features.organizer.notes.service) so short,
@@ -28,6 +28,7 @@ async def handle_recall(
     arguments: dict[str, Any],
     embedding_service: EmbeddingService,
     note_service: NoteService | None = None,
+    chat_settings: ChatSettingsService | None = None,
 ) -> Any:
     logger.debug("handle_recall: command=%s args_keys=%s", command, list(arguments.keys()))
 
@@ -37,6 +38,11 @@ async def handle_recall(
     query = str(arguments.get("query", "")).strip()
     if not query:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recall requires a query")
+    if chat_settings is not None:
+        tuning = await chat_settings.get()
+        limit, threshold = tuning.recall_limit, tuning.recall_threshold
+    else:
+        limit, threshold = DEFAULT_RECALL_LIMIT, DEFAULT_RECALL_THRESHOLD
 
     results = await embedding_service.search(
         EmbeddingSearchRequest(
@@ -44,14 +50,14 @@ async def handle_recall(
             source_types=_SOURCE_TYPES,
             # Fetch extra headroom since a matching note can surface as two rows
             # (full note + title) that collapse into one result below.
-            limit=_RECALL_LIMIT * 2,
-            threshold=_RECALL_THRESHOLD,
+            limit=limit * 2,
+            threshold=threshold,
             feature="recall",
         )
     )
     logger.debug("handle_recall: query=%r results=%d", query, len(results))
 
-    deduped = _dedupe_results(results)[:_RECALL_LIMIT]
+    deduped = _dedupe_results(results)[:limit]
     if note_service is not None:
         await _fill_missing_note_content(deduped, note_service)
     else:

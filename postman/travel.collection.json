@@ -1124,6 +1124,154 @@
       }
     },
     {
+      "name": "28a - Log A Visit Fills The Trip From The Day",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Put in the trip running that day in the place\\'s city', () => pm.expect(j.trip_id).to.eql(Number(pm.environment.get('travel_trip_id'))));",
+              "pm.environment.set('travel_logged_visit_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": \"{{travel_place_id}}\",\n  \"status\": \"visited\",\n  \"grade\": 4,\n  \"visit_date\": \"2031-12-19\",\n  \"trip_from_date\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "28b - Delete The Logged Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_logged_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_logged_visit_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "28c - Log A Visit On A Day Without A Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('No trip that day: stays trip-free', () => pm.expect(j.trip_id).to.eql(null));",
+              "pm.environment.set('travel_logged_visit_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": \"{{travel_place_id}}\",\n  \"status\": \"visited\",\n  \"grade\": 3,\n  \"visit_date\": \"2031-11-02\",\n  \"trip_from_date\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "28d - Delete The Trip-Free Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_logged_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_logged_visit_id}}"
+          ]
+        }
+      }
+    },
+    {
       "name": "29 - List Visits Of The Trip",
       "event": [
         {
@@ -1176,7 +1324,8 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const found = pm.response.json();",
-              "pm.test('Listed with derived grade', () => { pm.expect(found.length).to.eql(1); pm.expect(found[0].grade).to.eql(5); pm.expect(found[0].grade_count).to.eql(1); });"
+              "pm.test('Listed with derived grade', () => { pm.expect(found.length).to.eql(1); pm.expect(found[0].grade).to.eql(5); pm.expect(found[0].grade_count).to.eql(1); });",
+              "pm.test('Last visit is the visited visit\\'s day', () => pm.expect(pm.response.json()[0].last_visit).to.eql('2031-12-18'));"
             ],
             "type": "text/javascript"
           }

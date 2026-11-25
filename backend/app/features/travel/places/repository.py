@@ -1,4 +1,6 @@
-from sqlalchemy import func, or_, select, union_all
+from datetime import date
+
+from sqlalchemy import Date, cast, func, or_, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
@@ -89,6 +91,20 @@ class TravelPlaceRepository:
             .group_by(grades.c.place_id)
         )
         return {pid: (round(float(avg), 2), int(n)) for pid, avg, n in (await self._session.execute(stmt)).all()}
+
+    async def get_last_visits(self, place_ids: list[int]) -> dict[int, date]:
+        """The latest day each place was been to: a visited visit's date or a begun stay's check-in day (in its zone)."""
+        if not place_ids:
+            return {}
+        visits = select(Visit.place_id.label("place_id"), Visit.visit_date.label("day")).where(
+            Visit.status == "visited", Visit.visit_date.is_not(None)
+        )
+        stays = select(
+            Stay.place_id.label("place_id"), cast(func.timezone(Stay.timezone, Stay.check_in_at), Date).label("day")
+        ).where(Stay.check_in_at <= func.now())
+        days = union_all(visits, stays).subquery()
+        stmt = select(days.c.place_id, func.max(days.c.day)).where(days.c.place_id.in_(place_ids)).group_by(days.c.place_id)
+        return {pid: day for pid, day in (await self._session.execute(stmt)).all()}
 
     async def set_tags(self, place: Place, tags: list[TravelTag]) -> None:
         place.tags = tags

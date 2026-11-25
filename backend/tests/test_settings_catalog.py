@@ -59,7 +59,7 @@ class TestFieldShape:
 
     def test_home_is_one_read_only_row_linking_to_the_home_place(self):
         fields = _fields(build_catalog())
-        assert (fields["travel.home"].widget, fields["travel.home"].href) == ("readonly", "/locations/home")
+        assert (fields["travel.home"].widget, fields["travel.home"].href) == ("readonly", "/places/home")
         assert "travel.home_city_id" not in fields and "travel.home_address" not in fields
 
     def test_cascades_are_json_written_per_entry(self):

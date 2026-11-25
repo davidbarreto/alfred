@@ -6,7 +6,7 @@ document.getElementById('travel-time-form')?.addEventListener('submit', async (e
   const error = form.querySelector('[data-form-error]');
   error.textContent = '';
   try {
-    await locationSend(`/locations/${form.dataset.locationId}/travel-times`, 'PUT', {
+    await placeSend(`/places/${form.dataset.placeId}/travel-times`, 'PUT', {
       destination_id: Number(data.get('destination_id')), mode: data.get('mode'), minutes: Number(data.get('minutes')),
     });
     location.reload();
@@ -17,7 +17,7 @@ document.querySelectorAll('[data-delete-travel-time]').forEach((button) => {
     const error = document.getElementById('travel-time-error');
     error.textContent = '';
     try {
-      await locationSend(`/locations/travel-times/${button.dataset.deleteTravelTime}`, 'DELETE');
+      await placeSend(`/places/travel-times/${button.dataset.deleteTravelTime}`, 'DELETE');
       document.getElementById(`travel-time-${button.dataset.deleteTravelTime}`)?.remove();
     } catch (e) { error.textContent = e.message; }
   });

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}{{ place.name }}: visits and stays{% endblock %}
+
+{% block content %}
+<div class="page max-w-3xl space-y-4">
+  <a href="/places/{{ place.id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ place.name }}</a>
+  <div class="card bg-white" id="all-visits">
+    <div class="card-body p-5 space-y-3">
+      <h1 class="text-base font-semibold text-gray-900">Visits to {{ place.name }} <span class="text-gray-400 font-normal">{{ visits | length }}</span></h1>
+      {% for v in visits %}{% set show_place = false %}{% set show_trip = true %}{% include "_travel_visit_row.html" %}
+      {% else %}<p class="text-sm text-gray-400">No visits yet.</p>{% endfor %}
+    </div>
+  </div>
+  {% if stays %}
+  <div class="card bg-white" id="all-stays">
+    <div class="card-body p-5 space-y-3">
+      <h2 class="text-sm font-semibold text-gray-900">Stays <span class="text-gray-400 font-normal">{{ stays | length }}</span></h2>
+      {% include "_place_stays.html" %}
+    </div>
+  </div>
+  {% endif %}
+  {% include "_travel_visit_dialog.html" %}
+  {% include "_travel_tx_dialog.html" %}
+  {% include "_travel_detail_dialog.html" %}
+</div>
+<script src="/static/js/travel-visits.js"></script>
+<script src="/static/js/travel-transactions.js"></script>
+<script src="/static/js/travel-detail.js"></script>
+<script>
+initTravelVisits({ tripId: null, placeId: {{ place.id }} });
+initTravelTransactions();
+initTravelDetail();
+</script>
+{% endblock %}

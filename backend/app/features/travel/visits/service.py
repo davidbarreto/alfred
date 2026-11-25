@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,11 +53,20 @@ class VisitService:
         if event_id is not None:
             await self._repo.update_visit(visit, {"calendar_event_id": event_id})
 
+    async def _trip_on(self, place_id: int, day: date) -> int | None:
+        """The one trip running on `day` that includes the place's city; none when no trip or several match."""
+        place = await self._place_repo.get_place(place_id)
+        trips = await self._trip_repo.get_trips_in_city_on(place.city_id, day) if place else []
+        return trips[0].id if len(trips) == 1 else None
+
     async def create_visit(self, data: VisitCreate) -> VisitRead:
         await self._check_refs(data.trip_id, data.place_id)
         if data.calendar_event_id is not None:
             await self._event_links.ensure_free(data.calendar_event_id)
-        visit = await self._repo.create_visit(data.model_dump())
+        values = data.model_dump(exclude={"trip_from_date"})
+        if data.trip_from_date and data.trip_id is None and data.visit_date is not None:
+            values["trip_id"] = await self._trip_on(data.place_id, data.visit_date)
+        visit = await self._repo.create_visit(values)
         await self._create_event_if_due(visit)
         logger.info("Visit created: id=%d place_id=%d trip_id=%s status=%s", visit.id, visit.place_id, visit.trip_id, visit.status)
         await self._notes.sync(VISIT_NOTE, visit.id, f"Visit to {visit.place.name}", visit.notes)

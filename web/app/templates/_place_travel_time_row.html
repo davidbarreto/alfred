@@ -1,0 +1,9 @@
+{# One travel time row with its delete button. Vars: t (a travel time), place (the page's place). #}
+<li class="action-row flex items-center gap-2 py-1.5" id="travel-time-{{ t.id }}">
+  <span class="text-sm text-gray-700 min-w-0">
+    {% if t.origin.id == place.id %}{{ t.origin.name }}{% else %}<a href="/places/{{ t.origin.id }}" class="hover:underline">{{ t.origin.name }}</a>{% endif %}
+    → {% if t.destination.id == place.id %}{{ t.destination.name }}{% else %}<a href="/places/{{ t.destination.id }}" class="hover:underline">{{ t.destination.name }}</a>{% endif %}
+    <span class="text-gray-400">· {{ t.mode }} ·</span> {{ t.minutes }} min
+  </span>
+  <button type="button" class="btn btn-xs btn-ghost text-gray-500" data-delete-travel-time="{{ t.id }}" title="Delete this travel time"><i class="ti ti-trash"></i></button>
+</li>

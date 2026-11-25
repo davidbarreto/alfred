@@ -170,6 +170,28 @@ class TestPlaceQuery:
             pass
         assert "GROUP BY" in _literal(session.statement)
 
+    async def test_last_visits_take_visited_visits_and_begun_stays(self):
+        session = _ExecSession()
+        try:
+            await TravelPlaceRepository(session).get_last_visits([1, 2])
+        except _Stop:
+            pass
+        sql = _literal(session.statement)
+        assert "'visited'" in sql and "timezone(travel.stays.timezone, travel.stays.check_in_at)" in sql
+        assert "check_in_at <= now()" in sql and "max(" in sql
+
+
+class TestTripsInCityOn:
+    async def test_running_trips_with_a_stay_or_visit_in_the_city(self):
+        session = _CaptureSession()
+        try:
+            await TripRepository(session).get_trips_in_city_on(15, date(2026, 3, 14))
+        except _Stop:
+            pass
+        sql = _literal(session.statement)
+        assert "travel.trips.start_date <= '2026-03-14'" in sql and "travel.trips.end_date >= '2026-03-14'" in sql
+        assert "FROM travel.stays" in sql and "FROM travel.visits" in sql and "location.places.city_id = 15" in sql
+
 
 class TestVisitQuery:
     async def test_orders_undated_and_untimed_last(self):

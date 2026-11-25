@@ -1,0 +1,9 @@
+{# A place's stays (vars: stays), under its visits. #}
+{% for stay in stays %}
+<div class="text-sm" id="stay-{{ stay.id }}">
+  <p class="text-gray-900"><i class="ti ti-bed text-xs text-gray-400"></i> {{ stay.check_in_local[:10] | short_date }} → {{ stay.check_out_local[:10] | short_date }}
+    {% if stay.trip_id %}<a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ stay.trip_id }}">trip</a>{% endif %}
+    {% if stay.grade %}<span class="text-xs text-amber-600">{{ stay.grade }}/5</span>{% endif %}</p>
+  {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
+</div>
+{% endfor %}

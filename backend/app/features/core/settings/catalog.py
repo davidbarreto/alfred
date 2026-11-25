@@ -91,7 +91,7 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
             # Travel times are rows between locations; sending the list would replace every one of them.
             exclude=frozenset({"travel_times"}),
         ),),
-        (SettingsLinkRead(label="Travel times", href="/locations", description="Edited on each location's page."),),
+        (SettingsLinkRead(label="Travel times", href="/places", description="Edited on each everyday place's page."),),
     ),
     CatalogNamespace(
         "reminders", "Reminders & overload",
@@ -181,8 +181,8 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
             WeatherSettingsUpdate, WeatherSettingsRead, "/core/weather-settings", "/core/weather-settings", lambda: {},
         ),),
         (SettingsLinkRead(
-            label="Location coordinates", href="/locations",
-            description="Set on each location's page; Home's are used when no place is chosen.",
+            label="Place coordinates", href="/places",
+            description="Set on each place's page; Home's are used when no place is chosen.",
         ),),
     ),
     CatalogNamespace(

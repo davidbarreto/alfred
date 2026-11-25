@@ -102,7 +102,7 @@ class TravelSettingsUpdate(BaseModel):
     # client fails loudly instead of being ignored.
     home: str | None = setting(
         "Home", "Where trips start and the home → airport directions begin: the Home place's address and city.",
-        widget="readonly", href="/locations/home", group="Home",
+        widget="readonly", href="/places/home", group="Home",
     )
     home_address: str | None = None
     home_city_id: int | None = None
@@ -112,5 +112,5 @@ class TravelSettingsUpdate(BaseModel):
     def _home_moved(cls, value: object, info: ValidationInfo) -> object:
         raise ValueError(
             f"{info.field_name} moved to the Home place: change its address or city with PATCH /location/places/{{id}} "
-            "(find Home with GET /location/places?kind=home) or on the portal's Locations page"
+            "(find Home with GET /location/places?kind=home) or on the portal's Places page"
         )

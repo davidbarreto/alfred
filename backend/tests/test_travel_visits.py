@@ -74,6 +74,28 @@ class TestVisitService:
         visits._trip_repo.get_trip.assert_not_awaited()
         assert result.trip_id is None and result.place.maps_link.startswith("https://")
 
+    async def test_trip_from_date_puts_the_visit_in_the_one_matching_trip(self, visits):
+        visits._place_repo.get_place.return_value = _place(city_id=15)
+        visits._trip_repo.get_trips_in_city_on.return_value = [SimpleNamespace(id=7)]
+        visits._repo.create_visit.return_value = _visit(trip_id=7, status="visited", grade=4)
+        await visits.create_visit(VisitCreate(place_id=3, status="visited", grade=4, visit_date=date(2026, 3, 14), trip_from_date=True))
+        visits._trip_repo.get_trips_in_city_on.assert_awaited_once_with(15, date(2026, 3, 14))
+        stored = visits._repo.create_visit.await_args.args[0]
+        assert stored["trip_id"] == 7 and "trip_from_date" not in stored
+
+    async def test_trip_from_date_leaves_no_trip_when_several_match(self, visits):
+        visits._place_repo.get_place.return_value = _place(city_id=15)
+        visits._trip_repo.get_trips_in_city_on.return_value = [SimpleNamespace(id=7), SimpleNamespace(id=8)]
+        visits._repo.create_visit.return_value = _visit(trip_id=None, trip_name=None)
+        await visits.create_visit(VisitCreate(place_id=3, visit_date=date(2026, 3, 14), trip_from_date=True))
+        assert visits._repo.create_visit.await_args.args[0]["trip_id"] is None
+
+    async def test_without_trip_from_date_no_trip_is_looked_up(self, visits):
+        visits._place_repo.get_place.return_value = _place(city_id=15)
+        visits._repo.create_visit.return_value = _visit(trip_id=None, trip_name=None)
+        await visits.create_visit(VisitCreate(place_id=3, visit_date=date(2026, 3, 14)))
+        visits._trip_repo.get_trips_in_city_on.assert_not_awaited()
+
     async def test_marking_visited_with_a_grade(self, visits):
         visits._repo.get_visit.return_value = _visit()
         visits._repo.update_visit.return_value = _visit(status="visited", grade=5)
@@ -113,6 +135,7 @@ def places():
     base.add.return_value = Place(id=3)
     svc = TravelPlaceService(AsyncMock(), base)
     svc._repo = AsyncMock()
+    svc._repo.get_last_visits.return_value = {}
     svc._city_repo = AsyncMock()
     svc._tag_repo = AsyncMock()
     svc._visit_repo = AsyncMock()
@@ -128,6 +151,14 @@ class TestPlaceService:
         assert (reads[0].grade, reads[0].grade_count) == (4.5, 2)
         assert (reads[1].grade, reads[1].grade_count) == (None, 0)
         assert reads[0].tags == ["Would return"]
+
+    async def test_list_attaches_the_last_visit(self, places):
+        places._repo.get_places.return_value = [_place(id=3), _place(id=4)]
+        places._repo.get_grades.return_value = {}
+        places._repo.get_last_visits.return_value = {3: date(2026, 3, 14)}
+        reads = await places.get_places(TravelPlaceFilters())
+        assert [r.last_visit for r in reads] == [date(2026, 3, 14), None]
+        places._repo.get_last_visits.assert_awaited_once_with([3, 4])
 
     async def test_create_resolves_tags(self, places):
         places._tag_repo.get_or_create_tags.return_value = [TravelTag(name="Family")]

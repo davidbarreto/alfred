@@ -344,7 +344,7 @@
         <ul class="space-y-1">
           {% for v in group.visits %}
           <li class="flex flex-wrap items-center gap-2 text-sm" data-idea="{{ v.id }}">
-            <a href="/travel/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>
+            <a href="/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>
             <span class="text-xs text-gray-400">{{ v.place.kind }}{% if not v.trip_id %} · wishlist{% endif %}</span>
             <input type="date" class="input input-xs input-bordered idea-day" min="{{ trip.start_date }}" max="{{ trip.end_date }}" aria-label="Day for {{ v.place.name }}">
             <button type="button" class="btn btn-xs btn-outline plan-idea" data-id="{{ v.id }}">Plan on day</button>
@@ -435,7 +435,7 @@
         <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
           <select name="place_id" id="stay-place" class="select select-sm select-bordered w-full">
             <option value="new">+ New place…</option>
-            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}" data-href="/travel/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }} ({{ p.city.name }})</option>{% endfor %}
+            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}" data-href="/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }} ({{ p.city.name }})</option>{% endfor %}
           </select>
           <span class="block text-[11px] text-gray-500" id="stay-place-history"></span></label>
         <div class="col-span-2 grid grid-cols-2 gap-3" id="new-place-fields">

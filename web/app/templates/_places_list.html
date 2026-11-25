@@ -1,0 +1,76 @@
+{# One page of the Places list. Everyday cards show today's hours and what the place sells; the visited and all views show
+   city, grade, last visit and tags. The name link covers the whole card; inner links sit above it (relative z-10). #}
+{% macro today_line(t) -%}
+  {%- if not t or t.hours is none -%}Hours unknown
+  {%- elif t.hours == 'closed' -%}Closed today
+  {%- else -%}Today {{ t.hours }}{%- endif -%}
+  {%- if t and t.note %} · {{ t.note }}{% endif -%}
+{%- endmacro %}
+{% if not available %}
+<div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Places are unavailable right now.</p></div></div>
+{% elif not places %}
+<div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">
+  {%- if filters.view == 'everyday' and not (filters.q or filters.kind or filters.city_id) %}No everyday places yet. Start with home, then add the shops near home, work and school.
+  {%- elif filters.view == 'visited' and not (filters.q or filters.kind or filters.city_id or filters.tags or filters.min_grade) %}No visited places yet. Log a visit or a grade on any place's page.
+  {%- else %}No places match.{% endif %}</p></div></div>
+{% elif filters.view == 'everyday' %}
+<div class="card-row" style="--card-min: 16rem">
+  {% for p in places %}
+  <div class="card bg-white relative {% if not p.active %}opacity-60{% endif %}" id="place-{{ p.id }}">
+    <div class="card-body p-4 space-y-2">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <a href="/places/{{ p.id }}" class="text-sm font-semibold text-gray-900 hover:underline after:absolute after:inset-0">
+            <i class="ti {{ p.kind | location_icon }} text-sm" title="{{ p.kind }}"></i> {{ p.name }}</a>
+          <p class="text-xs text-gray-400">{{ p.kind | replace('_', ' ') }}{% if not p.active %} · archived{% endif %}</p>
+        </div>
+        {% if p.today and p.today.open_now is true %}
+        <span class="shrink-0 px-2 py-0.5 rounded-full text-xs bg-[#EAF3DE] text-[#639922]">Open now</span>
+        {% elif p.today and p.today.open_now is false %}
+        <span class="shrink-0 px-2 py-0.5 rounded-full text-xs text-gray-500 bg-gray-100">Closed</span>
+        {% endif %}
+      </div>
+      {% if p.opening_hours %}<p class="text-xs text-gray-500">{{ today_line(p.today) }}</p>{% endif %}
+      {% if p.address %}<p class="text-xs text-gray-500 truncate">{{ p.address }}</p>{% endif %}
+      {% if p.categories %}
+      <div class="flex flex-wrap gap-1">
+        {% for c in p.categories[:5] %}<span class="px-2 py-0.5 rounded-full text-xs bg-[#E6F1FB] text-[#0C447C]">{{ c.name }}</span>{% endfor %}
+        {% if p.categories | length > 5 %}<span class="text-xs text-gray-400">+{{ p.categories | length - 5 }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="space-y-2">
+  {% for p in places %}
+  <div class="card bg-white hover:shadow-md transition-shadow relative {% if not p.active %}opacity-60{% endif %}" id="place-{{ p.id }}">
+    <div class="card-body p-4 flex flex-row items-start justify-between gap-3">
+      <div class="space-y-1 min-w-0">
+        <p class="text-sm font-semibold text-gray-900"><a href="/places/{{ p.id }}" class="after:absolute after:inset-0">
+          <i class="ti {{ p.kind | location_icon }} text-sm" title="{{ p.kind }}"></i> {{ p.name }}</a></p>
+        <p class="text-xs text-gray-500">{{ p.kind | replace('_', ' ') }} · {{ p.city.country | country_flag_of }} <a class="relative z-10 hover:underline" href="/travel/cities/{{ p.city.id }}">{{ p.city.name }}</a>
+          {%- if p.last_visit %}<span class="hidden sm:inline"> · last {{ p.last_visit | short_date }}</span>{% endif %}{% if not p.active %} · archived{% endif %}</p>
+        {% if p.tags %}
+        <div class="flex flex-wrap gap-1">{% for tag in p.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
+        {% endif %}
+      </div>
+      {% if p.grade %}
+      <span class="text-xs font-medium text-amber-600 whitespace-nowrap" title="Average of {{ p.grade_count }} grade(s)">{{ p.grade | number }}/5 <span class="text-gray-400">({{ p.grade_count }})</span></span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% if available and (has_prev or has_next) %}
+<div class="flex justify-between pt-3">
+  {% if has_prev %}
+  <button class="btn btn-xs btn-outline" hx-get="/places/list?{{ query }}&offset={{ [offset - page_size, 0] | max }}" hx-target="#places-list" hx-swap="innerHTML">Previous</button>
+  {% else %}<span></span>{% endif %}
+  {% if has_next %}
+  <button class="btn btn-xs btn-outline" hx-get="/places/list?{{ query }}&offset={{ offset + page_size }}" hx-target="#places-list" hx-swap="innerHTML">Next</button>
+  {% endif %}
+</div>
+{% endif %}

@@ -46,11 +46,14 @@ class TravelPlaceService:
         self._stay_repo = StayRepository(session)
 
     async def _read_all(self, places: list[Place]) -> list[TravelPlaceRead]:
-        grades = await self._repo.get_grades([p.id for p in places])
+        ids = [p.id for p in places]
+        grades = await self._repo.get_grades(ids)
+        last_visits = await self._repo.get_last_visits(ids)
         reads = []
         for place in places:
             grade, count = grades.get(place.id, (None, 0))
-            reads.append(TravelPlaceRead.model_validate(place).model_copy(update={"grade": grade, "grade_count": count}))
+            update = {"grade": grade, "grade_count": count, "last_visit": last_visits.get(place.id)}
+            reads.append(TravelPlaceRead.model_validate(place).model_copy(update=update))
         return reads
 
     async def get_places(self, filters: TravelPlaceFilters) -> list[TravelPlaceRead]:

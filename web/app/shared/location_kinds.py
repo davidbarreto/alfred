@@ -1,5 +1,5 @@
-# The backend's fixed location kinds (LOCATION_KINDS); the API refuses any other value.
-# Each maps to the Tabler icon the portal shows next to a location of that kind.
+# The backend's fixed place kinds (PLACE_KINDS, in its order); the API refuses any other value.
+# Each maps to the Tabler icon the portal shows next to a place of that kind.
 KIND_ICONS = {
     "home": "ti-home",
     "work": "ti-briefcase",
@@ -20,11 +20,25 @@ KIND_ICONS = {
     "park": "ti-trees",
     "playground": "ti-horse-toy",
     "venue": "ti-ticket",
+    "hotel": "ti-bed",
+    "activity": "ti-route",
+    "museum": "ti-building-bank",
+    "attraction": "ti-camera",
     "other": "ti-map-pin",
 }
 KINDS = tuple(KIND_ICONS)
 
+# Copies of the backend's organizer/everyday_places/constants.py: whether a new place of a kind is everyday when the
+# user doesn't say (the new-place form pre-ticks Everyday from them; kinds in neither set start unticked).
+EVERYDAY_KINDS = frozenset({
+    "home", "work", "school", "gym", "sports", "supermarket", "pharmacy", "bakery", "market", "mall",
+    "variety_store", "hardware_store", "health", "playground",
+})
+TRIP_KINDS = frozenset({"hotel", "activity", "museum", "attraction"})
+# What the calendar's "+ New place" (always an everyday place) offers: every kind but home and the trip-only ones.
+EVERYDAY_PICK_KINDS = tuple(k for k in KINDS if k != "home" and k not in TRIP_KINDS)
+
 
 def location_icon(kind: str | None) -> str:
-    """The Tabler icon class for a location kind; the generic pin for an unknown one."""
+    """The Tabler icon class for a place kind; the generic pin for an unknown one."""
     return KIND_ICONS.get(kind or "", KIND_ICONS["other"])

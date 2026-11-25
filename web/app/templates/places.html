@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}Places{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Places</h1>
+      <p class="text-xs text-gray-400">Every place you know: home, work and the shops you use, and the restaurants, hotels and sights you have been to or want to see.</p>
+    </div>
+    <div class="page-actions">
+      <button onclick="document.getElementById('new-place').classList.toggle('hidden')"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+        <i class="ti ti-plus text-sm"></i>New place
+      </button>
+    </div>
+  </div>
+
+  {% include "_places_tabs.html" %}
+
+  <div id="new-place" class="card bg-white hidden">
+    <div class="card-body p-5">
+      {% with form_id="new-place-form", form_url="/places", form_method="POST", p=none, selected_ids=[], tags_text="" %}
+        {% include "_place_form.html" %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <nav class="scroll-row" aria-label="Views">
+    {% for v, query in views %}
+    <a href="/places?{{ query }}" class="px-3 py-1 rounded-full text-xs {{ 'bg-[#378ADD] text-white' if v == filters.view else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}" data-view="{{ v }}">{{ v | capitalize }}</a>
+    {% endfor %}
+  </nav>
+
+  <form id="place-filters" class="filter-bar"
+        hx-get="/places/list" hx-target="#places-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#place-q">
+    <input type="hidden" name="view" value="{{ filters.view }}">
+    {% if filters.country_id %}<input type="hidden" name="country_id" value="{{ filters.country_id }}">{% endif %}
+    <label class="space-y-1 filter-wide sm:w-48"><span class="block text-xs text-gray-500">Search</span>
+      <input id="place-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-full" placeholder="Name or address"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+      <select name="kind" class="select select-sm select-bordered w-full">
+        <option value="">Any</option>
+        {% for k in kinds %}<option value="{{ k }}" {{ 'selected' if filters.kind == k }}>{{ k | replace('_', ' ') }}</option>{% endfor %}
+      </select></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
+      <select name="city_id" class="select select-sm select-bordered w-full">
+        <option value="">Any</option>
+        {% for c in cities %}<option value="{{ c.id }}" {{ 'selected' if filters.city_id == c.id | string }}>{{ c.name }}, {{ c.country.name }}</option>{% endfor %}
+      </select></label>
+    {% if filters.view != 'everyday' %}
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum grade</span>
+      <select name="min_grade" class="select select-sm select-bordered w-full">
+        <option value="">Any</option>
+        {% for g in ['1', '2', '3', '4', '5'] %}<option value="{{ g }}" {{ 'selected' if filters.min_grade == g }}>{{ g }}+</option>{% endfor %}
+      </select></label>
+    <label class="inline-flex items-center gap-1 text-xs text-gray-600 self-end pb-2">
+      <input type="checkbox" name="ungraded" value="1" class="checkbox checkbox-xs" {{ 'checked' if filters.ungraded }}>No grade yet
+    </label>
+    {% endif %}
+    <label class="inline-flex items-center gap-1 text-xs text-gray-600 self-end pb-2">
+      <input type="checkbox" name="archived" value="1" class="checkbox checkbox-xs" {{ 'checked' if filters.archived }}>Show archived
+    </label>
+    {% if filters.view != 'everyday' and all_tags %}
+    <div class="filter-wide flex flex-wrap items-center gap-2">
+      {% for tag in all_tags %}
+      <label class="inline-flex items-center gap-1 text-xs text-gray-600">
+        <input type="checkbox" name="tag" value="{{ tag }}" class="checkbox checkbox-xs" {{ 'checked' if tag in filters.tags }}>{{ tag }}
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <a href="/places?view={{ filters.view }}" class="btn btn-xs btn-ghost self-end">Clear filters</a>
+  </form>
+
+  <div id="places-list">
+    {% include "_places_list.html" %}
+  </div>
+
+</div>
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+{% include "_place_script.html" %}
+{% endblock %}

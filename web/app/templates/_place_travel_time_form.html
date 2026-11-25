@@ -1,6 +1,6 @@
-{# Add or update a travel time from this location. Vars: location, others (locations to go to), modes. #}
+{# Add or update a travel time from this place. Vars: place, others (everyday places to go to), modes. #}
 {% if others %}
-<form id="travel-time-form" class="flex flex-wrap items-end gap-2 pt-2" data-location-id="{{ location.id }}">
+<form id="travel-time-form" class="flex flex-wrap items-end gap-2 pt-2" data-place-id="{{ place.id }}">
   <label class="space-y-1"><span class="block text-xs text-gray-500">To</span>
     <select name="destination_id" required class="select select-sm select-bordered">
       {% for other in others %}<option value="{{ other.id }}">{{ other.name }}</option>{% endfor %}
@@ -15,5 +15,5 @@
 </form>
 <p class="text-xs text-gray-400">Door to door, typed by you (Alfred never estimates them). Two-way unless the reverse is saved too; saving the same place and mode again updates the minutes.</p>
 {% else %}
-<p class="text-xs text-gray-400">Add another location to save travel times to it.</p>
+<p class="text-xs text-gray-400">Add another everyday place to save travel times to it.</p>
 {% endif %}

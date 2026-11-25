@@ -35,6 +35,18 @@ class TripRepository:
         stmt = select(Trip).where(Trip.start_date <= end, Trip.end_date >= start).order_by(Trip.start_date, Trip.id)
         return list((await self._session.scalars(stmt)).all())
 
+    async def get_trips_in_city_on(self, city_id: int, day: date) -> list[Trip]:
+        """Trips running on `day` that stay at or visit a place in this city."""
+        in_city = Place.city_id == city_id
+        stays = select(Stay.trip_id).join(Place, Place.id == Stay.place_id).where(in_city)
+        visits = select(Visit.trip_id).join(Place, Place.id == Visit.place_id).where(in_city)
+        stmt = (
+            select(Trip)
+            .where(Trip.start_date <= day, Trip.end_date >= day, or_(Trip.id.in_(stays), Trip.id.in_(visits)))
+            .order_by(Trip.start_date, Trip.id)
+        )
+        return list((await self._session.scalars(stmt)).all())
+
     async def get_trips(self, filters: TripFilters, today: date) -> list[Trip]:
         stmt = select(Trip)
         past = Trip.end_date < today

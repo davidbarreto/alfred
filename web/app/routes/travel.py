@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 import app.client as api
 from app.config import get_settings
 from app.shared.forward import forward, safe_get
+from app.shared.link_groups import LINK_KINDS, LINKS_PREVIEW, link_groups
 from app.shared.timezone import local_today
 from app.templates_config import templates
 
@@ -19,8 +20,6 @@ _PAGE_SIZE = 20
 _TIMELINE_PREVIEW = 8
 _STATUSES = {"current": "Upcoming & ongoing", "upcoming": "Upcoming", "ongoing": "Ongoing", "past": "Past", "all": "All"}
 _WARNING_PREVIEW = 5
-_LINK_KINDS = ["website", "instagram", "tiktok", "video", "article", "map", "booking", "other"]
-_LINKS_PREVIEW = 5
 _LOCATION_PREVIEW = 5
 _PLACE_KINDS = ["hotel", "restaurant", "cafe", "activity", "museum", "attraction", "shop", "other"]
 _LEG_MODES = ["flight", "train", "bus", "ferry", "car", "other"]
@@ -320,7 +319,7 @@ async def city_page(city_id: int, request: Request):
     links = await safe_get(f"/travel/cities/{city_id}/links", default=[])
     countries = await safe_get("/location/countries", default=[])
     return templates.TemplateResponse(request, "travel_city.html", {
-        "city": city, "countries": countries, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
+        "city": city, "countries": countries, "web_links": links, "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
         "preview": _LOCATION_PREVIEW, "today": local_today().isoformat(),
     })
 
@@ -344,7 +343,7 @@ async def city_links_page(city_id: int, request: Request):
     links = await safe_get(f"/travel/cities/{city_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_links.html", {
         "owner_kind": "city", "owner_id": city_id, "owner_name": city["name"], "back_url": f"/travel/cities/{city_id}",
-        "web_links": links, "link_kinds": _LINK_KINDS,
+        "web_links": links, "link_kinds": LINK_KINDS,
     })
 
 
@@ -355,7 +354,7 @@ async def country_page(country_id: int, request: Request):
         return RedirectResponse("/travel/cities", status_code=302)
     links = await safe_get(f"/travel/countries/{country_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_country.html", {
-        "country": country, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
+        "country": country, "web_links": links, "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
         "preview": _LOCATION_PREVIEW, "today": local_today().isoformat(),
     })
 
@@ -390,7 +389,7 @@ async def country_links_page(country_id: int, request: Request):
     links = await safe_get(f"/travel/countries/{country_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_links.html", {
         "owner_kind": "country", "owner_id": country_id, "owner_name": country["name"],
-        "back_url": f"/travel/countries/{country_id}", "web_links": links, "link_kinds": _LINK_KINDS,
+        "back_url": f"/travel/countries/{country_id}", "web_links": links, "link_kinds": LINK_KINDS,
     })
 
 
@@ -399,113 +398,21 @@ async def create_place(request: Request):
     return await forward(api.post("/travel/places", json=await request.json()), "Could not create the place.")
 
 
-def _place_filters(request: Request) -> dict:
-    params = request.query_params
-    status = params.get("status") or ""
-    return {
-        "q": (params.get("q") or "").strip(),
-        "kind": params.get("kind") if params.get("kind") in _PLACE_KINDS else "",
-        "city": (params.get("city") or "").strip(),
-        "country": (params.get("country") or "").strip(),
-        "city_id": params.get("city_id") if (params.get("city_id") or "").isdigit() else "",
-        "country_id": params.get("country_id") if (params.get("country_id") or "").isdigit() else "",
-        "tags": [t for t in params.getlist("tag") if t],
-        "min_grade": params.get("min_grade") if params.get("min_grade") in ("1", "2", "3", "4", "5") else "",
-        "status": status if status in ("planned", "visited", "missed") else "",
-        "no_trip": params.get("no_trip") in ("1", "true", "on"),
-        "ungraded": params.get("ungraded") in ("1", "true", "on"),
-    }
+# The place pages moved to the Places section (/places); these keep old links working.
+
+@router.get("/places")
+async def places_redirect():
+    return RedirectResponse("/places?view=visited", status_code=301)
 
 
-def _places_context(places: list | None, offset: int, filters: dict) -> dict:
-    page, has_next, has_prev = _pagination(places or [], offset)
-    query = [(k, filters[k]) for k in ("q", "kind", "city", "country", "city_id", "country_id", "min_grade", "status")]
-    query += [("tag", t) for t in filters["tags"]]
-    if filters["no_trip"]:
-        query.append(("no_trip", "1"))
-    if filters["ungraded"]:
-        query.append(("ungraded", "1"))
-    return {
-        "places": page, "available": places is not None, "offset": offset, "has_next": has_next,
-        "has_prev": has_prev, "page_size": _PAGE_SIZE, "query": urlencode([(k, v) for k, v in query if v]),
-    }
+@router.get("/places/{place_id}")
+async def place_redirect(place_id: int):
+    return RedirectResponse(f"/places/{place_id}", status_code=301)
 
 
-async def _fetch_places(filters: dict, offset: int) -> list | None:
-    params: list[tuple[str, object]] = [("limit", _PAGE_SIZE + 1), ("offset", offset)]
-    for key in ("q", "kind", "city", "country", "city_id", "country_id", "min_grade", "status"):
-        if filters[key]:
-            params.append((key, filters[key]))
-    params += [("tag", t) for t in filters["tags"]]
-    if filters["no_trip"]:
-        params.append(("no_trip", "true"))
-    if filters["ungraded"]:
-        params.append(("ungraded", "true"))
-    return await safe_get("/travel/places", params=params)
-
-
-async def _link_groups(cities: list[dict], own_urls: set[str], with_countries: bool = True) -> list[dict]:
-    """Read-only link groups for a trip or place page: each city, then each country in order of first appearance.
-
-    A URL already shown higher on the page (the page's own links, an earlier group) is not repeated; empty groups are
-    left out; each group shows at most `_LINKS_PREVIEW` and links to the owner's full links page.
-    """
-    seen = set(own_urls)
-    groups: list[dict] = []
-
-    async def add(title: str, kind: str, owner_id: int) -> None:
-        links = await safe_get(f"/travel/{kind}/{owner_id}/links", default=[]) or []
-        fresh = [link for link in links if link["url"] not in seen]
-        seen.update(link["url"] for link in fresh)
-        if fresh:
-            groups.append({"title": title, "see_all": f"/travel/{kind}/{owner_id}/links", "total": len(links), "links": fresh[:_LINKS_PREVIEW]})
-
-    countries: dict[int, dict] = {}
-    for city in cities:
-        await add(city["name"], "cities", city["id"])
-        countries.setdefault(city["country"]["id"], city["country"])
-    for country in countries.values() if with_countries else []:
-        await add(country["name"], "countries", country["id"])
-    return groups
-
-
-# "/places..." is registered before "/{trip_id}" so it is never read as a trip id.
-
-@router.get("/places", response_class=HTMLResponse)
-async def places_page(request: Request):
-    filters = _place_filters(request)
-    places = await _fetch_places(filters, 0)
-    tags = await safe_get("/travel/tags", default=[])
-    locations = await safe_get("/travel/places/locations", default={"cities": [], "countries": []})
-    scope = None  # the city or country the list is narrowed to by id, shown above the filters
-    if filters["city_id"]:
-        found = await safe_get(f"/location/cities/{filters['city_id']}")
-        scope = {"name": found["name"], "href": f"/travel/cities/{found['id']}"} if found else None
-    elif filters["country_id"]:
-        found = await safe_get(f"/location/countries/{filters['country_id']}")
-        scope = {"name": found["name"], "href": f"/travel/countries/{found['id']}"} if found else None
-    return templates.TemplateResponse(request, "travel_places.html", {
-        **_places_context(places, 0, filters), "filters": filters, "place_kinds": _PLACE_KINDS, "scope": scope,
-        "all_tags": [t["name"] for t in tags or []], "locations": locations,
-    })
-
-
-@router.get("/places/list", response_class=HTMLResponse)
-async def places_list(request: Request):
-    filters = _place_filters(request)
-    offset = _int_param(request.query_params.get("offset"))
-    places = await _fetch_places(filters, offset)
-    return templates.TemplateResponse(request, "_travel_places_list.html", _places_context(places, offset, filters))
-
-
-@router.patch("/places/{place_id}")
-async def update_place(place_id: int, request: Request):
-    return await forward(api.patch(f"/travel/places/{place_id}", json=await request.json()), "Could not update the place.")
-
-
-@router.delete("/places/{place_id}")
-async def delete_place(place_id: int):
-    return await forward(api.delete(f"/location/places/{place_id}"), "Could not delete the place.")
+@router.get("/places/{place_id}/links")
+async def place_links_redirect(place_id: int):
+    return RedirectResponse(f"/places/{place_id}/links", status_code=301)
 
 
 @router.post("/visits")
@@ -549,32 +456,6 @@ async def delete_web_link(link_id: int):
     return await forward(api.delete(f"/travel/links/{link_id}"), "Could not delete the link.")
 
 
-@router.get("/places/{place_id}/links", response_class=HTMLResponse)
-async def place_links_page(place_id: int, request: Request):
-    place = await safe_get(f"/travel/places/{place_id}")
-    if place is None:
-        return RedirectResponse("/travel/places", status_code=302)
-    links = await safe_get(f"/travel/places/{place_id}/links", default=[])
-    return templates.TemplateResponse(request, "travel_links.html", {
-        "owner_kind": "place", "owner_id": place_id, "owner_name": place["name"], "back_url": f"/travel/places/{place_id}",
-        "web_links": links, "link_kinds": _LINK_KINDS,
-    })
-
-
-@router.get("/places/{place_id}", response_class=HTMLResponse)
-async def place_page(place_id: int, request: Request):
-    place = await safe_get(f"/travel/places/{place_id}")
-    if place is None:
-        return RedirectResponse("/travel/places", status_code=302)
-    costs = await safe_get(f"/travel/places/{place_id}/costs")
-    links = await safe_get(f"/travel/places/{place_id}/links", default=[])
-    return templates.TemplateResponse(request, "travel_place.html", {
-        "link_groups": await _link_groups([place["city"]], {l["url"] for l in links}, with_countries=False),
-        "place": place, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
-        "entity_costs": {"visits": {c["id"]: c for c in (costs or {}).get("visits", [])}},
-    })
-
-
 @router.get("/{trip_id}/map.csv")
 async def trip_map_csv(trip_id: int, scope: str = "all"):
     """The trip's pins as a CSV that Google My Maps imports (it geocodes the Address column).
@@ -609,7 +490,7 @@ async def trip_links_page(trip_id: int, request: Request):
     links = await safe_get(f"/travel/trips/{trip_id}/links", default=[])
     return templates.TemplateResponse(request, "travel_links.html", {
         "owner_kind": "trip", "owner_id": trip_id, "owner_name": trip["name"], "back_url": f"/travel/{trip_id}",
-        "web_links": links, "link_kinds": _LINK_KINDS,
+        "web_links": links, "link_kinds": LINK_KINDS,
     })
 
 
@@ -738,7 +619,7 @@ async def warnings_page(trip_id: int, request: Request):
 # What a charges page can list: where to fetch the transactions, and where "back" goes.
 _CHARGE_SCOPES = {
     "trip": ("/travel/trips/{id}/charges", "/travel/{id}"),
-    "place": ("/travel/places/{id}/charges", "/travel/places/{id}"),
+    "place": ("/travel/places/{id}/charges", "/places/{id}"),
     "city": ("/travel/cities/{id}/charges", "/travel/cities/{id}"),
     "country": ("/travel/countries/{id}/charges", "/travel/countries/{id}"),
     "leg": ("/travel/legs/{id}/transactions", None),
@@ -821,10 +702,10 @@ async def trip_page(trip_id: int, request: Request):
     home = (trip.get("home") or {}).get("city")
     stayed = [c["city"] for c in trip.get("cities", []) if c["role"] == "stayed"]
     group_cities = ([home] if home else []) + [c for c in stayed if not home or c["id"] != home["id"]]
-    link_groups = await _link_groups(group_cities, {l["url"] for l in web_links})
+    groups = await link_groups(group_cities, {l["url"] for l in web_links})
     return templates.TemplateResponse(request, "travel_trip.html", {
-        "trip": trip, "link_groups": link_groups,
-        "web_links": web_links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
+        "trip": trip, "link_groups": groups,
+        "web_links": web_links, "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
         "empty_days": _empty_days(trip),
         "days": _group_by_day(preview),
         "today": local_today().isoformat(),

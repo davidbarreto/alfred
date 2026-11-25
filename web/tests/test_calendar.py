@@ -1082,7 +1082,7 @@ class TestEventLocation:
         resp = client.post("/calendar/", data={
             **self._FORM, "location_id": "new", "new_location_name": "Dentist", "new_location_from_home": "car=10",
         })
-        assert resp.status_code == 422 and "no Home location" in resp.text
+        assert resp.status_code == 422 and "no Home place" in resp.text
         mock_api["post"].assert_not_called()
 
     def test_backend_refusal_is_shown(self, client, mock_api):

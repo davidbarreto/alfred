@@ -49,12 +49,12 @@
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Places <span class="text-xs font-normal text-gray-400">{{ city.place_count }}</span></h2>
       {% for p in city.places %}
-      <a href="/travel/places/{{ p.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+      <a href="/places/{{ p.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
         <span class="text-gray-900">{{ p.name }} <span class="text-xs text-gray-400">{{ p.kind }}</span></span>
         {% if p.grade %}<span class="text-xs text-amber-600">{{ p.grade | number }}/5</span>{% endif %}
       </a>
       {% else %}<p class="text-sm text-gray-400">No places here yet.</p>{% endfor %}
-      {% if city.place_count > city.places | length %}<a href="/travel/places?city_id={{ city.id }}" class="text-xs text-[#378ADD] hover:underline">See all {{ city.place_count }} places</a>{% endif %}
+      {% if city.place_count > city.places | length %}<a href="/places?view=all&city_id={{ city.id }}" class="text-xs text-[#378ADD] hover:underline">See all {{ city.place_count }} places</a>{% endif %}
     </div>
   </div>
 

@@ -20,6 +20,8 @@ class VisitCreate(BaseModel):
     grade: int | None = Field(default=None, ge=1, le=5)
     # An existing calendar event to link; Alfred then moves its start/end and location with the visit.
     calendar_event_id: int | None = None
+    # With no trip_id: put the visit in the one trip running on visit_date that includes the place's city, if any.
+    trip_from_date: bool = False
 
     @model_validator(mode="after")
     def _grade_needs_a_done_visit(self) -> "VisitCreate":

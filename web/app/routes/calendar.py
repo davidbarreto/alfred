@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import app.client as api
 from app.config import get_settings
 from app.shared.forward import error_detail, safe_get
-from app.shared.location_kinds import KINDS
+from app.shared.location_kinds import EVERYDAY_PICK_KINDS
 from app.templates_config import templates
 from app.shared.timezone import local_today
 
@@ -183,7 +183,7 @@ async def calendar_page(request: Request):
         "holidays_by_date": holidays,
         "routines": routines,
         "locations": await _locations(),
-        "location_kinds": KINDS,
+        "location_kinds": EVERYDAY_PICK_KINDS,
         "events": events,
         "events_by_date": events_by_date,
         "weeks": weeks,
@@ -340,7 +340,7 @@ async def _event_location_id(choice: str | None, name: str | None, kind: str | N
     if routes:
         homes = await api.get("/organizer/places", params={"kind": "home"})
         if not homes:
-            raise ValueError("There is no Home location yet: add it on Locations, or leave the minutes empty.")
+            raise ValueError("There is no Home place yet: add it on Places, or leave the minutes empty.")
         home = homes[0]["id"]
     created = await api.post("/organizer/places", json={"name": name, "kind": (kind or "").strip() or "other"})
     for mode, minutes in routes:

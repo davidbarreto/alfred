@@ -563,7 +563,7 @@
         const saved = field in result.values ? result.values[field] : readValue(row).value;
         if (row.dataset.widget === "place") {
           const label = row.querySelector("[data-place-label]");
-          label.textContent = result.values.place_label ? `In use: ${result.values.place_label}` : "No weather now: add coordinates to the Home location or pick a place.";
+          label.textContent = result.values.place_label ? `In use: ${result.values.place_label}` : "No weather now: add coordinates to the Home place or pick a place.";
           label.className = `text-[11px] ${result.values.place_label ? "text-gray-500" : "text-red-600"}`;
         }
         state.get(row).loaded = saved;

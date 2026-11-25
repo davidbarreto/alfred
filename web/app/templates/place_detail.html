@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% from "_travel_macros.html" import cost_chip %}
+{% set active_page = "places" %}
+{% block title %}{{ place.name if place else 'Place' }}{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+
+  <a href="/places{{ '?view=visited' if place and not place.everyday else '' }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> All places</a>
+
+  {% if not place %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">This place does not exist.</p></div></div>
+  {% else %}
+  {% set t = place.today %}
+  {% set is_home = place.kind == 'home' %}
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <div class="page-head">
+        <div class="min-w-0 space-y-0.5">
+          <h1 class="text-base font-semibold text-gray-900"><i class="ti {{ place.kind | location_icon }}"></i> {{ place.name }}</h1>
+          <p class="text-xs text-gray-500">{{ place.kind | replace('_', ' ') }} · {{ place.city.country | country_flag_of }}
+            <a class="hover:underline text-[#378ADD]" href="/travel/cities/{{ place.city.id }}">{{ place.city.name }}</a>, {{ place.city.country.name }}
+            {%- if not place.active %} · archived{% endif %}</p>
+          {% if place.address %}<p class="text-xs text-gray-400">{{ place.address }}</p>{% endif %}
+          <a class="inline-flex items-center gap-1 text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener"><i class="ti ti-map-pin"></i>Open in Maps</a>
+        </div>
+        <div class="page-actions flex flex-wrap items-center gap-1.5">
+          {% if t and t.open_now is true %}
+          <span class="px-2 py-0.5 rounded-full text-xs bg-[#EAF3DE] text-[#639922]" id="open-status">Open now</span>
+          {% elif t and t.open_now is false %}
+          <span class="px-2 py-0.5 rounded-full text-xs text-gray-500 bg-gray-100" id="open-status">Closed now</span>
+          {% endif %}
+          {{ cost_chip(place_cost, 'place', place.id, place.name, request.url.path) }}
+          {% if is_home %}
+          <span class="px-2 py-0.5 rounded-full text-xs bg-[#E6F1FB] text-[#0C447C]" title="Home is always an everyday place">Everyday</span>
+          {% else %}
+          <button class="btn btn-xs {{ 'btn-primary' if place.everyday else 'btn-outline' }}" id="toggle-everyday" data-everyday="{{ 'true' if place.everyday else 'false' }}"
+                  title="{{ 'On the Everyday list, the day plan and the event At picker: click to take it off' if place.everyday else 'Add it to the Everyday list, the day plan and the event At picker' }}">
+            <i class="ti {{ 'ti-check' if place.everyday else 'ti-plus' }}"></i> Everyday</button>
+          {% endif %}
+          <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-place').classList.toggle('hidden')">Edit</button>
+          <button class="btn btn-xs btn-outline" id="toggle-active" data-active="{{ 'true' if place.active else 'false' }}">{{ 'Archive' if place.active else 'Restore' }}</button>
+          <button class="btn btn-xs btn-outline btn-error" id="delete-place">Delete</button>
+        </div>
+      </div>
+      <p class="text-xs text-red-600 empty:hidden" id="action-error"></p>
+    </div>
+  </div>
+
+  {% if home_moved %}
+  <div class="card bg-white border border-amber-300" id="home-moved">
+    <div class="card-body p-4 space-y-1">
+      <p class="text-sm font-semibold text-gray-900"><i class="ti ti-truck"></i> Home moved</p>
+      <p class="text-xs text-gray-600">Trips that have already started keep the address and city they were planned with; upcoming trips start from the new ones.
+        Travel times from Home are not changed automatically: check them below.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div id="edit-place" class="card bg-white hidden">
+    <div class="card-body p-5">
+      {% with form_id="edit-place-form", form_url="/places/" ~ place.id, form_method="PATCH", p=place, tags_text=travel.tags | join(', ') %}
+        {% include "_place_form.html" %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card-stack">
+      {% if place.everyday or place.opening_hours %}
+      <div class="card bg-white" id="place-hours">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Today and hours</h2>
+          {% if t and t.holiday %}
+          <p class="text-xs text-gray-500"><i class="ti ti-flag"></i> Today is a public holiday ({{ t.holiday }}){% if t.note %}: {{ t.note }}{% endif %}.</p>
+          {% endif %}
+          {% if not place.opening_hours %}
+          <p class="text-sm text-gray-400">Hours unknown. Add them with Edit.</p>
+          {% else %}
+          <table class="w-full text-sm">
+            <tbody>
+              {% for row in week %}
+              <tr class="{% if row.today %}font-semibold text-gray-900{% else %}text-gray-600{% endif %}" {% if row.today %}data-today{% endif %}>
+                <td class="py-1 pr-3">{{ row.label }}{% if row.today %} <span class="text-xs font-normal text-[#378ADD]">today</span>{% endif %}</td>
+                <td class="py-1 text-right tabular-nums {% if row.hours == 'unknown' %}text-gray-400{% endif %}">{{ row.hours }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if place.everyday %}
+      <div class="card bg-white" id="place-sells">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Sells</h2>
+          {% if place.categories %}
+          <div class="flex flex-wrap gap-1.5">
+            {% for c in place.categories %}<span class="px-2 py-0.5 rounded-full text-xs bg-[#E6F1FB] text-[#0C447C]">{{ c.name }}</span>{% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm text-gray-400">Nothing: a place you go to, not a shop.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card bg-white" id="place-travel-times">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Travel times</h2>
+            {% if travel_times_total > travel_times | length %}<a href="/places/{{ place.id }}/travel-times" class="text-xs text-[#378ADD] hover:underline">See all {{ travel_times_total }}</a>{% endif %}
+          </div>
+          {% if travel_times %}
+          <ul class="divide-y divide-gray-100">
+            {% for t in travel_times %}{% include "_place_travel_time_row.html" %}{% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-sm text-gray-400">No travel times yet.</p>
+          {% endif %}
+          <p class="text-xs text-red-600 empty:hidden" id="travel-time-error"></p>
+          {% include "_place_travel_time_form.html" %}
+        </div>
+      </div>
+
+      <div class="card bg-white" id="place-events">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Upcoming events</h2>
+            {% if events_total > events | length %}<a href="/places/{{ place.id }}/events" class="text-xs text-[#378ADD] hover:underline">See all {{ events_total }}</a>{% endif %}
+          </div>
+          {% if events %}
+          <ul class="divide-y divide-gray-100">
+            {% for ev in events %}{% include "_place_event_row.html" %}{% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-sm text-gray-400">No events here in the next 60 days. Pick this place on an event's form.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if place.notes %}
+      <div class="card bg-white" id="place-notes">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Notes</h2>
+          <p class="text-sm text-gray-700 whitespace-pre-line">{{ place.notes }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card-stack">
+      <div class="card bg-white" id="place-grade">
+        <div class="card-body p-5 space-y-3">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Grade</h2>
+            {% if travel.grade %}<span class="text-sm font-medium text-amber-600" id="grade-value">{{ travel.grade | number }}/5 <span class="text-xs text-gray-400">({{ travel.grade_count }} grade{{ '' if travel.grade_count == 1 else 's' }})</span></span>
+            {% else %}<span class="text-xs text-gray-400">Not graded yet</span>{% endif %}
+          </div>
+          <form id="log-visit" class="flex flex-wrap items-end gap-2">
+            <label class="space-y-1"><span class="block text-xs text-gray-500">Day</span>
+              <input name="visit_date" type="date" required value="{{ today }}" max="{{ today }}" class="input input-sm input-bordered"></label>
+            <label class="space-y-1"><span class="block text-xs text-gray-500">Grade</span>
+              <select name="grade" required class="select select-sm select-bordered">
+                {% for g in [5, 4, 3, 2, 1] %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+              </select></label>
+            <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes (optional)</span>
+              <input name="notes" class="input input-sm input-bordered w-full" placeholder="The terrace is lovely at lunch"></label>
+            <button type="submit" class="btn btn-sm btn-outline">Log a visit</button>
+            {% if wishlisted %}
+            <span class="text-xs text-gray-500" id="want-to-go"><i class="ti ti-star"></i> On your want-to-go list</span>
+            {% else %}
+            <button type="button" class="btn btn-sm btn-ghost" id="want-to-go"><i class="ti ti-star"></i> Want to go</button>
+            {% endif %}
+          </form>
+          <p class="text-[11px] text-gray-400">A visit on a day of a trip to {{ place.city.name }} goes into that trip.</p>
+          <p class="text-xs text-red-600 empty:hidden" id="grade-error"></p>
+        </div>
+      </div>
+
+      {% if visits or stays %}
+      <div class="card bg-white" id="visit-history">
+        <div class="card-body p-5 space-y-3">
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900">Visits and stays</h2>
+            <div class="flex items-center gap-2">
+              {% if history_total > visits | length + stays | length %}<a href="/places/{{ place.id }}/visits" class="text-xs text-[#378ADD] hover:underline">See all {{ history_total }}</a>{% endif %}
+              <button class="btn btn-xs btn-outline" id="add-visit">Plan a visit</button>
+            </div>
+          </div>
+          {% for v in visits %}{% set show_place = false %}{% set show_trip = true %}{% include "_travel_visit_row.html" %}{% endfor %}
+          {% include "_place_stays.html" %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if travel.tags %}
+      <div class="card bg-white" id="place-tags">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Tags</h2>
+          <div class="flex flex-wrap gap-1">{% for tag in travel.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% set owner_kind = 'place' %}{% set owner_id = place.id %}{% set links_url = '/places/' ~ place.id ~ '/links' %}
+      {% include "_travel_web_links_card.html" %}
+      {% include "_travel_link_groups.html" %}
+    </div>
+  </div>
+
+  {% include "_travel_visit_dialog.html" %}
+  {% include "_travel_tx_dialog.html" %}
+  {% include "_travel_detail_dialog.html" %}
+  {% include "_travel_web_link_dialog.html" %}
+  {% endif %}
+
+</div>
+{% if place %}
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+<script src="/static/js/travel-visits.js"></script>
+<script src="/static/js/travel-transactions.js"></script>
+<script src="/static/js/travel-detail.js"></script>
+<script src="/static/js/travel-web-links.js"></script>
+{% include "_place_script.html" %}
+{% include "_place_travel_time_script.html" %}
+<script>
+initTravelVisits({ tripId: null, placeId: {{ place.id }} });
+initTravelTransactions();
+initTravelDetail();
+initWebLinks();
+
+const actionError = document.getElementById('action-error');
+async function placeAction(method, body, then) {
+  actionError.textContent = '';
+  try { await placeSend('/places/{{ place.id }}', method, body); then(); }
+  catch (e) { actionError.textContent = e.message; }
+}
+document.getElementById('toggle-everyday')?.addEventListener('click', (event) => {
+  placeAction('PATCH', { everyday: event.currentTarget.dataset.everyday !== 'true' }, () => location.reload());
+});
+document.getElementById('toggle-active').addEventListener('click', (event) => {
+  placeAction('PATCH', { active: event.currentTarget.dataset.active !== 'true' }, () => location.reload());
+});
+document.getElementById('delete-place').addEventListener('click', () => {
+  if (!confirm({{ ('Delete ' ~ place.name ~ '? This cannot be undone; Archive hides it instead.') | tojson }})) return;
+  placeAction('DELETE', undefined, () => { window.location.href = '/places'; });
+});
+
+// Grade card: a visited visit with no trip asked (the backend puts it in a trip running that day in this city, if any),
+// or a planned visit with no day (the want-to-go list).
+const gradeError = document.getElementById('grade-error');
+async function addVisit(body) {
+  gradeError.textContent = '';
+  try { await placeSend('/travel/visits', 'POST', { place_id: {{ place.id }}, ...body }); location.reload(); }
+  catch (e) { gradeError.textContent = e.message; }
+}
+document.getElementById('log-visit').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const notes = form.elements.notes.value.trim();
+  addVisit({ status: 'visited', visit_date: form.elements.visit_date.value, grade: Number(form.elements.grade.value),
+             trip_from_date: true, ...(notes ? { notes } : {}) });
+});
+document.querySelector('button#want-to-go')?.addEventListener('click', () => addVisit({ status: 'planned' }));
+</script>
+{% endif %}
+{% endblock %}

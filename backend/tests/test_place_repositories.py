@@ -65,6 +65,11 @@ class TestEverydayPlaceRepository:
         assert "location.places.active IS true" in sql
         assert "LIMIT 10" in sql
 
+    async def test_list_by_city(self, session):
+        await EverydayPlaceRepository(session).list(EverydayPlaceFilters(city_id=7))
+
+        assert "location.places.city_id = 7" in _sql(session.scalars.call_args.args[0])
+
     async def test_categories_by_name_lowercase(self, session):
         await EverydayPlaceRepository(session).get_categories_by_name(["Groceries"])
 

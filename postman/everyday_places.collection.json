@@ -328,7 +328,8 @@
      "script": {
       "exec": [
        "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-       "pm.test('Same location', () => pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('location_id'))));"
+       "pm.test('Same location', () => pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get('location_id'))));",
+       "pm.environment.set('location_city_id', pm.response.json().city.id);"
       ],
       "type": "text/javascript"
      }
@@ -383,6 +384,76 @@
       {
        "key": "category_id",
        "value": "{{location_category_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "08a - List By City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Includes the market', () => pm.expect(pm.response.json().map((l) => l.id)).to.include(Number(pm.environment.get('location_id'))));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places?city_id={{location_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "{{location_city_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "08b - List By Another City Is Empty",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Nothing there', () => pm.expect(pm.response.json()).to.eql([]));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/organizer/places?city_id=999999999",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "organizer",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "999999999"
       }
      ]
     }

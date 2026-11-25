@@ -433,6 +433,7 @@ def places():
     svc = TravelPlaceService(AsyncMock(), base)
     svc._repo = AsyncMock()
     svc._repo.get_grades.return_value = {}
+    svc._repo.get_last_visits.return_value = {}
     svc._repo.get_place.return_value = _place()
     svc._city_repo = AsyncMock()
     svc._cities = AsyncMock()

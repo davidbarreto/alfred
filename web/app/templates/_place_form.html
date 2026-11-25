@@ -1,0 +1,78 @@
+{# Place form, shared by the list page (new) and the place page (edit). Vars: form_id, form_url, form_method, p (the place, or none),
+   categories, selected_ids, tags_text, kinds, everyday_kinds, hours_help, and for a new place home_city (the City picker's start).
+   The new form has an Everyday box (pre-ticked from the kind); on the edit form the page header toggles it. "Sells" shows only
+   for an everyday place. Needs _city_dialog.html, airport-input.js and travel-city-picker.js on the page. #}
+{% set is_everyday = p.everyday if p else false %}
+<form id="{{ form_id }}" class="space-y-3" data-place-form data-url="{{ form_url }}" data-method="{{ form_method }}"
+      data-everyday-kinds="{{ everyday_kinds | join(',') }}"{% if p and p.kind == 'home' %} data-home-address="{{ p.address or '' }}" data-home-city="{{ p.city.id }}"{% endif %}>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Name</span>
+      <input name="name" required maxlength="200" value="{{ p.name if p else '' }}" placeholder="Supermarket by school"
+             class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Kind</span>
+      {% set current_kind = p.kind if p else 'other' %}
+      <select name="kind" class="select select-sm select-bordered w-full">
+        {% for k in kinds %}<option value="{{ k }}"{% if k == current_kind %} selected{% endif %}>{{ k | replace('_', ' ') }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="space-y-1">
+      <span class="block text-xs text-gray-500">City{% if p and p.kind == 'home' %} <span class="text-gray-400">(the home city: trips start here)</span>{% elif not p %} <span class="text-gray-400">(the home city unless you pick another)</span>{% endif %}</span>
+      <input name="city_text" placeholder="Pick a city" aria-label="City" class="input input-sm input-bordered w-full">
+      <input type="hidden" name="city_id" value="{{ p.city.id if p else (home_city.id if home_city else '') }}">
+      <script type="application/json" data-city>{{ (p.city if p else home_city) | tojson }}</script>
+    </div>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Address</span>
+      <input name="address" value="{{ p.address or '' if p else '' }}" class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Maps link</span>
+      <input name="maps_url" type="url" value="{{ p.maps_url or '' if p else '' }}" placeholder="https://maps.app.goo.gl/..."
+             class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1">
+      <span class="block text-xs text-gray-500">Coordinates <span class="text-gray-400">(as Google Maps copies them; empty = read from the Maps link)</span></span>
+      <input name="coordinates" value="{{ (p.latitude ~ ', ' ~ p.longitude) if p and p.get('latitude') is not none else '' }}" placeholder="41.1579, -8.6291"
+             class="input input-sm input-bordered w-full">
+    </label>
+    <label class="space-y-1 sm:col-span-2">
+      <span class="block text-xs text-gray-500">Tags <span class="text-gray-400">(comma separated: would return, family...)</span></span>
+      <input name="tags" value="{{ tags_text or '' }}" class="input input-sm input-bordered w-full">
+    </label>
+  </div>
+  {% if not p %}
+  <label class="inline-flex items-center gap-2 text-xs text-gray-700">
+    <input type="checkbox" name="everyday" class="checkbox checkbox-xs" data-everyday-box>
+    Everyday place <span class="text-gray-400">(on the Everyday list, the day plan and the event "At" picker)</span>
+  </label>
+  {% endif %}
+  <label class="space-y-1 block">
+    <span class="block text-xs text-gray-500">Opening hours <span class="text-gray-400">(one line per group of days; empty or a missing day means unknown)</span></span>
+    <textarea name="opening_hours" rows="4" placeholder="{{ hours_help | replace('; ', '\n') }}"
+              class="textarea textarea-sm textarea-bordered w-full font-mono text-xs">{{ p.opening_hours_text | replace('; ', '\n') if p else '' }}</textarea>
+  </label>
+  {% if categories and (is_everyday or not p) %}
+  <fieldset class="space-y-1{{ ' hidden' if not p }}" data-sells>
+    <legend class="block text-xs text-gray-500">Sells</legend>
+    <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+      {% for c in categories %}
+      <label class="inline-flex items-center gap-1.5 text-xs text-gray-700">
+        <input type="checkbox" name="category_ids" value="{{ c.id }}" class="checkbox checkbox-xs"
+               {% if c.id in selected_ids %}checked{% endif %}>{{ c.name }}
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+  <label class="space-y-1 block">
+    <span class="block text-xs text-gray-500">Notes</span>
+    <textarea name="notes" rows="2" class="textarea textarea-sm textarea-bordered w-full">{{ p.notes or '' if p else '' }}</textarea>
+  </label>
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="submit" class="btn btn-sm btn-outline">{{ 'Save' if p else 'Add' }}</button>
+    <span class="text-xs text-red-600" data-form-error></span>
+  </div>
+</form>

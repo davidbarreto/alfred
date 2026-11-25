@@ -100,7 +100,9 @@ function initTravelVisits(config) {
     }
     const grade = form.elements.grade.value;
     if (grade) body.grade = Number(grade); else if (editing) body.grade = null;
+    // From a place page (no trip): the backend puts a dated visit in the trip running that day in the place's city, if any.
     if (!editing && config.tripId) body.trip_id = config.tripId;
+    else if (!editing && config.placeId) body.trip_from_date = true;
     const { ok, data } = editing
       ? await send('PATCH', `/travel/visits/${editing.id}`, body)
       : await send('POST', '/travel/visits', body);

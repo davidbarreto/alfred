@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated, Any
 
 from fastapi import Query
@@ -88,6 +89,8 @@ class TravelPlaceRead(PlaceRead):
     # Derived, never stored: the average over this place's graded visits and stays.
     grade: float | None = None
     grade_count: int = 0
+    # Derived: the latest visited visit's date or begun stay's check-in day.
+    last_visit: date | None = None
 
     @field_validator("tags", mode="before")
     @classmethod

@@ -71,7 +71,7 @@
     </optgroup>{% endif %}
   </select>
   <p data-place-label class="text-[11px] {{ 'text-gray-500' if row.place_label else 'text-red-600' }}">
-    {%- if row.place_label %}In use: {{ row.place_label }}{% else %}No weather now: add coordinates to the Home location or pick a place.{% endif %}</p>
+    {%- if row.place_label %}In use: {{ row.place_label }}{% else %}No weather now: add coordinates to the Home place or pick a place.{% endif %}</p>
 </div>
 {% endmacro %}
 

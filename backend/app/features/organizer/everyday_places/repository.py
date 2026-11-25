@@ -25,6 +25,8 @@ class EverydayPlaceRepository:
             stmt = stmt.where(Place.kind == filters.kind)
         if filters.active is not None:
             stmt = stmt.where(Place.active.is_(filters.active))
+        if filters.city_id is not None:
+            stmt = stmt.where(Place.city_id == filters.city_id)
         if filters.category_id is not None:
             stmt = stmt.where(
                 Place.id.in_(

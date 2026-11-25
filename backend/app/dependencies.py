@@ -132,7 +132,10 @@ from app.features.metrics.tags.service import MetricTagService
 from app.assistant.commands.handlers.travel import TravelServices
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import TripDefaultTagService
-from app.features.travel.cities.service import CityService
+from app.features.location.cities.service import CityService
+from app.features.location.countries.service import CountryService
+from app.features.travel.cities.hooks import TravelLocationHooks
+from app.features.travel.cities.service import TravelCityService
 from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
@@ -729,8 +732,18 @@ def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayServic
 def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
     return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
 
+def get_location_hooks(session: AsyncSession) -> TravelLocationHooks:
+    """What travel does when a city or country is created or deleted; `location` never imports travel."""
+    return TravelLocationHooks(session, EmbeddingService(session, get_embedding_provider()))
+
 def get_city_service(session: AsyncSession = Depends(get_session)) -> CityService:
-    return CityService(session, EmbeddingService(session, get_embedding_provider()))
+    return CityService(session, get_location_hooks(session))
+
+def get_country_service(session: AsyncSession = Depends(get_session)) -> CountryService:
+    return CountryService(session, get_location_hooks(session))
+
+def get_travel_city_service(session: AsyncSession = Depends(get_session)) -> TravelCityService:
+    return TravelCityService(session)
 
 def get_web_link_service(session: AsyncSession = Depends(get_session)) -> WebLinkService:
     return WebLinkService(session, LinkPreviewClient(), EmbeddingService(session, get_embedding_provider()))
@@ -760,7 +773,8 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
         places=get_place_service(session), visits=get_visit_service(session),
         links=TransactionLinkService(session), default_tags=TripDefaultTagService(session),
         recap=TripRecapService(session),
-        web_links=get_web_link_service(session), cities=CityService(session),
+        web_links=get_web_link_service(session), cities=get_city_service(session),
+        countries=get_country_service(session),
     )
 
 def get_checklist_service(session: AsyncSession = Depends(get_session)) -> ChecklistService:
@@ -921,6 +935,8 @@ LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
 StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
 CityServiceDep = Annotated[CityService, Depends(get_city_service)]
+CountryServiceDep = Annotated[CountryService, Depends(get_country_service)]
+TravelCityServiceDep = Annotated[TravelCityService, Depends(get_travel_city_service)]
 TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
 VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]
 TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transaction_link_service)]

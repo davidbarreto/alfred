@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.assistant.commands.handlers.travel import TravelServices, handle_travel
-from app.features.travel.cities.schemas import CountryRef
+from app.features.location.countries.schemas import CountryRef
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.links.schemas import WebLinkRead
 from app.features.travel.trips.trip_cities import TripCity
@@ -31,7 +31,7 @@ def _city_read(name, country, id):
 def services():
     s = TravelServices(
         trips=AsyncMock(), legs=AsyncMock(), stays=AsyncMock(), places=AsyncMock(), visits=AsyncMock(),
-        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(), web_links=AsyncMock(), cities=AsyncMock(),
+        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(), web_links=AsyncMock(), cities=AsyncMock(), countries=AsyncMock(),
     )
     s.web_links.create_city_link.return_value = _link(city_id=4)
     s.web_links.get_city_links.return_value = [_link(city_id=4)]
@@ -74,7 +74,7 @@ class TestOwner:
         assert exc.value.status_code == 404
 
     async def test_a_country_by_name(self, services):
-        services.cities.get_countries.return_value = [CountryRef(id=2, name="Examplia", code=None)]
+        services.countries.get_countries.return_value = [CountryRef(id=2, name="Examplia", code=None)]
         services.web_links.create_country_link.return_value = _link(country_id=2)
         await run("add", {"url": "https://example.com/a", "country": "examplia"}, services)
         assert services.web_links.create_country_link.await_args.args[0] == 2

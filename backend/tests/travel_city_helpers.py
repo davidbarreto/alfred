@@ -1,5 +1,6 @@
 """Synthetic cities for travel tests: the same name always gets the same id, so id comparisons behave like the real data."""
-from app.features.travel.cities.schemas import CityRef, CountryRef
+from app.features.location.cities.schemas import CityRef
+from app.features.location.countries.schemas import CountryRef
 
 _CITY_IDS: dict[str, int] = {}
 _COUNTRY_IDS: dict[str, int] = {}

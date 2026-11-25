@@ -11,8 +11,8 @@ from app.features.travel.legs.schemas import LegRead
 from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
-from app.features.travel.cities.repository import CityRepository
-from app.features.travel.cities.schemas import CityRef
+from app.features.location.cities.repository import CityRepository
+from app.features.location.cities.schemas import CityRef
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository

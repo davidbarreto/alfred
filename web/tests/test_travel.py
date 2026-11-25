@@ -306,7 +306,7 @@ class TestCities:
         mock_api["get"].return_value = [_city("Alpha")]
         resp = client.get("/travel/cities/search?q= alp ")
         assert resp.status_code == 200 and resp.json()[0]["name"] == "Alpha"
-        mock_api["get"].assert_awaited_once_with("/travel/cities", params={"q": "alp"})
+        mock_api["get"].assert_awaited_once_with("/location/cities", params={"q": "alp"})
 
     def test_search_failure_is_502(self, client, mock_api):
         mock_api["get"].side_effect = httpx.ConnectError("down")
@@ -316,7 +316,7 @@ class TestCities:
         body = {"name": "Alpha", "country": "Testland", "country_code": "TL"}
         mock_api["post"].return_value = _city("Alpha")
         assert client.post("/travel/cities", json=body).status_code == 200
-        mock_api["post"].assert_awaited_once_with("/travel/cities", json=body)
+        mock_api["post"].assert_awaited_once_with("/location/cities", json=body)
         mock_api["post"].side_effect = _status_error(409, "Alpha already exists in Testland")
         resp = client.post("/travel/cities", json=body)
         assert resp.status_code == 409 and "already exists" in resp.json()["error"]
@@ -1444,14 +1444,14 @@ def _country_detail(**kw):
 
 class TestCityPages:
     def test_index_groups_cities_by_country(self, client, mock_api):
-        _route(mock_api, {"/travel/countries": [_country(), _country(3, "Otherland", "OL")], "/travel/cities": [
+        _route(mock_api, {"/location/countries": [_country(), _country(3, "Otherland", "OL")], "/location/cities": [
             {"id": 4, "name": "Alpha", "country": _country()}, {"id": 5, "name": "Beta", "country": _country(3, "Otherland", "OL")}]})
         html = client.get("/travel/cities").text
         assert 'id="country-2"' in html and 'href="/travel/cities/4"' in html and 'href="/travel/countries/3"' in html
         assert "New city" in html
 
     def test_city_page_shows_grade_places_and_caps_the_trips(self, client, mock_api):
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [_country()], "/travel/cities/4": _city_detail()})
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [_country()], "/travel/cities/4": _city_detail()})
         html = client.get("/travel/cities/4").text
         assert "4.5/5" in html and "2 graded places" in html and 'href="/travel/countries/2"' in html
         assert html.count('href="/travel/1"') == 1 and 'href="/travel/5"' in html and 'href="/travel/6"' not in html
@@ -1459,7 +1459,7 @@ class TestCityPages:
         assert 'href="/travel/places?city_id=4"' in html and "See all 7 places" in html
 
     def test_city_page_links_card_is_for_the_city(self, client, mock_api):
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(place_count=1, trips=[])})
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [], "/travel/cities/4": _city_detail(place_count=1, trips=[])})
         html = client.get("/travel/cities/4").text
         assert 'data-owner-kind="city" data-owner-id="4"' in html and "See all 1 places" not in html
 
@@ -1489,7 +1489,7 @@ class TestCityPages:
 
     def test_places_page_can_be_narrowed_to_a_city(self, client, mock_api):
         _route(mock_api, {"/travel/places": [_place()], "/travel/tags": [], "/travel/places/locations": {"cities": [], "countries": []},
-                          "/travel/cities/4": _city_detail()})
+                          "/location/cities/4": _city_detail()})
         html = client.get("/travel/places?city_id=4").text
         assert "Places in" in html and 'name="city_id" value="4"' in html
         params = [c.kwargs.get("params") for c in mock_api["get"].await_args_list if c.args and c.args[0] == "/travel/places"]
@@ -1502,11 +1502,14 @@ class TestCityPages:
     def test_writes_are_proxied(self, client, mock_api):
         mock_api["patch"].return_value = {"id": 4}
         assert client.patch("/travel/cities/4", json={"name": "B"}).status_code == 200
-        mock_api["patch"].assert_awaited_with("/travel/cities/4", json={"name": "B"})
+        mock_api["patch"].assert_awaited_with("/location/cities/4", json={"name": "B"})
         assert client.patch("/travel/countries/2", json={"code": "EX"}).status_code == 200
+        mock_api["patch"].assert_awaited_with("/location/countries/2", json={"code": "EX"})
         mock_api["delete"].return_value = None
         assert client.delete("/travel/cities/4").status_code == 200
+        mock_api["delete"].assert_awaited_with("/location/cities/4")
         assert client.delete("/travel/countries/2").status_code == 200
+        mock_api["delete"].assert_awaited_with("/location/countries/2")
         mock_api["post"].return_value = {"id": 1}
         assert client.post("/travel/cities/4/links", json={"url": "https://example.com"}).status_code == 200
         mock_api["post"].assert_awaited_with("/travel/cities/4/links", json={"url": "https://example.com"})
@@ -1538,7 +1541,7 @@ class TestTripCitiesCard:
 
 class TestSpendAndHome:
     def test_city_page_shows_the_spend_split_and_the_tags(self, client, mock_api):
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(trips=[])})
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [], "/travel/cities/4": _city_detail(trips=[])})
         html = client.get("/travel/cities/4").text
         assert 'id="location-spend"' in html and "100.00 €" in html and "3 charges" in html
         assert "Linked to a stay or visit here: <a" in html and ">80.00 €</a>" in html and ">20.00 €</a>" in html
@@ -1548,14 +1551,14 @@ class TestSpendAndHome:
     def test_city_page_with_nothing_spent_says_how_to_set_tags(self, client, mock_api):
         empty = {"linked": {"total_eur": "0.00", "transaction_count": 0, "unconverted_count": 0}}
         empty["tagged"] = empty["overall"] = empty["linked"]
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [], "/travel/cities/4": _city_detail(
             trips=[], costs=empty, default_tag_names=None)})
         assert "no default tags are set" in client.get("/travel/cities/4").text
 
     def test_the_home_city_wears_a_badge(self, client, mock_api):
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(home=True, trips=[])})
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [], "/travel/cities/4": _city_detail(home=True, trips=[])})
         assert 'id="city-home"' in client.get("/travel/cities/4").text
-        _route(mock_api, {"/travel/cities/4/links": [], "/travel/countries": [], "/travel/cities/4": _city_detail(trips=[])})
+        _route(mock_api, {"/travel/cities/4/links": [], "/location/countries": [], "/travel/cities/4": _city_detail(trips=[])})
         assert 'id="city-home"' not in client.get("/travel/cities/4").text
 
     def test_country_page_has_spend_and_tags(self, client, mock_api):

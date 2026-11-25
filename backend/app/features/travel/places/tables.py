@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, St
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.features.travel.cities.tables import City
+from app.features.location.cities.tables import City
 from app.features.travel.constants import PLACE_KINDS, in_clause
 from app.features.travel.tags.tables import TravelTag, places_tags
 
@@ -24,7 +24,7 @@ class Place(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    city_id: Mapped[int] = mapped_column(ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=False, index=True)
+    city_id: Mapped[int] = mapped_column(ForeignKey("location.cities.id", ondelete="RESTRICT"), nullable=False, index=True)
     maps_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

@@ -15,8 +15,8 @@ from app.features.core.weather_settings.schemas import (
 from app.features.organizer.locations.repository import LocationRepository
 from app.features.organizer.locations.schemas import LocationFilters
 from app.features.organizer.locations.tables import Location
-from app.features.travel.cities.repository import CityRepository
-from app.features.travel.cities.schemas import CityFilters
+from app.features.location.cities.repository import CityRepository
+from app.features.location.cities.schemas import CityFilters
 
 logger = logging.getLogger(__name__)
 

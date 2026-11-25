@@ -258,7 +258,7 @@ async def delete_stay(stay_id: int):
 @router.get("/cities/search")
 async def search_cities(q: str = ""):
     """Cities matching a name, for the leg form's city picker."""
-    found = await safe_get("/travel/cities", params={"q": q.strip()} if q.strip() else None)
+    found = await safe_get("/location/cities", params={"q": q.strip()} if q.strip() else None)
     if found is None:
         return JSONResponse({"error": "Could not search cities."}, status_code=502)
     return JSONResponse(found)
@@ -266,15 +266,15 @@ async def search_cities(q: str = ""):
 
 @router.post("/cities")
 async def create_city(request: Request):
-    return await forward(api.post("/travel/cities", json=await request.json()), "Could not create the city.")
+    return await forward(api.post("/location/cities", json=await request.json()), "Could not create the city.")
 
 
 # "/cities..." and "/countries..." are registered before "/{trip_id}" so they are never read as a trip id.
 
 @router.get("/cities", response_class=HTMLResponse)
 async def cities_page(request: Request):
-    countries = await safe_get("/travel/countries")
-    cities = await safe_get("/travel/cities", default=[])
+    countries = await safe_get("/location/countries")
+    cities = await safe_get("/location/cities", default=[])
     by_country: dict[int, list] = {}
     for city in cities or []:
         by_country.setdefault(city["country"]["id"], []).append(city)
@@ -284,22 +284,22 @@ async def cities_page(request: Request):
 
 @router.patch("/cities/{city_id}")
 async def update_city(city_id: int, request: Request):
-    return await forward(api.patch(f"/travel/cities/{city_id}", json=await request.json()), "Could not update the city.")
+    return await forward(api.patch(f"/location/cities/{city_id}", json=await request.json()), "Could not update the city.")
 
 
 @router.delete("/cities/{city_id}")
 async def delete_city(city_id: int):
-    return await forward(api.delete(f"/travel/cities/{city_id}"), "Could not delete the city.")
+    return await forward(api.delete(f"/location/cities/{city_id}"), "Could not delete the city.")
 
 
 @router.patch("/countries/{country_id}")
 async def update_country(country_id: int, request: Request):
-    return await forward(api.patch(f"/travel/countries/{country_id}", json=await request.json()), "Could not update the country.")
+    return await forward(api.patch(f"/location/countries/{country_id}", json=await request.json()), "Could not update the country.")
 
 
 @router.delete("/countries/{country_id}")
 async def delete_country(country_id: int):
-    return await forward(api.delete(f"/travel/countries/{country_id}"), "Could not delete the country.")
+    return await forward(api.delete(f"/location/countries/{country_id}"), "Could not delete the country.")
 
 
 @router.post("/cities/{city_id}/links")
@@ -318,7 +318,7 @@ async def city_page(city_id: int, request: Request):
     if city is None:
         return RedirectResponse("/travel/cities", status_code=302)
     links = await safe_get(f"/travel/cities/{city_id}/links", default=[])
-    countries = await safe_get("/travel/countries", default=[])
+    countries = await safe_get("/location/countries", default=[])
     return templates.TemplateResponse(request, "travel_city.html", {
         "city": city, "countries": countries, "web_links": links, "link_kinds": _LINK_KINDS, "links_preview": _LINKS_PREVIEW,
         "preview": _LOCATION_PREVIEW, "today": local_today().isoformat(),
@@ -479,10 +479,10 @@ async def places_page(request: Request):
     locations = await safe_get("/travel/places/locations", default={"cities": [], "countries": []})
     scope = None  # the city or country the list is narrowed to by id, shown above the filters
     if filters["city_id"]:
-        found = await safe_get(f"/travel/cities/{filters['city_id']}")
+        found = await safe_get(f"/location/cities/{filters['city_id']}")
         scope = {"name": found["name"], "href": f"/travel/cities/{found['id']}"} if found else None
     elif filters["country_id"]:
-        found = await safe_get(f"/travel/countries/{filters['country_id']}")
+        found = await safe_get(f"/location/countries/{filters['country_id']}")
         scope = {"name": found["name"], "href": f"/travel/countries/{found['id']}"} if found else None
     return templates.TemplateResponse(request, "travel_places.html", {
         **_places_context(places, 0, filters), "filters": filters, "place_kinds": _PLACE_KINDS, "scope": scope,

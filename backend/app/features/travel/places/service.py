@@ -4,8 +4,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.travel.cities.repository import CityRepository
-from app.features.travel.cities.service import CityResolver
+from app.features.location.cities.repository import CityRepository
+from app.features.location.cities.service import CityResolver
+from app.features.location.countries.repository import CountryRepository
+from app.features.travel.cities.hooks import TravelLocationHooks
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.notes_index import PLACE_NOTE, WEB_LINK_NOTE, TravelNoteIndex
 from app.features.travel.places.detail import PlaceDetail
@@ -32,7 +34,7 @@ class PlaceService:
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = PlaceRepository(session)
         self._city_repo = CityRepository(session)
-        self._cities = CityResolver(self._city_repo)
+        self._cities = CityResolver(self._city_repo, CountryRepository(session), TravelLocationHooks(session, embedding_service))
         self._tag_repo = TravelTagRepository(session)
         self._visit_repo = VisitRepository(session)
         self._stay_repo = StayRepository(session)

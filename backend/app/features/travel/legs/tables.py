@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, St
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.features.travel.cities.tables import City
+from app.features.location.cities.tables import City
 from app.features.travel.constants import LEG_MODES, in_clause
 
 
@@ -25,10 +25,10 @@ class Leg(Base):
     destination: Mapped[str] = mapped_column(String(200), nullable=False)
     # The city a terminal, station or address is in: nullable, since some ends can't be matched to a city.
     origin_city_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=True, index=True
+        ForeignKey("location.cities.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     destination_city_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=True, index=True
+        ForeignKey("location.cities.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     origin_code: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
     destination_code: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)

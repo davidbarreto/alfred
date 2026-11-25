@@ -192,11 +192,11 @@ class TestLinkPreviewClient:
 def svc():
     service = WebLinkService(AsyncMock(), AsyncMock(), None)
     service._repo, service._trip_repo, service._place_repo = AsyncMock(), AsyncMock(), AsyncMock()
-    service._city_repo = AsyncMock()
+    service._city_repo, service._country_repo = AsyncMock(), AsyncMock()
     service._trip_repo.get_trip.return_value = SimpleNamespace(id=1, name="Example trip")
     service._place_repo.get_place.return_value = SimpleNamespace(id=3, name="Cafe Example")
     service._city_repo.get_city.return_value = SimpleNamespace(id=4, name="Alpha")
-    service._city_repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia")
+    service._country_repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia")
     service._preview.fetch.return_value = LinkPreview("Fetched title", "Fetched desc", "https://example.com/i.jpg")
     service._repo.create_link.side_effect = lambda data: _link(**{
         **data, "id": 5, "trip_id": data.get("trip_id"), "place_id": data.get("place_id"),
@@ -240,7 +240,7 @@ class TestCreate:
 
     async def test_unknown_city_or_country(self, svc):
         svc._city_repo.get_city.return_value = None
-        svc._city_repo.get_country.return_value = None
+        svc._country_repo.get_country.return_value = None
         for call in (svc.create_city_link, svc.create_country_link, svc.get_city_links, svc.get_country_links):
             with pytest.raises(TravelNotFoundError):
                 await call(9, WebLinkCreate(url="https://example.com/a")) if "create" in call.__name__ else await call(9)

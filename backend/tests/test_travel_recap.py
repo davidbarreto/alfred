@@ -186,8 +186,8 @@ async def _sql(call) -> str:
 class TestFilterSql:
     async def test_trip_city_and_country_look_at_stays_and_visits(self):
         sql = await _sql(lambda s: TripRepository(s).get_trips(TripFilters(status="all", city="Lisbon", country="Portugal"), date(2026, 6, 5)))
-        assert "travel.stays" in sql and "travel.visits" in sql and "lower(travel.cities.name) = 'lisbon'" in sql
-        assert "lower(travel.countries.name) = 'portugal'" in sql and " OR " in sql
+        assert "travel.stays" in sql and "travel.visits" in sql and "lower(location.cities.name) = 'lisbon'" in sql
+        assert "lower(location.countries.name) = 'portugal'" in sql and " OR " in sql
 
     async def test_ungraded_places_are_those_without_any_grade(self):
         sql = await _sql(lambda s: PlaceRepository(s).get_places(PlaceFilters(ungraded=True)))

@@ -4,7 +4,8 @@ from typing import Any
 from sqlalchemy import and_, case, delete, func, or_, select, union, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.travel.cities.tables import City, Country
+from app.features.location.cities.tables import City
+from app.features.location.countries.tables import Country
 from app.features.travel.places.tables import Place
 from app.features.travel.stays.tables import Stay
 from app.features.travel.tags.tables import TravelTag, trips_tags

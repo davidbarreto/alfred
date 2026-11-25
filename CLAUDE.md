@@ -73,7 +73,7 @@ Full tree: `docs/architecture.md`.
 - Environment config via `pydantic-settings`; never hardcode secrets or URLs
 
 ### Database (PostgreSQL + pgvector)
-- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs`, `study`, `metrics`, `planning` (what each holds: `docs/data-model.md`)
+- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs`, `study`, `metrics`, `planning`, `travel`, `location` (what each holds: `docs/data-model.md`)
 - Write-through cache pattern for external integrations (Notion, Google Calendar, Google Contacts)
 - Alfred-only columns (e.g. task `estimate_minutes`, event `availability`) never go to the provider: the service strips them before every provider call and skips the call when an update touches only those fields
 - Embeddings live in a generic `core.embeddings` table; treat as a derived index, not source of truth

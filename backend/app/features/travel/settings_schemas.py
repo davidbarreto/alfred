@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator
 
 from app.features.core.settings.metadata import setting
-from app.features.travel.cities.schemas import CityRef
+from app.features.location.cities.schemas import CityRef
 
 # Each one is a travel.* setting with this default (the constant the code used before).
 DEFAULT_LEAVE_HOME_LEAD_MIN = 60

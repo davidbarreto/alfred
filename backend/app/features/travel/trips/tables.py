@@ -5,7 +5,7 @@ from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.features.travel.cities.tables import City
+from app.features.location.cities.tables import City
 from app.features.travel.tags.tables import TravelTag, trips_tags
 
 
@@ -31,7 +31,7 @@ class Trip(Base):
     default_tag_names: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # This trip's own home and airport times. NULL = follow the travel settings (see `effective_home`).
     home_city_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("travel.cities.id", ondelete="RESTRICT"), nullable=True, index=True
+        Integer, ForeignKey("location.cities.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     home_address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     airport_buffer_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -57,7 +57,7 @@ class TripWeather(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     trip_id: Mapped[int] = mapped_column(ForeignKey("travel.trips.id", ondelete="CASCADE"), nullable=False)
-    city_id: Mapped[int] = mapped_column(ForeignKey("travel.cities.id", ondelete="CASCADE"), nullable=False)
+    city_id: Mapped[int] = mapped_column(ForeignKey("location.cities.id", ondelete="CASCADE"), nullable=False)
     day: Mapped[date] = mapped_column(Date, nullable=False)
     min_c: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     max_c: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

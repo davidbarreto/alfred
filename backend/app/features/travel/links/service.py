@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import WEB_LINK_NOTE, TravelNoteIndex
-from app.features.travel.cities.repository import CityRepository
+from app.features.location.cities.repository import CityRepository
+from app.features.location.countries.repository import CountryRepository
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.links.kind import display_domain, guess_kind, is_social
@@ -27,6 +28,7 @@ class WebLinkService:
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
         self._city_repo = CityRepository(session)
+        self._country_repo = CountryRepository(session)
         self._preview = preview_client
         self._notes = TravelNoteIndex(embedding_service)
 
@@ -49,7 +51,7 @@ class WebLinkService:
         return city.name
 
     async def _country_name(self, country_id: int) -> str:
-        country = await self._city_repo.get_country(country_id)
+        country = await self._country_repo.get_country(country_id)
         if country is None:
             raise TravelNotFoundError(f"Country {country_id} not found")
         return country.name

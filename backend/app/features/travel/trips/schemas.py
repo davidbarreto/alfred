@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import Query
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
-from app.features.travel.cities.schemas import CityRef
+from app.features.location.cities.schemas import CityRef
 from app.features.travel.constants import TripStatusFilter
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead

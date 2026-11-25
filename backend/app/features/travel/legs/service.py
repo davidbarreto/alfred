@@ -3,9 +3,9 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.travel.cities.repository import CityRepository
+from app.features.location.cities.repository import CityRepository
 from app.features.travel.event_links import EventLinkChecker
-from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.notes_index import LEG_NOTE, TravelNoteIndex
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate

@@ -101,6 +101,7 @@ alfred/
 │   │   │   │   ├── grammar_scope/ # Per-track grammar curriculum (active/deferred/mastered)
 │   │   │   │   ├── sessions/      # Learning sessions; feeds_srs flag; daily progress
 │   │   │   │   └── tracks/        # Language tracks (code, CEFR level, daily_quota, review_mode)
+│   │   │   ├── location/          # Shared geography: countries/, cities/ (CRUD, CityResolver), hooks.py (what other domains do on create/delete)
 │   │   │   ├── metrics/           # Personal measurement log: series, entries (start/stop, value, count), tags
 │   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
 │   │   │   ├── study/             # Study planner: tracks, targeted plans (backlog + global cap), tags, generator

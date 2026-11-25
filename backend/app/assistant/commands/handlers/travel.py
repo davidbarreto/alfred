@@ -7,8 +7,9 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import build_model, optional_int, parse_int, parse_tags, require_int
-from app.features.travel.cities.schemas import CityFilters
-from app.features.travel.cities.service import CityService
+from app.features.location.cities.schemas import CityFilters
+from app.features.location.cities.service import CityService
+from app.features.location.countries.service import CountryService
 from app.features.travel.constants import TRIP_STATUS_FILTERS
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.default_tags import TripDefaultTagService
@@ -43,6 +44,7 @@ class TravelServices:
     recap: TripRecapService
     web_links: WebLinkService | None = None
     cities: CityService | None = None
+    countries: CountryService | None = None
 
 
 def _bad_request(detail: str) -> HTTPException:
@@ -219,7 +221,7 @@ async def _find_city(services: TravelServices, ref: str, country: str | None) ->
 async def _find_country(services: TravelServices, ref: str) -> int:
     if _is_id(ref):
         return int(ref)
-    matches = [c for c in await services.cities.get_countries() if c.name.lower() == ref.lower()]
+    matches = [c for c in await services.countries.get_countries() if c.name.lower() == ref.lower()]
     if not matches:
         raise _not_found("Country", repr(ref))
     return matches[0].id

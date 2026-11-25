@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 
 from app import dependencies as deps
-from app.features.travel.cities.repository import CityRepository
-from app.features.travel.cities.schemas import CityUpdate, CountryUpdate
-from app.features.travel.cities.service import CityService
+from app.features.location.cities.tables import City
+from app.features.travel.cities.hooks import TravelLocationHooks
+from app.features.travel.cities.repository import TravelCityRepository
+from app.features.travel.cities.service import TravelCityService
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.repository import PlaceRepository
@@ -98,12 +98,10 @@ def _city_row(id=1, name="Alpha", country_id=2):
 
 @pytest.fixture
 def service():
-    svc = CityService(AsyncMock())
-    svc._repo, svc._place_repo, svc._link_repo, svc._notes = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
-    svc._cost_repo, svc._trip_repo, svc._settings = AsyncMock(), AsyncMock(), AsyncMock()
-    svc._repo.get_city_in_country.return_value = None
+    svc = TravelCityService(AsyncMock())
+    svc._repo, svc._cities, svc._countries, svc._place_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+    svc._cost_repo, svc._settings = AsyncMock(), AsyncMock()
     svc._settings.get_value.return_value = None
-    svc._trip_repo.count_home_city_trips.return_value = 0
     svc._cost_repo.get_place_linked_ids.return_value = set()
     svc._cost_repo.get_unlinked_tagged_ids.return_value = set()
     svc._cost_repo.get_cost.return_value = (Decimal("0.00"), 0, 0)
@@ -112,11 +110,11 @@ def service():
 
 class TestCityDetail:
     async def test_unknown_city(self, service):
-        service._repo.get_city.return_value = None
+        service._cities.get_city.return_value = None
         assert await service.get_city_detail(9) is None
 
     async def test_grade_is_the_mean_of_the_graded_places_and_counts_them(self, service):
-        service._repo.get_city.return_value = _city_row()
+        service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: [10, 11, 12]}
         service._place_repo.get_grades.return_value = {10: (4.0, 2), 11: (3.0, 1)}
         service._repo.get_places.return_value = [SimpleNamespace(id=10, name="A", kind="cafe")]
@@ -126,7 +124,7 @@ class TestCityDetail:
         assert detail.places[0].grade == 4.0
 
     async def test_no_graded_place_means_no_grade(self, service):
-        service._repo.get_city.return_value = _city_row()
+        service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: [10]}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
@@ -135,7 +133,7 @@ class TestCityDetail:
         assert (detail.grade, detail.grade_count) == (None, 0)
 
     async def test_only_five_places_are_asked_for(self, service):
-        service._repo.get_city.return_value = _city_row()
+        service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: list(range(8))}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
@@ -147,86 +145,14 @@ class TestCityDetail:
 class TestCountryDetail:
     async def test_grade_is_the_mean_of_the_city_means(self, service):
         country = SimpleNamespace(id=2, name="Examplia", code="EX", created_at=NOW, updated_at=NOW, default_tag_names=None)
-        service._repo.get_country.return_value = country
-        service._repo.get_country_cities.return_value = [_city_row(1, "Alpha"), _city_row(3, "Beta"), _city_row(4, "Gamma")]
+        service._countries.get_country.return_value = country
+        service._cities.get_country_cities.return_value = [_city_row(1, "Alpha"), _city_row(3, "Beta"), _city_row(4, "Gamma")]
         service._repo.get_place_ids_by_city.return_value = {1: [10], 3: [11, 12], 4: []}
         service._place_repo.get_grades.return_value = {10: (5.0, 1), 11: (3.0, 1), 12: (4.0, 1)}
         service._repo.get_trips_of_cities.return_value = []
         detail = await service.get_country_detail(2)
         assert (detail.grade, detail.grade_count) == (4.25, 2)
         assert [(c.name, c.place_count, c.grade) for c in detail.cities] == [("Alpha", 1, 5.0), ("Beta", 2, 3.5), ("Gamma", 0, None)]
-
-
-class TestEdits:
-    async def test_rename_into_a_taken_name_is_a_conflict(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.get_city_in_country.return_value = _city_row(id=7, name="Beta")
-        with pytest.raises(TravelConflictError):
-            await service.update_city(1, CityUpdate(name="Beta"))
-        service._repo.update.assert_not_awaited()
-
-    async def test_a_case_change_of_its_own_name_is_fine(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.get_city_in_country.return_value = _city_row()
-        await service.update_city(1, CityUpdate(name=" ALPHA "))
-        assert service._repo.update.await_args.args[1] == {"name": "ALPHA"}
-
-    async def test_moving_to_an_unknown_country_is_not_found(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.get_country.return_value = None
-        with pytest.raises(TravelNotFoundError):
-            await service.update_city(1, CityUpdate(country_id=99))
-
-    async def test_a_code_of_another_country_is_a_conflict(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia", code=None)
-        service._repo.get_other_country_by_code.return_value = SimpleNamespace(id=3)
-        with pytest.raises(TravelConflictError):
-            await service.update_country(2, CountryUpdate(code="ex"))
-
-    async def test_a_null_code_clears_it(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia", code="EX")
-        await service.update_country(2, CountryUpdate.model_validate({"code": None}))
-        assert service._repo.update.await_args.args[1] == {"code": None}
-
-    def test_the_code_is_uppercased_and_must_be_letters(self):
-        assert CountryUpdate(code="gb").code == "GB"
-        with pytest.raises(ValidationError):
-            CountryUpdate(code="1a")
-
-
-class TestDeletes:
-    async def test_a_city_with_places_or_leg_ends_is_a_conflict_naming_them(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.count_places.return_value = 2
-        service._repo.count_leg_ends.return_value = 3
-        with pytest.raises(TravelConflictError, match="2 place.*3 leg end.*0 trip home"):
-            await service.delete_city(1)
-        service._repo.delete.assert_not_awaited()
-
-    async def test_an_unused_city_is_deleted_with_its_link_notes(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.count_places.return_value = 0
-        service._repo.count_leg_ends.return_value = 0
-        service._link_repo.get_link_ids.return_value = [5, 6]
-        assert await service.delete_city(1) is True
-        assert service._notes.remove.await_count == 2
-
-    async def test_unknown_city_is_not_deleted(self, service):
-        service._repo.get_city.return_value = None
-        assert await service.delete_city(1) is False
-
-    async def test_a_country_with_cities_is_a_conflict(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia")
-        service._repo.get_country_cities.return_value = [_city_row()]
-        with pytest.raises(TravelConflictError):
-            await service.delete_country(2)
-
-    async def test_an_empty_country_is_deleted(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia")
-        service._repo.get_country_cities.return_value = []
-        service._link_repo.get_link_ids.return_value = []
-        assert await service.delete_country(2) is True
-        service._repo.delete.assert_awaited_once()
 
 
 class TestSql:
@@ -248,28 +174,28 @@ class TestSql:
 
     async def test_trips_of_cities_look_at_stays_visits_and_leg_ends(self):
         session = self._Session()
-        await CityRepository(session).get_trips_of_cities([1, 2])
+        await TravelCityRepository(session).get_trips_of_cities([1, 2])
         sql = self._sql(session.statements[0])
         assert "UNION" in sql and "travel.stays" in sql and "travel.visits" in sql and "travel.legs" in sql
         assert "origin_city_id IN (1, 2)" in sql and "ORDER BY travel.trips.start_date DESC" in sql
 
     async def test_no_cities_no_query(self):
         session = self._Session()
-        assert await CityRepository(session).get_trips_of_cities([]) == []
+        assert await TravelCityRepository(session).get_trips_of_cities([]) == []
         assert session.statements == []
 
     async def test_places_filter_by_city_id_and_country_id(self):
         session = self._Session()
         await PlaceRepository(session).get_places(PlaceFilters(city_id=4, country_id=2))
         sql = self._sql(session.statements[0])
-        assert "travel.places.city_id = 4" in sql and "travel.cities.country_id = 2" in sql
+        assert "travel.places.city_id = 4" in sql and "location.cities.country_id = 2" in sql
 
 
 class TestRoutes:
     @pytest.fixture
     def client(self):
         svc = AsyncMock()
-        app.dependency_overrides[deps.get_city_service] = lambda: svc
+        app.dependency_overrides[deps.get_travel_city_service] = lambda: svc
         yield TestClient(app), svc
         app.dependency_overrides.clear()
 
@@ -283,27 +209,12 @@ class TestRoutes:
         svc.get_country_detail.return_value = None
         assert c.get("/travel/countries/9", headers=AUTH).status_code == 404
 
-    def test_delete_conflict_and_missing_and_ok(self, client):
+    def test_charges_404(self, client):
         c, svc = client
-        svc.delete_city.side_effect = TravelConflictError("in use")
-        assert c.delete("/travel/cities/1", headers=AUTH).status_code == 409
-        svc.delete_city.side_effect = None
-        svc.delete_city.return_value = False
-        assert c.delete("/travel/cities/1", headers=AUTH).status_code == 404
-        svc.delete_city.return_value = True
-        assert c.delete("/travel/cities/1", headers=AUTH).status_code == 204
-        svc.delete_country.return_value = True
-        assert c.delete("/travel/countries/1", headers=AUTH).status_code == 204
-
-    def test_patch_conflicts_and_unknown(self, client):
-        c, svc = client
-        svc.update_city.side_effect = TravelConflictError("exists")
-        assert c.patch("/travel/cities/1", headers=AUTH, json={"name": "B"}).status_code == 409
-        svc.update_city.side_effect = TravelNotFoundError("Country 9 not found")
-        assert c.patch("/travel/cities/1", headers=AUTH, json={"country_id": 9}).status_code == 404
-        svc.update_country.side_effect = TravelConflictError("exists")
-        assert c.patch("/travel/countries/1", headers=AUTH, json={"code": "EX"}).status_code == 409
-        assert c.patch("/travel/countries/1", headers=AUTH, json={"code": "1"}).status_code == 422
+        svc.get_city_charges.return_value = None
+        svc.get_country_charges.return_value = None
+        assert c.get("/travel/cities/9/charges", headers=AUTH).status_code == 404
+        assert c.get("/travel/countries/9/charges", headers=AUTH).status_code == 404
 
 
 class TestLinkRoutes:
@@ -352,7 +263,7 @@ class TestLinkRoutes:
 
 class TestSpendAndTags:
     async def test_linked_spend_comes_from_the_citys_places_and_tagged_spend_is_what_nothing_else_counts(self, service):
-        service._repo.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Lisbon, Trip"})
+        service._cities.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Lisbon, Trip"})
         service._repo.get_place_ids_by_city.return_value = {1: [10, 11]}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
@@ -369,7 +280,7 @@ class TestSpendAndTags:
         assert detail.costs.tagged.transaction_count == 1 and detail.default_tag_names == "Lisbon, Trip"
 
     async def test_a_city_without_tags_asks_for_no_tagged_charges_beyond_an_empty_set(self, service):
-        service._repo.get_city.return_value = _city_row()
+        service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: []}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
@@ -381,8 +292,8 @@ class TestSpendAndTags:
         country = SimpleNamespace(id=2, name="Examplia", code=None, created_at=NOW, updated_at=NOW, default_tag_names="spain")
         city_a = SimpleNamespace(**{**_city_row(1, "Alpha").__dict__, "default_tag_names": "alpha"})
         city_b = SimpleNamespace(**{**_city_row(3, "Beta").__dict__, "default_tag_names": None})
-        service._repo.get_country.return_value = country
-        service._repo.get_country_cities.return_value = [city_a, city_b]
+        service._countries.get_country.return_value = country
+        service._cities.get_country_cities.return_value = [city_a, city_b]
         service._repo.get_place_ids_by_city.return_value = {1: [10], 3: [11]}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_trips_of_cities.return_value = []
@@ -395,7 +306,7 @@ class TestSpendAndTags:
         assert detail.costs.overall.transaction_count == 3
 
     async def test_city_charges_are_the_ids_behind_each_spend_part(self, service):
-        service._repo.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Trip"})
+        service._cities.get_city.return_value = SimpleNamespace(**{**_city_row().__dict__, "default_tag_names": "Trip"})
         service._repo.get_place_ids_by_city.return_value = {1: [10]}
         service._place_repo.get_grades.return_value = {}
         service._cost_repo.get_place_linked_ids.return_value = {1, 2}
@@ -412,8 +323,8 @@ class TestSpendAndTags:
         }
 
     async def test_country_charges_merge_every_tag_group_once_and_unknowns_are_none(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, default_tag_names="spain")
-        service._repo.get_country_cities.return_value = [SimpleNamespace(id=1, default_tag_names="alpha")]
+        service._countries.get_country.return_value = SimpleNamespace(id=2, default_tag_names="spain")
+        service._cities.get_country_cities.return_value = [SimpleNamespace(id=1, default_tag_names="alpha")]
         service._repo.get_place_ids_by_city.return_value = {1: [10]}
         service._place_repo.get_grades.return_value = {}
         service._cost_repo.get_place_linked_ids.return_value = set()
@@ -422,25 +333,15 @@ class TestSpendAndTags:
         service._cost_repo.get_transactions.return_value = []
         service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
         assert (await service.get_country_charges(2, "tagged")).cost.transaction_count == 3
-        service._repo.get_country.return_value = None
-        service._repo.get_city.return_value = None
+        service._countries.get_country.return_value = None
+        service._cities.get_city.return_value = None
         assert await service.get_country_charges(9, "overall") is None
         assert await service.get_city_charges(9, "overall") is None
-
-    async def test_blank_default_tags_are_stored_as_null(self, service):
-        service._repo.get_city.return_value = _city_row()
-        await service.update_city(1, CityUpdate(default_tag_names="  "))
-        assert service._repo.update.await_args.args[1] == {"default_tag_names": None}
-
-    async def test_the_tags_are_saved_trimmed(self, service):
-        service._repo.get_country.return_value = SimpleNamespace(id=2, name="Examplia", code=None)
-        await service.update_country(2, CountryUpdate(default_tag_names=" spain, travel "))
-        assert service._repo.update.await_args.args[1] == {"default_tag_names": "spain, travel"}
 
 
 class TestHome:
     async def test_the_home_city_is_flagged_on_its_page(self, service):
-        service._repo.get_city.return_value = _city_row()
+        service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: []}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
@@ -450,21 +351,61 @@ class TestHome:
         service._settings.get_value.return_value = "9"
         assert (await service.get_city_detail(1)).home is False
 
-    async def test_the_home_city_cannot_be_deleted(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.count_places.return_value = 0
-        service._repo.count_leg_ends.return_value = 0
-        service._settings.get_value.return_value = "1"
-        with pytest.raises(TravelConflictError, match="home city"):
-            await service.delete_city(1)
 
-    async def test_a_city_that_is_the_home_of_a_trip_cannot_be_deleted(self, service):
-        service._repo.get_city.return_value = _city_row()
-        service._repo.count_places.return_value = 0
-        service._repo.count_leg_ends.return_value = 0
-        service._trip_repo.count_home_city_trips.return_value = 2
-        with pytest.raises(TravelConflictError, match="2 trip home"):
-            await service.delete_city(1)
+@pytest.fixture
+def hooks():
+    h = TravelLocationHooks(AsyncMock())
+    h._repo, h._trip_repo, h._link_repo, h._settings, h._notes = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+    h._settings.get_value.return_value = None
+    h._repo.count_places.return_value = 0
+    h._repo.count_leg_ends.return_value = 0
+    h._trip_repo.count_home_city_trips.return_value = 0
+    return h
+
+
+class TestHooks:
+    async def test_an_unused_city_is_not_in_use(self, hooks):
+        assert await hooks.city_in_use(_city_row()) is None
+
+    async def test_places_leg_ends_and_trip_homes_are_named(self, hooks):
+        hooks._repo.count_places.return_value = 2
+        hooks._repo.count_leg_ends.return_value = 3
+        hooks._trip_repo.count_home_city_trips.return_value = 1
+        assert await hooks.city_in_use(_city_row()) == "Alpha is used by 2 place(s), 3 leg end(s) and 1 trip home(s)"
+
+    async def test_the_home_city_is_in_use(self, hooks):
+        hooks._settings.get_value.return_value = "1"
+        assert "home city" in await hooks.city_in_use(_city_row())
+
+    async def test_a_new_city_gets_the_leg_ends_with_its_name(self, hooks):
+        hooks._repo.attach_leg_ends.return_value = 2
+        city = _city_row(id=4, name="Beta")
+        await hooks.city_created(city)
+        hooks._repo.attach_leg_ends.assert_awaited_once_with(city)
+
+    async def test_the_link_notes_are_dropped_only_when_the_delete_is_done(self, hooks):
+        hooks._link_repo.get_link_ids.return_value = [5, 6]
+        after = await hooks.before_delete(city_id=1)
+        hooks._link_repo.get_link_ids.assert_awaited_once_with(city_id=1, country_id=None)
+        hooks._notes.remove.assert_not_awaited()
+        await after()
+        assert hooks._notes.remove.await_count == 2
+
+    async def test_attaching_leg_ends_only_touches_ends_without_a_city_matched_on_trimmed_lowercase_text(self):
+        class _Session:
+            def __init__(self):
+                self.statements = []
+
+            async def execute(self, stmt):
+                self.statements.append(stmt)
+                return SimpleNamespace(rowcount=1)
+
+        session = _Session()
+        attached = await TravelCityRepository(session).attach_leg_ends(City(id=4, name="Porto", country_id=1))
+        sql = [str(st.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})) for st in session.statements]
+        assert attached == 2 and len(sql) == 2
+        assert "origin_city_id IS NULL" in sql[0] and "lower(trim(travel.legs.origin)) = 'porto'" in sql[0]
+        assert "destination_city_id IS NULL" in sql[1] and "SET destination_city_id=4" in sql[1].replace(" = ", "=")
 
 
 class TestCostSql:

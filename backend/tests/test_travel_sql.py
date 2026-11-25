@@ -62,7 +62,7 @@ class TestPlaceLocationQuery:
         except _Stop:
             pass
         sql = _literal(session.statement)
-        assert "travel.cities.name" in sql and "travel.countries.name" in sql
+        assert "location.cities.name" in sql and "location.countries.name" in sql
 
 
 class TestPlaceCityJoins:
@@ -73,9 +73,9 @@ class TestPlaceCityJoins:
         except _Stop:
             pass
         sql = _literal(session.statement)
-        assert "JOIN travel.cities ON travel.cities.id = travel.places.city_id" in sql
-        assert "lower(travel.cities.name) = 'lisbon'" in sql and "lower(travel.countries.name) = 'portugal'" in sql
-        assert "lower(travel.cities.name) LIKE '%%ex%%'" in sql and "lower(travel.countries.name) LIKE '%%ex%%'" in sql
+        assert "JOIN location.cities ON location.cities.id = travel.places.city_id" in sql
+        assert "lower(location.cities.name) = 'lisbon'" in sql and "lower(location.countries.name) = 'portugal'" in sql
+        assert "lower(location.cities.name) LIKE '%%ex%%'" in sql and "lower(location.countries.name) LIKE '%%ex%%'" in sql
 
 
 class TestWeatherKey:

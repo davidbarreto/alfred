@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.features.travel.cities.schemas import CityRef
+from app.features.location.cities.schemas import CityRef
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.visits.schemas import VisitRead

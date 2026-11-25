@@ -15,7 +15,8 @@ PostgreSQL + pgvector, SQLAlchemy 2.0 `Mapped[]` models, Alembic migrations. Per
 | `study` | study planner: tracks, targeted plans, tags |
 | `metrics` | personal measurement log: series, entries, tags |
 | `planning` | saved day plans (`day_plans`) |
-| `travel` | trips, legs, stays, places, cities, countries, visits, tags |
+| `travel` | trips, legs, stays, places, visits, tags, links |
+| `location` | geography shared by every domain: countries, cities |
 
 ## Conventions
 
@@ -40,5 +41,6 @@ Migrations, foreign keys, `created_at`/`updated_at`, boolean and timestamp namin
 | Reminders & overload | `core.overload_log`, `core.settings` | [modules/reminders-overload.md](modules/reminders-overload.md) |
 | Planning | `planning.day_plans`, `organizer.routines`, `routine_steps`, `activities`, `activity_logs`, `activities_tags`, `calendar_event_skips` (migration 080), `calendar_event_overrides` (migration 082) | [modules/planning.md](modules/planning.md) |
 | Travel | `travel.trips`, `legs`, `stays`, `places`, `tags`, `trips_tags` (migration 084), `visits`, `places_tags` (migration 085), `legs_transactions`, `stays_transactions`, `visits_transactions` and `calendar_event_id` on legs/stays (migration 086) and visits (migration 087), `links` (migration 090; migration 092 lets a link belong to a city or country too), `countries` and `cities` (migration 091; migration 093 adds `default_tag_names` to both and the trips' own `home_city_id` / `home_address` / `airport_buffer_min` / `home_to_airport_min`; `places.city_id` replaces the text `city` / `country`, legs gain `origin_city_id` / `destination_city_id`, `trip_weather.city_id` replaces `city_key` / `city`) | [modules/travel.md](modules/travel.md) |
+| Location | `location.countries`, `location.cities`: `travel.countries` / `travel.cities` moved by migration 100 (`ALTER TABLE ... SET SCHEMA`: same ids and foreign keys, indexes renamed `*_travel_*` → `*_location_*`) | [modules/travel.md](modules/travel.md) (*Cities and countries*) |
 | Shopping | `organizer.shopping_products`, `shopping_items`, `recurrence_items` | [modules/shopping.md](modules/shopping.md) |
 | Locations | `organizer.locations`, `locations_shopping_categories` (migration 094); migration 095 creates Home from the old `organizer.home_address` setting; `location_travel_times` (migration 096, replaces the `planning.travel_times` setting); `calendar_events.location_id` (migration 097, SET NULL); `kind` limited to a fixed set (migration 098); `latitude`/`longitude` (migration 099) | [modules/locations.md](modules/locations.md) |

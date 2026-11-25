@@ -5328,12 +5328,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5366,12 +5366,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5406,12 +5406,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5443,12 +5443,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5480,12 +5480,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5517,12 +5517,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -5556,12 +5556,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities?country_id={{travel_country_id}}&q=postman city",
+          "raw": "{{base_url}}/location/cities?country_id={{travel_country_id}}&q=postman city",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ],
           "query": [
@@ -5600,14 +5600,56 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries",
+          "raw": "{{base_url}}/location/countries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "countries"
+          ]
+        }
+      }
+    },
+    {
+      "name": "134a - Travel No Longer Creates Cities",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('The write moved to /location/cities', () => pm.expect(pm.response.code).to.be.oneOf([404, 405]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "travel",
-            "countries"
+            "cities"
           ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Postman Nowhere\", \"country\": \"Testland\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       }
     },
@@ -6409,6 +6451,76 @@
       }
     },
     {
+      "name": "153a - Get Base City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('The base city only: no travel figures', () => { pm.expect(j.id).to.eql(Number(pm.environment.get('travel_city_id'))); pm.expect(j.country.id).to.eql(Number(pm.environment.get('travel_country_id'))); pm.expect(j).to.have.property('default_tag_names'); pm.expect(j).to.not.have.property('place_count'); pm.expect(j).to.not.have.property('trips'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/location/cities/{{travel_city_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "cities",
+            "{{travel_city_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "153b - Get Unknown Base City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/location/cities/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "cities",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
       "name": "154 - Get Country",
       "event": [
         {
@@ -6550,6 +6662,76 @@
           ],
           "path": [
             "travel",
+            "countries",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "155a - Get Base Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('The base country only: no travel figures', () => { pm.expect(j.id).to.eql(Number(pm.environment.get('travel_country_id'))); pm.expect(j).to.have.property('code'); pm.expect(j).to.have.property('created_at'); pm.expect(j).to.not.have.property('cities'); pm.expect(j).to.not.have.property('costs'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
+            "countries",
+            "{{travel_country_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "155b - Get Unknown Base Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/location/countries/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "location",
             "countries",
             "999999999"
           ]
@@ -6852,12 +7034,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_city_id}}"
           ]
@@ -6890,12 +7072,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_city_b_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_city_b_id}}"
           ]
@@ -6928,12 +7110,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_city_id}}"
           ]
@@ -6967,12 +7149,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "countries",
             "{{travel_country_id}}"
           ]
@@ -7005,12 +7187,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "countries",
             "{{travel_country_id}}"
           ]
@@ -7043,12 +7225,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "countries",
             "{{travel_country_id}}"
           ]
@@ -7111,12 +7293,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_city_id}}"
           ]
@@ -7213,12 +7395,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_city_b_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_city_b_id}}"
           ]
@@ -7247,12 +7429,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_newtown_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_newtown_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_newtown_city_id}}"
           ]
@@ -7281,12 +7463,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_renamed_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_renamed_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_renamed_city_id}}"
           ]
@@ -7350,12 +7532,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities",
+          "raw": "{{base_url}}/location/cities",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities"
           ]
         },
@@ -7500,12 +7682,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_home_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_home_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_home_city_id}}"
           ]
@@ -7799,12 +7981,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_home_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_home_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_home_city_id}}"
           ]
@@ -7872,12 +8054,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "countries",
             "{{travel_country_id}}"
           ]
@@ -7946,12 +8128,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}",
+          "raw": "{{base_url}}/location/countries/{{travel_country_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "countries",
             "{{travel_country_id}}"
           ]
@@ -8056,12 +8238,12 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/cities/{{travel_home_city_id}}",
+          "raw": "{{base_url}}/location/cities/{{travel_home_city_id}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "travel",
+            "location",
             "cities",
             "{{travel_home_city_id}}"
           ]

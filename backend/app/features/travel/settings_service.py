@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.organizer.locations.repository import LocationRepository
-from app.features.travel.cities.repository import CityRepository
-from app.features.travel.cities.schemas import CityRef
+from app.features.location.cities.repository import CityRepository
+from app.features.location.cities.schemas import CityRef
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.settings_schemas import (
     DEFAULT_CHARGE_LINK_LEAD_DAYS,

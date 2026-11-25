@@ -63,15 +63,15 @@ TASK_UPDATE_FLAGS = {
 _EVENT_PLANNING_DETAILS = (
     f"Planning fields (series-wide, Alfred only, never sent to Google): availability = how much the event blocks, one of "
     f"{'/'.join(EVENT_AVAILABILITIES)} (unset: all-day events are free, timed ones blocked); presence = "
-    f"{'/'.join(EVENT_PRESENCES)} (default in_person); place_id = one of the user's everyday places (alfred_location, "
+    f"{'/'.join(EVENT_PRESENCES)} (default in_person); place_id = one of the user's everyday places (alfred_place, "
     "id or name) the event happens at, so the client plans the trips there from the travel times between places; travel_minutes "
     "= one-way travel in minutes for an event with no location (default 0; with neither, in-person events "
     "get the assumed planning default); routine_id = an event-attached routine whose steps run around this event. "
     "Pass an empty availability, routine_id or place_id to clear it. location (free text) is the calendar's own "
     "location and is sent to Google; place_id never is, but when an event without invitees is linked and its location "
-    "is empty (or still the previous location's), Alfred fills location with the location's address (else its name). Locations are for frequent places only: for a one-off "
+    "is empty (or still the previous location's), Alfred fills location with the location's address (else its name). Linked places are for frequent places only: for a one-off "
     "appointment set travel_minutes (ask the user), and mark online events remote. When the user says it is a place they "
-    "go to often, create it first with alfred_location add (with --from travel times the user gives) and pass its id."
+    "go to often, create it first with alfred_place add (with --from travel times the user gives) and pass its id."
 )
 _EVENT_SKIP_DETAILS = (
     "id is the event id and date the day of the occurrence to leave out. Alfred only: the event in Google Calendar is "
@@ -178,29 +178,43 @@ _ACTIVITY_DETAILS = (
     "target_per_week is a soft wish such as 3 for the gym that only shapes suggestions and is never enforced; "
     "categories are tags (comma-separated plain names). Use a recurring task instead when skipping it counts as a miss."
 )
-LOCATION_FIELD_FLAGS = {
-    "--kind": "kind", "--address": "address", "--maps": "maps_url", "--coords": "coordinates", "--hours": "opening_hours",
-    "--sells": "sells", "--notes": "notes", "--active": "active", "--from": "travel_from",
+PLACE_FIELD_FLAGS = {
+    "--kind": "kind", "--city": "city", "--country": "country", "--address": "address", "--maps": "maps_url",
+    "--coords": "coordinates", "--hours": "opening_hours", "--sells": "sells", "--notes": "notes", "--active": "active",
+    "--from": "travel_from", "--everyday": "everyday", **FLAG_TAGS,
 }
-_LOCATION_DETAILS = (
-    "Locations are the user's frequent everyday places: home, work, school, gym and the shops they use "
-    "(not trip sights: those are travel places). kind is one of "
+PLACE_LIST_FLAGS = {
+    "--view": "view", "--kind": "kind", "--city": "city", "--country": "country", "--sells": "sells", "--tag": "tag",
+    "--min-grade": "min_grade", "--ungraded": "ungraded", "--all": "all", **FLAG_LIMIT, "--offset": "offset",
+}
+PLACE_LOOKUP_FLAGS = {"--city": "city", "--country": "country"}
+_PLACE_DETAILS = (
+    "One place table for everything: the user's everyday places (home, work, school, gym, the shops they use) and "
+    "the places of trips and outings (hotels, restaurants, sights). kind is one of "
     f"{', '.join(PLACE_KINDS)} (default {DEFAULT_KIND}; school also covers classes and courses, sports a pool, pitch "
     "or club, mall a shopping centre, variety_store a bazaar-style shop with household goods, tools and gear, "
     "hardware_store DIY, health a doctor, dentist or clinic, playground also an indoor play centre, venue concerts, "
-    "theatre or cinema). Only one location can be home, and the office or workplace is kind work, so find it with "
-    "list --kind work instead of guessing its name. sells is a comma-separated list of shopping "
-    "category names (what the shop is good for). hours is text such as 'mon-fri 08:00-20:00; sat 09:00-13:00, "
+    "theatre or cinema, hotel any stay, activity a tour or class, attraction a sight or viewpoint). Only one place can "
+    "be home, and the office or workplace is kind work, so find it with list --kind work instead of guessing its name. "
+    "city is a city name or id (default the home city, the Home place's); a new city needs country too. "
+    "everyday (true/false) says whether the place is one of the user's everyday places (shown in the day plan, the "
+    "event --at picker, the sells search); it defaults to true for home, work, school, gym, sports, the shop kinds "
+    "for daily needs, health and playground, false for hotel, activity, museum and attraction, and must be given for "
+    "the rest (restaurant, cafe, shop, park, venue, other): ask the user. Home is always everyday. sells (everyday "
+    "only) is a comma-separated list of shopping category names (what the shop is good for). tags are travel tags "
+    "(comma-separated; passing them replaces the list). hours is text such as 'mon-fri 08:00-20:00; sat 09:00-13:00, "
     "15:00-19:00; sun closed; holidays closed': days are mon..sun, ranges (mon-fri), lists (mon,wed), daily or "
     "holidays; a missing day means unknown. maps is a Maps link for the user. coords is 'latitude, longitude' such as "
-    "'41.1579, -8.6291' (the weather is looked up at a location's coordinates; when empty they are read from the Maps "
+    "'41.1579, -8.6291' (the weather is looked up at a place's coordinates; when empty they are read from the Maps "
     "link if it has any). An empty value clears an optional field. "
+    "A place is named by id or name: everyday places first, then the places in --city (default the home city); "
+    "a name found in several cities is refused with the candidates (use the id). "
     "When the user adds or edits a shop you may search the web for its opening hours: show what you found with the "
     "source and save them only after the user confirms. Alfred itself never searches. Never estimate travel minutes "
-    "from addresses: ask the user. from sets door-to-door minutes to this location as origin:mode=minutes[,mode=minutes][;...], "
-    "e.g. home:metro=20,foot=35;office:car=10 (home is the home location; each origin must already be a location; two-way "
-    "unless the reverse is saved too; saving the same origin and mode again updates the minutes). show lists the travel "
-    "times from and to the location."
+    "from addresses: ask the user. from (everyday only) sets door-to-door minutes to this place as "
+    "origin:mode=minutes[,mode=minutes][;...], e.g. home:metro=20,foot=35;office:car=10 (home is the Home place; "
+    "each origin must already be a place; two-way unless the reverse is saved too; saving the same origin and mode "
+    "again updates the minutes). show lists the travel times from and to the place, its grade, visits and stays."
 )
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
@@ -319,22 +333,17 @@ _LEG_OVERVIEW = (
     "url the booking link. " + _TRAVEL_FORMATS
 )
 _STAY_OVERVIEW = (
-    "A stay is a lodging period. Give place (id of an existing place) or hotel (a name, with optional city/country/"
-    "maps_url, reused if a hotel with that name and city exists; a new hotel needs city and country). check_in/check_out are local wall times at the hotel "
+    "A stay is a lodging period. Give place (an existing place, id or name) or hotel (a name, with optional city/country/"
+    "maps_url, reused if a place with that name and city exists; a new hotel goes in city and country, or the home "
+    "city when neither is given). check_in/check_out are local wall times at the hotel "
     "in its zone (tz); grade is 1-5 after the stay. trip is optional (a weekend away needs no trip). " + _TRAVEL_FORMATS
-)
-_PLACE_OVERVIEW = (
-    "A place is a hotel, restaurant, cafe, activity, museum, attraction, shop or other, independent of any trip. "
-    "kind is one of hotel/restaurant/cafe/activity/museum/attraction/shop/other. A new place needs a city and a country "
-    "(names; a new one is created). maps_url is the user's own link; lat/lng "
-    "are optional and user-supplied. notes holds lasting facts (\"book the terrace\"). A place's grade is the average of "
-    "its graded visits and stays. " + _TRAVEL_FORMATS
 )
 _VISIT_OVERVIEW = (
     "A visit is one occurrence of going to a place: status planned/visited/missed, optional trip, date and time "
     "(HH:MM, real for a reservation or approximate to order the day). A planned visit with no trip is the wishlist. "
-    "place is an id or a name: a name reuses an existing place (same name, and city if given) or creates one of the given "
-    "kind (default other); a new place needs city and country. grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
+    "place is an id or a name: a name reuses an existing place (everyday places and the home city first, or the given "
+    "city) or creates one of the given kind (default other) in city and country, or the home city when neither is "
+    "given. A local outing to grade is simpler with alfred_place grade. grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
 )
 _LINK_OVERVIEW = (
     "A link is a saved web address (official site, tips, Instagram or TikTok page, video, article, booking page) owned by "
@@ -363,17 +372,9 @@ STAY_FLAGS = {
     "--check-in": "check_in", "--check-out": "check_out", "--tz": "tz", "--ref": "booking_ref", "--url": "booking_url",
     "--notes": "notes", "--grade": "grade", "--trip": "trip",
 }
-PLACE_FLAGS = {
-    "--kind": "kind", "--city": "city", "--country": "country", "--maps-url": "maps_url", "--lat": "lat", "--lng": "lng",
-    "--address": "address", "--notes": "notes", **FLAG_TAGS,
-}
 LINK_FLAGS = {
     "--trip": "trip", "--place": "place", "--city": "city", "--country": "country", "--title": "title", "--kind": "kind",
     "--notes": "notes", "--url": "url",
-}
-PLACE_LIST_FLAGS = {
-    "--kind": "kind", "--city": "city", "--country": "country", "--tag": "tag", "--min-grade": "min_grade",
-    "--ungraded": "ungraded", "--status": "status", "--no-trip": "no_trip", **FLAG_LIMIT, "--offset": "offset",
 }
 VISIT_FLAGS = {
     "--trip": "trip", "--date": "date", "--time": "time", "--status": "status", "--grade": "grade", "--notes": "notes",
@@ -1356,45 +1357,6 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["id", "transaction_id"],
         },
     },
-    "travel_place": {
-        "add": {
-            "description": "Add a place: name, then --kind (hotel, restaurant, cafe, activity, museum, attraction, shop, other), --city and --country (both required)",
-            "details": _PLACE_OVERVIEW,
-            "aliases": ["/placeadd"],
-            "flags": PLACE_FLAGS,
-            "requires_args": True,
-            "arg_keys": ["name"],
-        },
-        "list": {
-            "description": "List places; the argument searches name, city and address. Filter by kind, city, tag, min grade, visit status",
-            "details": _PLACE_OVERVIEW + " no_trip=true keeps only places that belong to no trip. Each place carries its derived grade.",
-            "aliases": ["/places", "/placelist"],
-            "flags": PLACE_LIST_FLAGS,
-            "arg_keys": ["q"],
-        },
-        "get": {
-            "description": "Show a place (by id or name) with its visit and stay history, derived grade and lifetime cost",
-            "aliases": ["/place", "/placeget"],
-            "flags": {},
-            "requires_args": True,
-            "arg_keys": ["place"],
-        },
-        "update": {
-            "description": "Update a place by ID (name, kind, city, country, maps link, coordinates, address, notes, tags)",
-            "details": _PLACE_OVERVIEW + " Passing tags replaces the whole tag list.",
-            "aliases": ["/placeupdate"],
-            "flags": {**PLACE_FLAGS, "--name": "name"},
-            "requires_args": True,
-            "arg_keys": ["id"],
-        },
-        "delete": {
-            "description": "Delete a place by ID; refused while it has visits or stays",
-            "aliases": ["/placedelete"],
-            "flags": {},
-            "requires_args": True,
-            "arg_keys": ["id"],
-        },
-    },
     "travel_link": {
         "add": {
             "description": "Save a link: the address, then --trip, --place, --city or --country (an id or a name), optional --title, --kind, --notes",
@@ -1636,42 +1598,77 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["id"],
         },
     },
-    "location": {
+    "place": {
         "add": {
-            "description": "Add a frequent place (home, office, school, a shop): name, then --kind, --address, --hours, --sells, --from (travel minutes), --notes",
-            "details": _LOCATION_DETAILS,
-            "aliases": ["/locationadd"],
-            "flags": LOCATION_FIELD_FLAGS,
+            "description": "Add a place: name, then --kind, --city (default home city), --everyday, --address, --hours, --sells, --from (travel minutes), --tags",
+            "details": _PLACE_DETAILS,
+            "aliases": ["/placeadd"],
+            "flags": PLACE_FIELD_FLAGS,
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "list": {
-            "description": "List frequent places with today's hours; filter by --kind or --sells (a shopping category), --all includes archived",
-            "details": _LOCATION_DETAILS,
-            "aliases": ["/locations", "/locationlist"],
-            "flags": {"--kind": "kind", "--sells": "sells", "--all": "all", **FLAG_LIMIT},
+            "description": "List places: --view everyday (default, with today's hours), visited or all; filter by --kind, --sells, --city, --tag, --min-grade",
+            "details": _PLACE_DETAILS + (
+                " The argument searches names (and addresses). everyday: the everyday places and Home, filters kind, "
+                "sells, all. visited: places with a visit or a stay, with their grade and tags. all: every place. "
+                "city, country, tag, min_grade and ungraded (true: no grade yet) filter visited and all. --all true includes archived places."
+            ),
+            "aliases": ["/places", "/placelist"],
+            "flags": PLACE_LIST_FLAGS,
+            "arg_keys": ["q"],
         },
         "show": {
-            "description": "Show a location (id or name) with its hours, today's status, what it sells and its travel times",
-            "aliases": ["/location", "/locationshow"],
-            "flags": {},
+            "description": "Show a place (id or name) with its hours, what it sells, travel times, grade, visits and stays",
+            "details": _PLACE_DETAILS,
+            "aliases": ["/place", "/placeshow"],
+            "flags": PLACE_LOOKUP_FLAGS,
             "requires_args": True,
-            "arg_keys": ["location"],
+            "arg_keys": ["place"],
         },
         "update": {
-            "description": "Update a location (id or name): --name, --kind, --address, --hours, --sells (replaces the list), --from, --active",
-            "details": _LOCATION_DETAILS + " --active false archives it.",
-            "aliases": ["/locationupdate"],
-            "flags": {**LOCATION_FIELD_FLAGS, "--name": "name"},
+            "description": "Update a place (id or name): --name, --kind, --city, --address, --hours, --sells, --from, --tags, --everyday",
+            "details": _PLACE_DETAILS + (
+                " Here --city moves the place to that city (name it by id when the name is ambiguous). --everyday "
+                "false takes it off the everyday list, the place stays. --active false archives it."
+            ),
+            "aliases": ["/placeupdate"],
+            "flags": {**PLACE_FIELD_FLAGS, "--name": "name"},
             "requires_args": True,
-            "arg_keys": ["location"],
+            "arg_keys": ["place"],
+        },
+        "grade": {
+            "description": "Grade a place 1-5 after going there: place then grade, optional --date (default today) and --notes",
+            "details": (
+                "Saves a visited visit with no trip, so any place can be graded, the home town's restaurants included; "
+                "the place's grade is the average of its graded visits and stays. place is an id or a name (see "
+                "place add). For a visit during a trip use travel_visit instead."
+            ),
+            "aliases": ["/placegrade"],
+            "flags": {**PLACE_LOOKUP_FLAGS, "--grade": "grade", "--date": "date", "--notes": "notes"},
+            "requires_args": True,
+            "arg_keys": ["place"],
+        },
+        "archive": {
+            "description": "Archive a place (id or name): hidden from lists and pickers, its history is kept",
+            "aliases": ["/placearchive"],
+            "flags": PLACE_LOOKUP_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["place"],
+        },
+        "unarchive": {
+            "description": "Bring an archived place back",
+            "aliases": ["/placeunarchive"],
+            "flags": PLACE_LOOKUP_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["place"],
         },
         "delete": {
-            "description": "Delete a location by id or name",
-            "aliases": ["/locationdelete"],
-            "flags": {},
+            "description": "Delete a place (id or name); refused while it has travel times, visits or stays",
+            "aliases": ["/placedelete"],
+            "flags": PLACE_LOOKUP_FLAGS,
             "requires_args": True,
-            "arg_keys": ["location"],
+            "arg_keys": ["place"],
         },
     },
     "day_plan": {

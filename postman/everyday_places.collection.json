@@ -1055,17 +1055,19 @@
    }
   },
   {
-   "name": "17 - Command: Show Location By Name",
+   "name": "17 - Command: Show Place By Name",
    "event": [
     {
      "listen": "test",
      "script": {
       "exec": [
        "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-       "pm.test('Command found the location by name', () => {",
+       "pm.test('Command found the everyday place by name', () => {",
        "    const json = pm.response.json();",
        "    pm.expect(json.status).to.eql('ok');",
        "    pm.expect(json.result.id).to.eql(Number(pm.environment.get('location_id')));",
+       "    pm.expect(json.result.everyday).to.eql(true);",
+       "    pm.expect(json.result.travel_times).to.be.an('array');",
        "});"
       ],
       "type": "text/javascript"
@@ -1092,7 +1094,7 @@
     },
     "body": {
      "mode": "raw",
-     "raw": "{\n  \"type\": \"location\",\n  \"command\": \"show\",\n  \"args\": {\n    \"location\": \"postman market {{location_run}}\"\n  },\n  \"source\": \"postman\"\n}",
+     "raw": "{\n  \"type\": \"place\",\n  \"command\": \"show\",\n  \"args\": {\n    \"place\": \"postman market {{location_run}}\"\n  },\n  \"source\": \"postman\"\n}",
      "options": {
       "raw": {
        "language": "json"

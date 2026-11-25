@@ -21,10 +21,10 @@ _GROUP_LABELS = {
     "reminder": "Reminders",
     "finance": "Finance",
     "help": "Help",
+    "place": "Places",
     "travel_trip": "Travel: trips",
     "travel_leg": "Travel: legs",
     "travel_stay": "Travel: stays",
-    "travel_place": "Travel: places",
     "travel_visit": "Travel: visits",
     "travel_link": "Travel: links",
 }

@@ -9,7 +9,6 @@ from travel_city_helpers import city_ref
 from app.assistant.commands.handlers.travel import TravelServices, handle_travel
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
-from app.features.travel.places.detail import TravelPlaceDetail
 from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceRead
 from app.features.location.errors import LocationConflictError
 from app.features.travel.stays.schemas import StayCreate, StayRead
@@ -64,9 +63,14 @@ def _visit(id=11, status="planned", grade=None):
 def services():
     s = TravelServices(
         trips=AsyncMock(), legs=AsyncMock(), stays=AsyncMock(), places=AsyncMock(), visits=AsyncMock(),
-        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(), base_places=AsyncMock(),
+        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(), base_places=AsyncMock(), cities=AsyncMock(),
     )
+    s.base_places.find.return_value = None
+    s.cities.get_cities.return_value = []
     return s
+
+
+_LISBON = SimpleNamespace(id=2, name="Lisbon", country=SimpleNamespace(name="Portugal"))
 
 
 async def run(cmd_type, command, arguments, services):
@@ -218,11 +222,6 @@ class TestRecapAndFilters:
         f = services.trips.get_trips.await_args.args[0]
         assert (f.city, f.country) == ("Lisbon", "Portugal")
 
-    async def test_place_list_can_ask_for_ungraded_places(self, services):
-        services.places.get_places.return_value = []
-        await run("travel_place", "list", {"ungraded": "true"}, services)
-        assert services.places.get_places.await_args.args[0].ungraded is True
-
 
 class TestLegs:
     ARGS = {
@@ -263,7 +262,6 @@ class TestLegs:
 
 class TestStays:
     async def test_add_with_a_new_hotel_creates_the_place_first(self, services):
-        services.places.get_places.return_value = []
         services.places.create_place.return_value = _place()
         services.stays.create_stay.return_value = _stay()
         await run("travel_stay", "add", {
@@ -275,14 +273,17 @@ class TestStays:
         data: StayCreate = services.stays.create_stay.await_args.args[0]
         assert data.place_id == 3 and data.trip_id == 1
 
-    async def test_add_reuses_a_hotel_with_the_same_name(self, services):
-        services.places.get_places.return_value = [_place(), _place(id=4, name="Hotel Example Annex")]
+    async def test_add_reuses_a_hotel_with_the_same_name_in_that_city(self, services):
+        services.cities.get_cities.return_value = [_LISBON]
+        services.base_places.find.return_value = SimpleNamespace(id=3)
+        services.places.get_place.return_value = _place()
         services.stays.create_stay.return_value = _stay()
         await run("travel_stay", "add", {
             "trip_id": "1", "hotel": "hotel example", "city": "Lisbon", "country": "Portugal", "check_in": "2031-12-18T15:00",
             "check_out": "2031-12-20T11:00", "tz": "UTC",
         }, services)
         services.places.create_place.assert_not_awaited()
+        services.base_places.find.assert_awaited_once_with("hotel example", 2)
         assert services.stays.create_stay.await_args.args[0].place_id == 3
 
     async def test_add_with_a_place_id_never_creates(self, services):
@@ -310,60 +311,8 @@ class TestStays:
             await run("travel_stay", "update", {"id": "7", "grade": "great"}, services)
 
 
-class TestPlaces:
-    async def test_add_defaults_the_kind(self, services):
-        services.places.create_place.return_value = _place()
-        await run("travel_place", "add", {"name": "Cafe Example", "city": "Lisbon", "country": "Portugal", "tags": "Would return"}, services)
-        data: TravelPlaceCreate = services.places.create_place.await_args.args[0]
-        assert (data.kind, data.tags) == ("other", ["would return"])
-
-    async def test_add_with_a_bad_kind_is_a_400(self, services):
-        with pytest.raises(HTTPException) as exc:
-            await run("travel_place", "add", {"name": "X", "kind": "spaceship"}, services)
-        assert exc.value.status_code == 400
-
-    async def test_list_passes_filters(self, services):
-        services.places.get_places.return_value = [_place(grade=4.5, grade_count=2)]
-        result = await run("travel_place", "list", {"q": "ex", "kind": "hotel", "min_grade": "4", "no_trip": "true", "tag": "A,B"}, services)
-        f = services.places.get_places.await_args.args[0]
-        assert (f.q, f.kind, f.min_grade, f.no_trip, f.tag) == ("ex", "hotel", 4, True, ["A", "B"])
-        assert result["places"][0]["grade"] == 4.5
-
-    async def test_get_returns_history_and_lifetime_cost(self, services):
-        services.places.get_place.return_value = _place()
-        services.places.get_place_detail.return_value = TravelPlaceDetail(
-            **dict(_place()), visits=[_visit()], stays=[_stay()],
-        )
-        services.links.get_place_costs.return_value = SimpleNamespace(total=Cost(total_eur="80.00", transaction_count=2))
-        result = await run("travel_place", "get", {"place": "3"}, services)
-        assert len(result["visits"]) == 1 and len(result["stays"]) == 1 and result["lifetime_cost"]["total_eur"] == "80.00"
-
-    async def test_get_by_name_needs_an_exact_match(self, services):
-        services.places.get_places.return_value = [_place(name="Hotel Example Annex")]
-        with pytest.raises(HTTPException) as exc:
-            await run("travel_place", "get", {"place": "Hotel Example"}, services)
-        assert exc.value.status_code == 404
-
-    async def test_update_coordinates(self, services):
-        services.places.update_place.return_value = _place()
-        await run("travel_place", "update", {"id": "3", "lat": "38,7", "lng": "-9.1"}, services)
-        update = services.places.update_place.await_args.args[1]
-        assert update.coordinates == (38.7, -9.1)
-
-    async def test_bad_coordinate_is_a_400(self, services):
-        with pytest.raises(HTTPException):
-            await run("travel_place", "update", {"id": "3", "lat": "north"}, services)
-
-    async def test_delete_in_use_is_a_409(self, services):
-        services.base_places.delete.side_effect = LocationConflictError("'Cafe' can't be deleted: it has 1 visit(s)")
-        with pytest.raises(HTTPException) as exc:
-            await run("travel_place", "delete", {"id": "3"}, services)
-        assert exc.value.status_code == 409
-
-
 class TestVisits:
     async def test_add_by_name_creates_the_place_with_the_given_kind(self, services):
-        services.places.get_places.return_value = []
         services.places.create_place.return_value = _place(id=5, name="Museum Example", kind="museum")
         services.visits.create_visit.return_value = _visit()
         await run("travel_visit", "add", {
@@ -375,11 +324,33 @@ class TestVisits:
         assert (visit.place_id, visit.trip_id, visit.visit_date, visit.visit_time, visit.status) == (5, 1, date(2031, 12, 18), time(10, 0), "planned")
 
     async def test_add_reuses_a_known_place(self, services):
-        services.places.get_places.return_value = [_place(id=5, name="Museum Example", kind="museum")]
+        services.base_places.find.return_value = SimpleNamespace(id=5)
+        services.places.get_place.return_value = _place(id=5, name="Museum Example", kind="museum")
         services.visits.create_visit.return_value = _visit()
         await run("travel_visit", "add", {"place": "museum example"}, services)
         services.places.create_place.assert_not_awaited()
+        services.base_places.find.assert_awaited_once_with("museum example")
         assert services.visits.create_visit.await_args.args[0].place_id == 5
+
+    async def test_add_by_a_new_name_without_a_city_creates_it_in_the_home_city(self, services):
+        services.base_places.default_city_id.return_value = 15
+        services.places.create_place.return_value = _place(id=5, name="Bistro Example", kind="restaurant")
+        services.visits.create_visit.return_value = _visit()
+        await run("travel_visit", "add", {"place": "Bistro Example", "kind": "restaurant"}, services)
+        place: TravelPlaceCreate = services.places.create_place.await_args.args[0]
+        assert (place.name, place.kind, place.city_id) == ("Bistro Example", "restaurant", 15)
+
+    async def test_a_new_place_with_a_city_but_no_country_is_a_400(self, services):
+        with pytest.raises(HTTPException) as exc:
+            await run("travel_visit", "add", {"place": "Bistro Example", "city": "Atlantis"}, services)
+        assert exc.value.status_code == 400 and "city and country" in exc.value.detail
+        services.places.create_place.assert_not_awaited()
+
+    async def test_a_name_in_several_cities_is_a_409(self, services):
+        services.base_places.find.side_effect = LocationConflictError("Several places are called 'Cafe'")
+        with pytest.raises(HTTPException) as exc:
+            await run("travel_visit", "add", {"place": "Cafe"}, services)
+        assert exc.value.status_code == 409
 
     async def test_add_graded_but_planned_is_a_400(self, services):
         services.places.get_place.return_value = _place()
@@ -415,7 +386,8 @@ class TestVisits:
         assert result["visits"][0]["place"] == "Museum Example"
 
     async def test_update_moves_a_visit_to_another_place(self, services):
-        services.places.get_places.return_value = [_place(id=8, name="Other Museum", kind="museum")]
+        services.base_places.find.return_value = SimpleNamespace(id=8)
+        services.places.get_place.return_value = _place(id=8, name="Other Museum", kind="museum")
         services.visits.update_visit.return_value = _visit()
         await run("travel_visit", "update", {"id": "11", "place": "Other Museum"}, services)
         assert services.visits.update_visit.await_args.args[1].place_id == 8

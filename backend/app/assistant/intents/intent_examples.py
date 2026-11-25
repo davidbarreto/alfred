@@ -418,21 +418,31 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=330, text="When do I need to leave for the airport on my next trip?", intent="travel_trip.get"),
     IntentExample(id=331, text="What's the itinerary for my holiday?", intent="travel_trip.get"),
 
-    # --- location.add ---
-    IntentExample(id=332, text="Add the pharmacy near school", intent="location.add"),
-    IntentExample(id=333, text="Save the supermarket next to the office as a location", intent="location.add"),
-    IntentExample(id=334, text="Add a new place: the bakery on my street", intent="location.add"),
-    IntentExample(id=335, text="Remember the gym I go to, it opens at 7", intent="location.add"),
-    IntentExample(id=336, text="Add the market near home, open Saturdays 8 to 13", intent="location.add"),
-    IntentExample(id=337, text="New location: the hardware store by the station", intent="location.add"),
+    # --- place.add ---
+    IntentExample(id=332, text="Add the pharmacy near school", intent="place.add"),
+    IntentExample(id=333, text="Save the supermarket next to the office as a place", intent="place.add"),
+    IntentExample(id=334, text="Add a new place: the bakery on my street", intent="place.add"),
+    IntentExample(id=335, text="Remember the gym I go to, it opens at 7", intent="place.add"),
+    IntentExample(id=336, text="Add the market near home, open Saturdays 8 to 13", intent="place.add"),
+    IntentExample(id=337, text="New place: the hardware store by the station", intent="place.add"),
 
-    # --- location.list ---
-    IntentExample(id=338, text="Which shops do I have saved?", intent="location.list"),
-    IntentExample(id=339, text="Show my locations", intent="location.list"),
-    IntentExample(id=340, text="Where can I buy groceries near me?", intent="location.list"),
-    IntentExample(id=341, text="Is the pharmacy open today?", intent="location.list"),
-    IntentExample(id=342, text="List my frequent places", intent="location.list"),
-    IntentExample(id=343, text="Which supermarkets are open now?", intent="location.list"),
+    # --- place.list ---
+    IntentExample(id=338, text="Which shops do I have saved?", intent="place.list"),
+    IntentExample(id=339, text="Show my places", intent="place.list"),
+    IntentExample(id=340, text="Where can I buy groceries near me?", intent="place.list"),
+    IntentExample(id=341, text="Is the pharmacy open today?", intent="place.list"),
+    IntentExample(id=342, text="List my frequent places", intent="place.list"),
+    IntentExample(id=343, text="Which supermarkets are open now?", intent="place.list"),
+    IntentExample(id=344, text="Which restaurants have I been to?", intent="place.list"),
+    IntentExample(id=345, text="List the places I've graded", intent="place.list"),
+
+    # --- place.grade ---
+    IntentExample(id=346, text="Give Cafe Example a 4", intent="place.grade"),
+    IntentExample(id=347, text="The sushi place was great, 5 out of 5", intent="place.grade"),
+    IntentExample(id=348, text="Rate the bakery on my street 3 stars", intent="place.grade"),
+    IntentExample(id=349, text="We had dinner at Trattoria Example yesterday, I'd give it a 4", intent="place.grade"),
+    IntentExample(id=350, text="Grade the new burger place 2, too greasy", intent="place.grade"),
+    IntentExample(id=351, text="I liked the museum we went to on Saturday, 4 stars", intent="place.grade"),
 
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="weather.current"),

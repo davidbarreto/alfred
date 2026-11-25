@@ -163,7 +163,7 @@ class TravelTripGetArgs(BaseModel):
     )
 
 
-class LocationAddArgs(BaseModel):
+class PlaceAddArgs(BaseModel):
     name: str = Field(
         description="Short name for the place as the user would say it, e.g. 'Pharmacy by school', 'Office', 'Market'"
     )
@@ -171,8 +171,15 @@ class LocationAddArgs(BaseModel):
         default=None,
         description=(
             "What kind of place it is: an office or workplace is work, a shopping centre mall, a bazaar-style shop "
-            "with a bit of everything variety_store, a doctor or dentist health, concerts or cinema venue; other "
-            "when none fits"
+            "with a bit of everything variety_store, a doctor or dentist health, concerts or cinema venue, a sight "
+            "attraction; other when none fits"
+        ),
+    )
+    everyday: bool | None = Field(
+        default=None,
+        description=(
+            "true when the user goes there regularly (their shop, gym, school), false for a place visited once "
+            "(a restaurant tried, a sight). Omit when the wording doesn't say."
         ),
     )
     address: str | None = Field(default=None, description="Street address only if the user gave one. Omit otherwise.")
@@ -186,6 +193,15 @@ class LocationAddArgs(BaseModel):
     sells: str | None = Field(
         default=None, description="Comma-separated shopping categories it is used for, if stated, e.g. 'groceries,bakery'"
     )
+
+
+class PlaceGradeArgs(BaseModel):
+    place: str = Field(description="The place's name as the user said it, e.g. 'Cafe Example', 'the sushi place'")
+    grade: int = Field(ge=1, le=5, description="The grade from 1 to 5 (stars, or 'out of 5')")
+    date: str | None = Field(
+        default=None, description="YYYY-MM-DD when the user says when they went (yesterday, on Saturday). Omit for today."
+    )
+    notes: str | None = Field(default=None, description="What the user said about it, in a short phrase. Omit if nothing.")
 
 
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
@@ -208,10 +224,11 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "metric.stop": MetricStopArgs,
     "metric.log": MetricLogArgs,
     "travel_trip.get": TravelTripGetArgs,
-    "location.add": LocationAddArgs,
+    "place.add": PlaceAddArgs,
+    "place.grade": PlaceGradeArgs,
 }
 
-_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}
+_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set", "place.grade"}
 
 
 def get_schema_for_intent(intent: str) -> type[BaseModel] | None:

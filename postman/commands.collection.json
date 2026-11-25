@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Commands API",
     "_postman_id": "alfred-commands-v1",
-    "description": "Test suite for the Commands API. Flow: /commands/detect \u2192 /commands/extract (NL only) \u2192 /commands/execute \u2192 /commands/respond.",
+    "description": "Test suite for the Commands API. Flow: /commands/detect → /commands/extract (NL only) → /commands/execute → /commands/respond.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1716,15 +1716,14 @@
       }
     },
     {
-      "name": "38 - Execute: travel place add without a kind uses other",
+      "name": "38 - Execute: place add a restaurant asks whether it is everyday",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "const j = pm.response.json();",
-              "pm.environment.set('travel_cmd_place_id', j.result.id);"
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Asks for --everyday', () => pm.expect(pm.response.text()).to.include('--everyday'));"
             ],
             "type": "text/javascript"
           }
@@ -1750,7 +1749,52 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\"\n  },\n  \"source\": \"mcp\"\n}"
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\",\n    \"kind\": \"restaurant\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "38b - Execute: place add a restaurant in a new city, not everyday",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().result;",
+              "pm.test('Not everyday, in the given city, tagged', () => {",
+              "  pm.expect(r.everyday).to.eql(false);",
+              "  pm.expect(r.city.name).to.eql('Testville');",
+              "  pm.expect(r.country).to.eql('Testland');",
+              "  pm.expect(r.tags).to.eql(['postman tag']);",
+              "});",
+              "pm.environment.set('travel_cmd_place_id', r.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\",\n    \"kind\": \"restaurant\",\n    \"everyday\": \"false\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\",\n    \"tags\": \"Postman tag\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     },
@@ -1831,6 +1875,246 @@
       }
     },
     {
+      "name": "40b - Execute: place grade logs a visit with no trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().result;",
+              "pm.test('Graded, average shown', () => pm.expect(r.message).to.include('graded 2/5').and.to.include('grade is now 3'));",
+              "pm.environment.set('place_cmd_grade_visit_id', r.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"grade\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_place_id}}\",\n    \"grade\": \"2\",\n    \"date\": \"2031-12-19\",\n    \"notes\": \"Postman grade\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40c - Execute: place show has the grade and both visits",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().result;",
+              "pm.test('Travel view composed in', () => {",
+              "  pm.expect(r.grade).to.eql(3);",
+              "  pm.expect(r.visits.length).to.eql(2);",
+              "  const graded = r.visits.find(v => v.id === pm.environment.get('place_cmd_grade_visit_id'));",
+              "  pm.expect(graded.trip_id).to.eql(null);",
+              "  pm.expect(graded.status).to.eql('visited');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"show\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40d - Execute: place list visited includes it",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().result;",
+              "pm.test('Visited view lists the graded place', () => {",
+              "  pm.expect(r.view).to.eql('visited');",
+              "  pm.expect(r.places.map(p => p.id)).to.include(pm.environment.get('travel_cmd_place_id'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"list\",\n  \"args\": {\n    \"view\": \"visited\",\n    \"city\": \"Testville\",\n    \"tag\": \"Postman tag\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40e - Execute: place list everyday leaves it out",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().result;",
+              "pm.test('Not an everyday place', () => pm.expect(r.places.map(p => p.id)).to.not.include(pm.environment.get('travel_cmd_place_id')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"list\",\n  \"args\": {\n    \"q\": \"Postman Place\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40f - Execute: place list with a bad view",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"list\",\n  \"args\": {\n    \"view\": \"favourites\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40g - Execute: place delete with visits is refused",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
       "name": "41 - Execute: travel visit delete (cleanup)",
       "event": [
         {
@@ -1868,7 +2152,7 @@
       }
     },
     {
-      "name": "42 - Execute: travel place delete (cleanup)",
+      "name": "41b - Execute: travel visit delete the graded visit (cleanup)",
       "event": [
         {
           "listen": "test",
@@ -1900,7 +2184,45 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+          "raw": "{\n  \"type\": \"travel_visit\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{place_cmd_grade_visit_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "42 - Execute: place delete (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Deleted', () => pm.expect(pm.response.json().result.deleted).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     },
@@ -1912,6 +2234,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A trip kind is not everyday', () => pm.expect(pm.response.json().result.everyday).to.eql(false));",
               "pm.environment.set('travel_cmd_link_place_id', pm.response.json().result.id);"
             ],
             "type": "text/javascript"
@@ -1938,7 +2261,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Link Place {{$timestamp}}\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\"\n  },\n  \"source\": \"mcp\"\n}"
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Link Place {{$timestamp}}\",\n    \"kind\": \"attraction\",\n    \"city\": \"Testville\",\n    \"country\": \"Testland\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     },
@@ -2276,7 +2599,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_link_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+          "raw": "{\n  \"type\": \"place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_link_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     }

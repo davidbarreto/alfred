@@ -61,6 +61,10 @@ class TravelPlaceRepository:
                 ~Place.id.in_(select(Visit.place_id).where(Visit.trip_id.is_not(None))),
                 ~Place.id.in_(select(Stay.place_id).where(Stay.trip_id.is_not(None))),
             )
+        if filters.has_visits:
+            stmt = stmt.where(or_(Place.id.in_(select(Visit.place_id)), Place.id.in_(select(Stay.place_id))))
+        if filters.active is not None:
+            stmt = stmt.where(Place.active.is_(filters.active))
         stmt = stmt.order_by(func.lower(Place.name), Place.id).limit(filters.limit).offset(filters.offset)
         return list((await self._session.scalars(stmt)).all())
 

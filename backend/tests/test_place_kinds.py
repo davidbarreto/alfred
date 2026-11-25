@@ -50,6 +50,6 @@ class TestPlaceKinds:
         assert module.PLACE_KINDS == PLACE_KINDS
         assert set(module.LOCATION_KINDS) | set(module.TRAVEL_KINDS) == set(PLACE_KINDS)
 
-    def test_location_commands_list_the_kinds_and_point_to_work(self):
-        details = COMMAND_DEFINITIONS["location"]["add"]["details"]
+    def test_place_commands_list_the_kinds_and_point_to_work(self):
+        details = COMMAND_DEFINITIONS["place"]["add"]["details"]
         assert ", ".join(PLACE_KINDS) in details and "--kind work" in details

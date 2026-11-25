@@ -20,7 +20,7 @@ from app.features.travel.legs.service import LegService
 from app.features.travel.recap.service import TripRecapService
 from app.features.location.errors import LocationConflictError
 from app.features.location.places.service import PlaceService
-from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceFilters, TravelPlaceRead, TravelPlaceUpdate
+from app.features.travel.places.schemas import TravelPlaceCreate, TravelPlaceRead, TravelPlaceUpdate
 from app.features.travel.places.service import TravelPlaceService
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
 from app.features.travel.stays.service import StayService
@@ -47,7 +47,7 @@ class TravelServices:
     web_links: WebLinkService | None = None
     cities: CityService | None = None
     countries: CountryService | None = None
-    # What a place is (deleting it): location's service, which asks organizer and travel what holds the place.
+    # What a place is (finding it by name): location's service.
     base_places: PlaceService | None = None
 
 
@@ -91,15 +91,6 @@ def _time(value: str | None, name: str) -> time | None:
         raise _bad_request(f"{name} must be a time as HH:MM, got {value!r}")
 
 
-def _float(value: str | None, name: str) -> float | None:
-    if not value:
-        return None
-    try:
-        return float(value.replace(",", "."))
-    except ValueError:
-        raise _bad_request(f"{name} must be a number, got {value!r}")
-
-
 # "my next trip" has no name to search for: it means the soonest upcoming or ongoing trip.
 _NEXT_WORDS = ("next", "upcoming", "current")
 
@@ -133,24 +124,35 @@ async def _find_place(
     services: TravelServices, ref: str, kind: str | None = None, city: str | None = None, country: str | None = None,
     create: bool = False,
 ) -> TravelPlaceRead:
-    """A place by id or exact (case-insensitive) name, narrowed by city; created when `create` and none matches."""
+    """A place by id or name, by the rule every command uses: everyday places and the home city first, else the
+    places in `city`; a 409 when the name is in several cities. Created when `create` and none matches, in `city`
+    and `country` (both, or neither for the home city)."""
+    if not _is_id(ref):
+        match = None
+        if not city:
+            match = await services.base_places.find(ref)
+        elif (city_id := await _existing_city_id(services, city, country)) is not None:
+            match = await services.base_places.find(ref, city_id)
+        if match is not None:
+            ref = str(match.id)
     if _is_id(ref):
         place = await services.places.get_place(int(ref))
         if place is None:
             raise _not_found("Place", ref)
         return place
-    candidates = await services.places.get_places(
-        TravelPlaceFilters(q=ref, kind=None, city=city, country=None, tag=None, min_grade=None, status=None, no_trip=False, limit=50, offset=0)
-    )
-    exact = [p for p in candidates if p.name.lower() == ref.lower()]
-    if exact:
-        return exact[0]
     if not create:
         raise _not_found("Place", repr(ref))
-    if not city or not country:
-        raise _bad_request(f"Which city and country is {ref} in?")
-    data = build_model(TravelPlaceCreate, kind=kind or "other", name=ref, city=city, country=country)
-    return await services.places.create_place(data)
+    if bool(city) != bool(country):
+        raise _bad_request(f"Which city and country is {ref} in? Give both, or neither for the home city")
+    where = {"city": city, "country": country} if city else {"city_id": await services.base_places.default_city_id()}
+    return await services.places.create_place(build_model(TravelPlaceCreate, kind=kind or "other", name=ref, **where))
+
+
+async def _existing_city_id(services: TravelServices, city: str, country: str | None) -> int | None:
+    """The one city of that name (in `country` when given), or None when there is none or several."""
+    found = await services.cities.get_cities(CityFilters(country_id=None, q=city))
+    matches = [c for c in found if c.name.lower() == city.lower() and (not country or c.country.name.lower() == country.lower())]
+    return matches[0].id if len(matches) == 1 else None
 
 
 # ---- summaries ---------------------------------------------------------------
@@ -186,14 +188,6 @@ def _visit_summary(visit: VisitRead) -> dict[str, Any]:
         "date": visit.visit_date.isoformat() if visit.visit_date else None,
         "time": visit.visit_time.isoformat(timespec="minutes") if visit.visit_time else None,
         "grade": visit.grade, "notes": visit.notes,
-    }
-
-
-def _place_summary(place: TravelPlaceRead) -> dict[str, Any]:
-    return {
-        "id": place.id, "kind": place.kind, "name": place.name, "city": place.city.name, "country": place.city.country.name,
-        "grade": place.grade, "grade_count": place.grade_count, "tags": place.tags, "notes": place.notes,
-        "maps_link": place.maps_link,
     }
 
 
@@ -302,7 +296,7 @@ async def _web_link(command: str, arguments: dict[str, Any], services: TravelSer
 async def handle_travel(cmd_type: str, command: str, arguments: dict[str, Any], services: TravelServices) -> Any:
     logger.debug("handle_travel: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
     handlers = {
-        "travel_trip": _trip, "travel_leg": _leg, "travel_stay": _stay, "travel_place": _place, "travel_visit": _visit,
+        "travel_trip": _trip, "travel_leg": _leg, "travel_stay": _stay, "travel_visit": _visit,
         "travel_link": _web_link,
     }
     handler = handlers.get(cmd_type)
@@ -530,73 +524,6 @@ async def _stay(command: str, arguments: dict[str, Any], services: TravelService
         return {"message": f"Stay {stay_id} deleted"}
 
     raise _bad_request(f"Unknown stay command: {command}")
-
-
-async def _place(command: str, arguments: dict[str, Any], services: TravelServices) -> Any:
-    fields = _present(arguments, ("kind", "city", "country", "maps_url", "address", "notes"))
-    if "lat" in arguments or "lng" in arguments:
-        lat, lng = _float(_text(arguments, "lat"), "lat"), _float(_text(arguments, "lng"), "lng")
-        if (lat is None) != (lng is None):
-            raise _bad_request("Give both --lat and --lng, or neither")
-        fields["coordinates"] = None if lat is None else (lat, lng)
-    if "tags" in arguments:
-        fields["tags"] = parse_tags(arguments.get("tags"))
-
-    if command == "add":
-        if not fields.get("city") or not fields.get("country"):
-            raise _bad_request(f"Which city and country is {_text(arguments, 'name')} in?")
-        place = await services.places.create_place(build_model(TravelPlaceCreate, name=_text(arguments, "name"), **{
-            "kind": "other", **{k: v for k, v in fields.items() if v is not None},
-        }))
-        return {"id": place.id, "message": f"Place '{place.name}' added"}
-
-    if command == "list":
-        filters = TravelPlaceFilters(
-            q=_text(arguments, "q"), kind=_text(arguments, "kind"), city=_text(arguments, "city"),
-            country=_text(arguments, "country"), tag=parse_tags(arguments.get("tag")) or None,
-            min_grade=parse_int(arguments.get("min_grade"), "min_grade"), ungraded=_flag(arguments, "ungraded"),
-            status=_text(arguments, "status"),
-            no_trip=_flag(arguments, "no_trip"), limit=optional_int(arguments, "limit", 20),
-            offset=optional_int(arguments, "offset", 0),
-        )
-        places = await services.places.get_places(filters)
-        return {"count": len(places), "places": [_place_summary(p) for p in places]}
-
-    if command == "get":
-        ref = _text(arguments, "place")
-        if not ref:
-            raise _bad_request("place is required")
-        place = await _find_place(services, ref)
-        detail = await services.places.get_place_detail(place.id)
-        costs = await services.links.get_place_costs(place.id)
-        return {
-            **_place_summary(detail),
-            "address": detail.address,
-            "visits": [_visit_summary(v) for v in detail.visits],
-            "stays": [_stay_summary(s) for s in detail.stays],
-            "lifetime_cost": costs.total.model_dump(mode="json") if costs else None,
-        }
-
-    if command == "update":
-        place_id = require_int(arguments, "id")
-        if "name" in arguments:
-            fields["name"] = _text(arguments, "name")
-        if not fields:
-            raise _bad_request("Nothing to update")
-        place = await services.places.update_place(place_id, build_model(TravelPlaceUpdate, **fields))
-        if place is None:
-            raise _not_found("Place", place_id)
-        return {"id": place.id, "message": f"Place '{place.name}' updated"}
-
-    if command == "delete":
-        place_id = require_int(arguments, "id")
-        if services.base_places is None:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Place service not available")
-        if not await services.base_places.delete(place_id):
-            raise _not_found("Place", place_id)
-        return {"message": f"Place {place_id} deleted"}
-
-    raise _bad_request(f"Unknown place command: {command}")
 
 
 def _visit_changes(arguments: dict[str, Any]) -> dict[str, Any]:

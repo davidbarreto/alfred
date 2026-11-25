@@ -132,6 +132,7 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
 from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
+from app.assistant.commands.handlers.place import PlaceServices
 from app.assistant.commands.handlers.travel import TravelServices
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import TripDefaultTagService
@@ -795,6 +796,14 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
         countries=get_country_service(session),
     )
 
+def get_place_services(session: AsyncSession = Depends(get_session)) -> PlaceServices:
+    """What the `place` command composes: the base place, its everyday role and its travel role."""
+    return PlaceServices(
+        places=get_place_service(session), everyday=get_everyday_place_service(session),
+        travel_times=get_travel_time_service(session), travel=get_travel_place_service(session),
+        visits=get_visit_service(session), costs=TransactionLinkService(session), cities=get_city_service(session),
+    )
+
 def get_checklist_service(session: AsyncSession = Depends(get_session)) -> ChecklistService:
     return ChecklistService(session, get_task_service(session))
 
@@ -962,6 +971,7 @@ TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transa
 TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_default_tag_service)]
 CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
 TravelServicesDep = Annotated[TravelServices, Depends(get_travel_services)]
+PlaceServicesDep = Annotated[PlaceServices, Depends(get_place_services)]
 ChecklistServiceDep = Annotated[ChecklistService, Depends(get_checklist_service)]
 TripSnoozeServiceDep = Annotated[TripSnoozeService, Depends(get_trip_snooze_service)]
 TripForecastServiceDep = Annotated[TripForecastService, Depends(get_trip_forecast_service)]

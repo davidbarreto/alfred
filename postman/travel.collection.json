@@ -1257,6 +1257,98 @@
       }
     },
     {
+      "name": "31b - Places With Visits Or Stays (the Visited view)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The graded place is listed', () => pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.environment.get('travel_place_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?has_visits=true&tag=postman-place-{{travel_ts}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "has_visits",
+              "value": "true"
+            },
+            {
+              "key": "tag",
+              "value": "postman-place-{{travel_ts}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "31c - Archived Places Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('An active place is left out', () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(Number(pm.environment.get('travel_place_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?has_visits=true&active=false&tag=postman-place-{{travel_ts}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "has_visits",
+              "value": "true"
+            },
+            {
+              "key": "active",
+              "value": "false"
+            },
+            {
+              "key": "tag",
+              "value": "postman-place-{{travel_ts}}"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "32 - Get Place Detail",
       "event": [
         {

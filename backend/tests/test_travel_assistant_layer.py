@@ -10,12 +10,16 @@ from app.assistant.intents.intent_service import get_operation_type
 from app.features.travel.notes_index import NOTE_SOURCE_TYPES, TravelNoteIndex, note_text
 from unittest.mock import AsyncMock, MagicMock
 
-_TRAVEL_GROUPS = ("travel_trip", "travel_leg", "travel_stay", "travel_place", "travel_visit", "travel_link")
+_TRAVEL_GROUPS = ("travel_trip", "travel_leg", "travel_stay", "travel_visit", "travel_link")
 
 
 class TestRegistry:
     def test_every_travel_group_is_defined(self):
         assert set(_TRAVEL_GROUPS) <= set(COMMAND_DEFINITIONS)
+
+    def test_places_are_one_group_outside_travel(self):
+        assert "place" in COMMAND_DEFINITIONS
+        assert "travel_place" not in COMMAND_DEFINITIONS and "location" not in COMMAND_DEFINITIONS
 
     def test_descriptions_fit_the_telegram_limit(self):
         for group in _TRAVEL_GROUPS:
@@ -29,8 +33,8 @@ class TestRegistry:
 
     @pytest.mark.parametrize("alias,group,action", [
         ("/trips", "travel_trip", "list"), ("/trip", "travel_trip", "get"), ("/tripadd", "travel_trip", "add"),
-        ("/legadd", "travel_leg", "add"), ("/stayadd", "travel_stay", "add"), ("/places", "travel_place", "list"),
-        ("/place", "travel_place", "get"), ("/visitadd", "travel_visit", "add"), ("/visited", "travel_visit", "visited"),
+        ("/legadd", "travel_leg", "add"), ("/stayadd", "travel_stay", "add"),
+        ("/places", "place", "list"), ("/place", "place", "show"), ("/placegrade", "place", "grade"), ("/visitadd", "travel_visit", "add"), ("/visited", "travel_visit", "visited"),
         ("/missed", "travel_visit", "missed"), ("/leglink", "travel_leg", "link"), ("/linkadd", "travel_link", "add"),
         ("/links", "travel_link", "list"), ("/linksuggest", "travel_link", "suggest"),
     ])

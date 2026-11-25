@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 
+from app.features.core.settings.metadata import setting
 from app.features.organizer.calendar_events.schemas import NotificationProfile
 from app.shared.utils.time_text import parse_offset
 
@@ -12,19 +13,16 @@ def check_offsets(offsets: list[str]) -> list[str]:
 
 
 class CalendarNotificationCascadesRead(BaseModel):
-    profiles: dict[NotificationProfile, list[str]] = Field(
-        title="Calendar notifications",
-        description=(
-            "When each notification profile reminds you before an event, as offsets like 7d, 4h, 30m or 0 "
-            "(at the start). Events without a profile use normal."
-        ),
-        json_schema_extra={
-            "widget": "json",
-            "key": "calendar_notification_cascades",
-            "group": "Calendar notifications",
-            "write_path": "/organizer/calendar-notification-settings/{entry}",
-            "entry_field": "offsets",
-        },
+    profiles: dict[NotificationProfile, list[str]] = setting(
+        "Calendar notifications",
+        "When each notification profile reminds you before an event, as offsets like 7d, 4h, 30m or 0 "
+        "(at the start). Events without a profile use normal.",
+        widget="json",
+        group="Calendar notifications",
+        key="calendar_notification_cascades",
+        write_path="/organizer/calendar-notification-settings/{entry}",
+        entry_field="offsets",
+        default=...,
     )
 
 

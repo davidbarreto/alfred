@@ -3082,6 +3082,91 @@
       }
     },
     {
+      "name": "89p0a - Reminder Settings - Update Undated Task Snooze Days",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Snooze days are returned', () => pm.expect(pm.response.json().undated_task_snooze_days).to.eql(7));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"undated_task_snooze_days\": 7\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p0b - Reminder Settings - Snooze Days Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"undated_task_snooze_days\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "89p1 - Assistant Settings - Get (remember current values)",
       "event": [
         {
@@ -3251,6 +3336,91 @@
               "language": "json"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "89p5 - Settings Catalog - Get",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const catalog = pm.response.json();",
+              "const fields = catalog.namespaces.flatMap(ns => ns.fields);",
+              "const byKey = Object.fromEntries(fields.map(f => [f.key, f]));",
+              "pm.test('Every namespace is listed in page order', () => {",
+              "    pm.expect(catalog.namespaces.map(ns => ns.namespace)).to.eql(['planning', 'reminders', 'travel', 'finance', 'study', 'organizer', 'assistant']);",
+              "});",
+              "pm.test('Every field has a label, a widget and a write path', () => {",
+              "    fields.forEach(f => { pm.expect(f.label, f.key).to.be.a('string').and.not.empty; pm.expect(f.widget, f.key).to.be.a('string'); pm.expect(f.write_path, f.key).to.match(/^\\//); });",
+              "});",
+              "pm.test('A number carries its limits and default', () => {",
+              "    const f = byKey['travel.airport_buffer_min'];",
+              "    pm.expect([f.widget, f.min, f.max, f.default, f.has_default]).to.eql(['number', 0, 600, 120, true]);",
+              "});",
+              "pm.test('The new snooze setting is listed', () => pm.expect(byKey['reminders.undated_task_snooze_days'].unit).to.eql('days'));",
+              "pm.test('Cascades are JSON rows written per entry', () => {",
+              "    const f = byKey['organizer.calendar_notification_cascades'];",
+              "    pm.expect(f.widget).to.eql('json');",
+              "    pm.expect(f.write_path).to.eql('/organizer/calendar-notification-settings/{entry}');",
+              "});",
+              "pm.test('Planning never offers travel times', () => pm.expect(byKey).to.not.have.property('planning.travel_times'));",
+              "pm.test('Unregistered rows never include assistant keys', () => {",
+              "    catalog.unregistered.forEach(row => pm.expect(row.key.startsWith('assistant.'), row.key).to.be.false);",
+              "    catalog.unregistered.forEach(row => pm.expect(byKey).to.not.have.property(row.key));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/settings/catalog",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "settings",
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89p6 - Settings Catalog - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/settings/catalog",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "settings",
+            "catalog"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
         }
       }
     },

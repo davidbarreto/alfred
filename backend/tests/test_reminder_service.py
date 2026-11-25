@@ -75,7 +75,7 @@ def default_reminder_settings(**overrides):
         "overload_urgent_interval_hours": 4, "overdue_grace_hours_high": 0,
         "overdue_grace_hours_medium": 48, "overdue_grace_hours_low": 168,
         "undated_escalation_days_high": 7, "undated_escalation_days_medium": 21,
-        "undated_escalation_days_low": 45, "urgency_reset_days": 7, "catchup_tasks_per_day": 3, "catchup_stale_days": 30,
+        "undated_escalation_days_low": 45, "urgency_reset_days": 7, "undated_task_snooze_days": 7, "catchup_tasks_per_day": 3, "catchup_stale_days": 30,
         "catchup_missed_habit_threshold": 3,
     }
     return ReminderSettingsRead(**{**values, **overrides})
@@ -703,12 +703,12 @@ def _snooze_list_side_effect(snoozed_task_id: int):
 
 
 class TestSnoozeUndatedEscalation:
-    async def test_upserts_marker_with_default_days(self):
+    async def test_upserts_marker(self):
         from app.features.core.reminders.service import snooze_undated_escalation, undated_escalation_snooze_key
 
         wm_service = AsyncMock()
 
-        expires_at = await snooze_undated_escalation(wm_service, task_id=5)
+        expires_at = await snooze_undated_escalation(wm_service, task_id=5, days=7)
 
         wm_service.upsert.assert_awaited_once()
         created = wm_service.upsert.call_args.args[0]
@@ -734,7 +734,7 @@ class TestSnoozeUndatedEscalation:
         task_service = AsyncMock()
 
         await snooze_undated_escalation(
-            wm_service, task_id=5, task_service=task_service, current_urgency="URGENT"
+            wm_service, task_id=5, days=7, task_service=task_service, current_urgency="URGENT"
         )
 
         task_service.update_task.assert_awaited_once_with(5, TaskUpdate(urgency="NORMAL"))
@@ -746,7 +746,7 @@ class TestSnoozeUndatedEscalation:
         task_service = AsyncMock()
 
         await snooze_undated_escalation(
-            wm_service, task_id=5, task_service=task_service, current_urgency="NORMAL"
+            wm_service, task_id=5, days=7, task_service=task_service, current_urgency="NORMAL"
         )
 
         task_service.update_task.assert_not_called()
@@ -757,7 +757,7 @@ class TestSnoozeUndatedEscalation:
         wm_service = AsyncMock()
 
         # Should not raise even though current_urgency is URGENT and no task_service given.
-        await snooze_undated_escalation(wm_service, task_id=5, current_urgency="URGENT")
+        await snooze_undated_escalation(wm_service, task_id=5, days=7, current_urgency="URGENT")
 
 
 class TestUndatedTaskEscalationConfigAndSnooze:

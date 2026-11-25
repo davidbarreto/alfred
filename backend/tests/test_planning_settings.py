@@ -6,9 +6,7 @@ from pydantic import ValidationError
 
 from app.features.planning.schemas import PlanningSettingsUpdate, parse_travel_times
 from app.features.planning.settings_service import (
-    DEFAULT_OFFICE_TAG,
-    DEFAULT_WORK_TAG,
-    DEFAULT_WORK_TARGET_MINUTES,
+    DEFAULTS,
     PlanningSettingsService,
 )
 
@@ -58,8 +56,8 @@ def service(store, travel_times):
 class TestRead:
     async def test_defaults_are_generic_and_nothing_personal_is_seeded(self, service):
         settings = await service.get()
-        assert settings.work_target_minutes == DEFAULT_WORK_TARGET_MINUTES == 480
-        assert (settings.work_tag, settings.office_tag) == (DEFAULT_WORK_TAG, DEFAULT_OFFICE_TAG) == ("work", "office")
+        assert settings.work_target_minutes == DEFAULTS["work_target_minutes"] == 480
+        assert (settings.work_tag, settings.office_tag) == (DEFAULTS["work_tag"], DEFAULTS["office_tag"]) == ("work", "office")
         assert settings.wake_time is None and settings.sleep_time is None
         assert settings.preferred_work_windows == []
         assert settings.office_days_per_week is None and settings.office_min_minutes is None
@@ -95,7 +93,7 @@ class TestUpdate:
         store.values.update({"planning.office_days_per_week": "4", "planning.work_target_minutes": "420"})
         result = await service.update(PlanningSettingsUpdate(office_days_per_week=None, work_target_minutes=None))
         assert result.office_days_per_week is None
-        assert result.work_target_minutes == DEFAULT_WORK_TARGET_MINUTES
+        assert result.work_target_minutes == DEFAULTS["work_target_minutes"]
 
     async def test_empty_window_list_clears_the_setting(self, service, store):
         store.values["planning.preferred_work_windows"] = json.dumps(["10:00-14:00"])

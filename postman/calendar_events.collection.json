@@ -1363,6 +1363,122 @@
       }
     },
     {
+      "name": "18a - Calendar Notification Settings - Unknown Profile (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notification-settings/nromal",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notification-settings",
+            "nromal"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\n    \"10m\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "18b - Calendar Notification Settings - Invalid Offset (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+              "pm.test('The bad offset is named', () => pm.expect(JSON.stringify(pm.response.json().detail)).to.include('soon'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notification-settings/light",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notification-settings",
+            "light"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\n    \"soon\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "18c - Calendar Notification Settings - Unknown Profile Not Stored",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only the known profiles are listed', () => pm.expect(Object.keys(pm.response.json().profiles).sort()).to.eql(['aware', 'cant_miss', 'important', 'light', 'normal']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notification-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notification-settings"
+          ]
+        }
+      }
+    },
+    {
       "name": "19 - Calendar Notifications - Get Due Digest",
       "event": [
         {

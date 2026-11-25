@@ -1,6 +1,8 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
+
+from app.features.core.settings.metadata import setting
 
 USER_NAME_MAX_LENGTH = 50
 PERSONA_ADDITIONS_MAX_LENGTH = 20000
@@ -18,8 +20,13 @@ class AssistantSettingsRead(BaseModel):
 class AssistantSettingsUpdate(BaseModel):
     """Partial update: a field left out is untouched; null or blank clears it."""
 
-    user_name: Optional[str] = Field(default=None, max_length=USER_NAME_MAX_LENGTH)
-    persona_additions: Optional[str] = Field(default=None, max_length=PERSONA_ADDITIONS_MAX_LENGTH)
+    user_name: Optional[str] = setting(
+        "Your name", "How the chat and the briefings call you. Empty = \"the user\".", max_length=USER_NAME_MAX_LENGTH,
+    )
+    persona_additions: Optional[str] = setting(
+        "Persona additions", "Markdown added after the base persona.",
+        widget="link", href="/persona", max_length=PERSONA_ADDITIONS_MAX_LENGTH,
+    )
 
     @field_validator("user_name")
     @classmethod

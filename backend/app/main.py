@@ -84,6 +84,7 @@ from app.api.routes.core.catchup import router as core_catchup_router
 from app.api.routes.core.reminders import router as core_reminders_router
 from app.api.routes.core.reminder_settings import router as core_reminder_settings_router
 from app.api.routes.core.assistant_settings import router as core_assistant_settings_router
+from app.api.routes.core.settings_catalog import router as core_settings_catalog_router
 from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.core.urgency_reset import router as core_urgency_reset_router
 from app.api.routes.core.api_requests import router as core_api_requests_router
@@ -228,6 +229,7 @@ app.include_router(core_overload_router)
 app.include_router(core_catchup_router)
 app.include_router(core_reminder_settings_router)
 app.include_router(core_assistant_settings_router)
+app.include_router(core_settings_catalog_router)
 app.include_router(core_pause_router)
 app.include_router(core_urgency_reset_router)
 app.include_router(core_api_requests_router)

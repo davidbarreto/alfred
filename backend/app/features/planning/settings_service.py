@@ -17,14 +17,25 @@ logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "planning."
 
-# Generic defaults; nothing personal is seeded. A missing or blank row means "use the default" (unset).
-DEFAULT_WORK_TARGET_MINUTES = 480
-DEFAULT_WORK_TAG = "work"
-DEFAULT_OFFICE_TAG = "office"
+# Generic defaults; nothing personal is seeded. A missing or blank row means "use the default", and a field
+# that is not here (wake/sleep time, office days and minutes, conventions) is simply unset.
+DEFAULTS: dict[str, int | str | list[str]] = {
+    "work_target_minutes": 480,
+    "preferred_work_windows": [],
+    "workdays": list(DEFAULT_WORKDAYS),
+    "work_tag": "work",
+    "office_tag": "office",
+    "default_travel_minutes": DEFAULT_TRAVEL_MINUTES,
+    "walk_tolerance_minutes": DEFAULT_WALK_TOLERANCE_MINUTES,
+}
 
 
-def _int_or(raw: str | None, default: int) -> int:
+def _int_or(raw: str | None, default: int | None) -> int | None:
     return int(raw) if raw else default
+
+
+def _list_or(raw: str | None, default: list[str]) -> list[str]:
+    return json.loads(raw) if raw else list(default)
 
 
 def _key(field: str) -> str:
@@ -46,17 +57,17 @@ class PlanningSettingsService:
         return PlanningSettingsRead(
             wake_time=raw["wake_time"] or None,
             sleep_time=raw["sleep_time"] or None,
-            work_target_minutes=int(raw["work_target_minutes"]) if raw["work_target_minutes"] else DEFAULT_WORK_TARGET_MINUTES,
-            preferred_work_windows=json.loads(raw["preferred_work_windows"]) if raw["preferred_work_windows"] else [],
-            workdays=json.loads(raw["workdays"]) if raw["workdays"] else list(DEFAULT_WORKDAYS),
-            work_tag=raw["work_tag"] or DEFAULT_WORK_TAG,
-            office_tag=raw["office_tag"] or DEFAULT_OFFICE_TAG,
-            office_days_per_week=int(raw["office_days_per_week"]) if raw["office_days_per_week"] else None,
-            office_min_minutes=int(raw["office_min_minutes"]) if raw["office_min_minutes"] else None,
+            work_target_minutes=_int_or(raw["work_target_minutes"], DEFAULTS["work_target_minutes"]),
+            preferred_work_windows=_list_or(raw["preferred_work_windows"], DEFAULTS["preferred_work_windows"]),
+            workdays=_list_or(raw["workdays"], DEFAULTS["workdays"]),
+            work_tag=raw["work_tag"] or DEFAULTS["work_tag"],
+            office_tag=raw["office_tag"] or DEFAULTS["office_tag"],
+            office_days_per_week=_int_or(raw["office_days_per_week"], None),
+            office_min_minutes=_int_or(raw["office_min_minutes"], None),
             conventions=raw["conventions"] or None,
             travel_times=await self._travel_times.as_preferences(),
-            default_travel_minutes=_int_or(raw["default_travel_minutes"], DEFAULT_TRAVEL_MINUTES),
-            walk_tolerance_minutes=_int_or(raw["walk_tolerance_minutes"], DEFAULT_WALK_TOLERANCE_MINUTES),
+            default_travel_minutes=_int_or(raw["default_travel_minutes"], DEFAULTS["default_travel_minutes"]),
+            walk_tolerance_minutes=_int_or(raw["walk_tolerance_minutes"], DEFAULTS["walk_tolerance_minutes"]),
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:

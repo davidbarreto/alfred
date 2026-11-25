@@ -5,7 +5,6 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.features.core.overload.schemas import OverloadSnapshot
 from app.features.core.overload.service import OverloadService
 from app.features.core.reminders import escalation
@@ -104,7 +103,7 @@ def undated_escalation_snooze_key(task_id: int) -> str:
 async def snooze_undated_escalation(
     working_memory_service: WorkingMemoryService,
     task_id: int,
-    days: int | None = None,
+    days: int,
     task_service: TaskService | None = None,
     current_urgency: str | None = None,
 ) -> datetime:
@@ -112,9 +111,9 @@ async def snooze_undated_escalation(
 
     Snoozing means "I've seen this, stop bugging me" -- so if the task was already
     flagged URGENT, clear that too (not just the future reminder), matching what
-    completing or rescheduling the task already does.
+    completing or rescheduling the task already does. Callers without a number of days
+    use the `reminders.undated_task_snooze_days` setting.
     """
-    days = days if days is not None else get_settings().undated_task_snooze_days
     key = undated_escalation_snooze_key(task_id)
     expires_at = datetime.now(timezone.utc) + timedelta(days=days)
     await working_memory_service.upsert(WorkingMemoryCreate(key=key, value="snoozed", expires_at=expires_at))

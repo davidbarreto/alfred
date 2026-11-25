@@ -12,7 +12,7 @@ from app.features.organizer.tasks.schemas import (
 )
 from app.features.organizer.tasks.service import CompletionConflictError
 from app.api.auth import require_auth
-from app.dependencies import TaskServiceDep, WorkingMemoryServiceDep
+from app.dependencies import ReminderSettingsServiceDep, TaskServiceDep, WorkingMemoryServiceDep
 from app.shared.utils.timezone import local_today
 
 router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
@@ -94,11 +94,14 @@ async def snooze_task(
     task_id: int,
     service: TaskServiceDep,
     working_memory_service: WorkingMemoryServiceDep,
+    reminder_settings: ReminderSettingsServiceDep,
     days: int | None = Query(None, ge=1),
 ):
     task_read = await service.get_task(task_id)
     if task_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if days is None:
+        days = (await reminder_settings.get()).undated_task_snooze_days
     expires_at = await snooze_undated_escalation(
         working_memory_service, task_id, days, task_service=service, current_urgency=task_read.urgency
     )

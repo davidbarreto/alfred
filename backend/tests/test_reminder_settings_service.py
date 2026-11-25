@@ -19,7 +19,7 @@ def service():
 def _env_defaults():
     with patch(
         "app.features.core.reminders.settings_service.get_settings",
-        return_value=MagicMock(urgency_reset_days=9),
+        return_value=MagicMock(urgency_reset_days=9, undated_task_snooze_days=11),
     ):
         yield
 
@@ -41,6 +41,17 @@ class TestGet:
 
     async def test_urgency_reset_days_defaults_to_the_env_value(self, service):
         assert (await service.get()).urgency_reset_days == 9
+
+    async def test_undated_task_snooze_days_defaults_to_the_env_value(self, service):
+        assert (await service.get()).undated_task_snooze_days == 11
+
+    async def test_stored_snooze_days_override_the_env_value(self, service):
+        async def get_value(key):
+            return "3" if key == "reminders.undated_task_snooze_days" else None
+
+        service._settings.get_value.side_effect = get_value
+
+        assert (await service.get()).undated_task_snooze_days == 3
 
     async def test_stored_value_overrides_default(self, service):
         async def get_value(key):
@@ -83,7 +94,8 @@ class TestUpdate:
         "field,value",
         [("overload_max_listed", 0), ("overload_urgent_threshold", 0), ("overload_urgent_interval_hours", 25),
          ("overdue_grace_hours_low", -1),
-         ("catchup_tasks_per_day", 0), ("catchup_stale_days", 6), ("catchup_missed_habit_threshold", 8)],
+         ("catchup_tasks_per_day", 0), ("catchup_stale_days", 6), ("catchup_missed_habit_threshold", 8),
+         ("undated_task_snooze_days", 0), ("undated_task_snooze_days", 366)],
     )
     def test_rejects_out_of_range(self, field, value):
         with pytest.raises(ValidationError):

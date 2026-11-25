@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
@@ -37,11 +37,19 @@ def mock_working_memory_service():
 
 
 @pytest.fixture
-def client(mock_service, mock_working_memory_service):
+def mock_reminder_settings():
+    svc = AsyncMock()
+    svc.get.return_value = MagicMock(undated_task_snooze_days=5)
+    return svc
+
+
+@pytest.fixture
+def client(mock_service, mock_working_memory_service, mock_reminder_settings):
     from app.main import app
-    from app.dependencies import get_task_service, get_working_memory_service
+    from app.dependencies import get_reminder_settings_service, get_task_service, get_working_memory_service
     app.dependency_overrides[get_task_service] = lambda: mock_service
     app.dependency_overrides[get_working_memory_service] = lambda: mock_working_memory_service
+    app.dependency_overrides[get_reminder_settings_service] = lambda: mock_reminder_settings
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -239,11 +247,20 @@ class TestSnoozeTask:
         assert "snoozed_until" in data
         mock_working_memory_service.upsert.assert_awaited_once()
 
-    def test_respects_explicit_days(self, client, mock_working_memory_service):
+    def test_without_days_uses_the_snooze_setting(self, client, mock_working_memory_service):
+        from datetime import datetime, timezone
+
+        before = datetime.now(timezone.utc)
+        client.post("/organizer/tasks/1/snooze", headers=AUTH)
+        created = mock_working_memory_service.upsert.call_args.args[0]
+        assert 4 <= (created.expires_at - before).days <= 5
+
+    def test_respects_explicit_days(self, client, mock_working_memory_service, mock_reminder_settings):
         from datetime import datetime, timezone
 
         before = datetime.now(timezone.utc)
         client.post("/organizer/tasks/1/snooze?days=3", headers=AUTH)
+        mock_reminder_settings.get.assert_not_awaited()
         created = mock_working_memory_service.upsert.call_args.args[0]
         assert 2 <= (created.expires_at - before).days <= 3
 

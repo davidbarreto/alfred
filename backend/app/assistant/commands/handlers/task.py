@@ -8,6 +8,7 @@ from app.assistant.commands.handlers._utils import build_model, parse_dt, parse_
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.reminders.service import snooze_undated_escalation
+from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.organizer.tasks.schemas import (
     TASK_CONTEXTS,
@@ -65,6 +66,7 @@ async def handle_task(
     service: TaskService,
     embedding_service: EmbeddingService | None = None,
     working_memory_service: WorkingMemoryService | None = None,
+    reminder_settings_service: ReminderSettingsService | None = None,
 ) -> Any:
     logger.debug("handle_task: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
@@ -197,7 +199,14 @@ async def handle_task(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Working memory service not available"
             )
 
-        days = int(arguments["days"]) if arguments.get("days") else None
+        if arguments.get("days"):
+            days = int(arguments["days"])
+        elif reminder_settings_service is not None:
+            days = (await reminder_settings_service.get()).undated_task_snooze_days
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Reminder settings service not available"
+            )
         expires_at = await snooze_undated_escalation(
             working_memory_service, task_id, days, task_service=service, current_urgency=existing.urgency
         )

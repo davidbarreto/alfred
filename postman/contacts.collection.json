@@ -621,6 +621,92 @@
       }
     },
     {
+      "name": "15a - Birthday Notification Settings - Unknown Relationship (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings/freind",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings",
+            "freind"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\n    \"3d\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "15b - Birthday Notification Settings - Invalid Offset (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings/friend",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings",
+            "friend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\n    \"soon\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "16 - Birthday Notifications - Get Due Digest",
       "event": [
         {

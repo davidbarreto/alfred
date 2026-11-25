@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.features.core.settings.metadata import setting
 from app.features.organizer.activities.schemas import ActivitySuggestion
 from app.features.organizer.locations.schemas import MAX_TRAVEL_TIMES
 from app.shared.utils.time_text import WEEKDAYS
@@ -107,19 +108,37 @@ class PlanningSettingsRead(BaseModel):
 class PlanningSettingsUpdate(BaseModel):
     """Partial update: a field left out is untouched, an explicit null resets it to its default (unset)."""
 
-    wake_time: str | None = None
-    sleep_time: str | None = None
-    work_target_minutes: int | None = Field(default=None, ge=0, le=1440)
-    preferred_work_windows: list[str] | None = None
-    workdays: list[str] | None = None
-    work_tag: str | None = None
-    office_tag: str | None = None
-    office_days_per_week: int | None = Field(default=None, ge=1, le=7)
-    office_min_minutes: int | None = Field(default=None, ge=0, le=1440)
-    conventions: str | None = Field(default=None, max_length=CONVENTIONS_MAX_LENGTH)
+    wake_time: str | None = setting("Wake time", "When the planned day starts. Empty = not set.", widget="time", group="Day")
+    sleep_time: str | None = setting("Sleep time", "When the planned day ends. Empty = not set.", widget="time", group="Day")
+    work_target_minutes: int | None = setting(
+        "Work target per day", "Minutes of work to plan on a workday.", unit="min", group="Work", ge=0, le=1440,
+    )
+    preferred_work_windows: list[str] | None = setting(
+        "Preferred work windows", "When work is placed first, as HH:MM-HH:MM.", widget="windows", group="Work",
+    )
+    workdays: list[str] | None = setting("Workdays", "", widget="weekdays", group="Work")
+    work_tag: str | None = setting("Work tag", "Tasks and events with this tag count as work time.", group="Work")
+    office_tag: str | None = setting("Office tag", "Events with this tag mark an office day.", group="Office")
+    office_days_per_week: int | None = setting(
+        "Office days per week", "Empty = no office target.", unit="days", group="Office", ge=1, le=7,
+    )
+    office_min_minutes: int | None = setting(
+        "Minimum for an office day", "Empty = any length counts.", unit="min", group="Office", ge=0, le=1440,
+    )
+    conventions: str | None = setting(
+        "Conventions", "Standing rules every plan should follow, in free text. Sent with every day plan.",
+        widget="longtext", group="Rules", max_length=CONVENTIONS_MAX_LENGTH,
+    )
+    # Not on the settings page: travel times are rows between locations, edited on each location's page.
     travel_times: list[TravelTime] | None = Field(default=None, max_length=MAX_TRAVEL_TIMES)
-    default_travel_minutes: int | None = Field(default=None, ge=0, le=600)
-    walk_tolerance_minutes: int | None = Field(default=None, ge=0, le=120)
+    default_travel_minutes: int | None = setting(
+        "Assumed travel when nothing is saved", "Minutes one way for a leg with no saved route. 0 = off.",
+        unit="min", group="Travel", ge=0, le=600,
+    )
+    walk_tolerance_minutes: int | None = setting(
+        "Walk instead of public transport", "When walking takes at most this many minutes longer.",
+        unit="min", group="Travel", ge=0, le=120,
+    )
 
     @field_validator("wake_time", "sleep_time")
     @classmethod

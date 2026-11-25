@@ -67,7 +67,7 @@ Values below are the defaults from `Settings` when the variable is optional. **R
 
 ### Reminders
 
-`UNDATED_TASK_SNOOZE_DAYS` (default 7) and `URGENCY_RESET_DAYS` (default 7, can also be set in the portal) are env-only defaults. The rest of the reminder tuning is a runtime setting (below).
+`URGENCY_RESET_DAYS` (default 7) and `UNDATED_TASK_SNOOZE_DAYS` (default 7) are only fallbacks: the runtime settings `reminders.urgency_reset_days` and `reminders.undated_task_snooze_days` (below) win when they are set. The rest of the reminder tuning is a runtime setting too.
 
 ### Web portal and MCP
 
@@ -91,20 +91,26 @@ Stored in the database, so no restart or redeploy. Where each one lives:
 
 | Setting | What it controls | Where to change it |
 |---|---|---|
-| **Reminders & overload** (`reminders.*` in `core.settings`) | Escalation grace periods, undated-task age, re-remind cadence, overload thresholds, max tasks listed, catch-up tuning, urgency reset days | Portal: Overload section of `/tasks/insights`. API: `GET/PUT /core/reminder-settings` |
+| **Reminders & overload** (`reminders.*` in `core.settings`) | Escalation grace periods, undated-task age, re-remind cadence, overload thresholds, max tasks listed, catch-up tuning, urgency reset days, how long a snoozed undated task stays out of escalation (`undated_task_snooze_days`) | Portal: Overload section of `/tasks/insights`. API: `GET/PUT /core/reminder-settings` |
 | **Travel settings** (`travel.*`) | `airport_buffer_min` (default 120): how long before departure to be at the airport; `home_to_airport_min` (default 45): the ride there. Together they give the leave-home time and its reminder; the home address (read-only here: it is the Home location's address, edited on `/locations`; `PUT` refuses it) is where the home → airport directions start; `home_city_id` (optional, a `travel.cities` id; empty = none) is the city trips start from, and changing it (or the address or either time) first copies the old value into every trip that has already started and has none of its own (see `modules/travel.md`, *Home*) | Portal: Reminder settings on `/travel`. API: `GET/PUT /travel/settings` |
 | **Persona** (`assistant.*`) | `user_name` (how prompts name the user: the chat and the morning and evening briefings; empty = "the user") and `persona_additions` (markdown added after the committed basic persona `backend/app/assistant/persona.md`; personal, so it lives only in the database) | Portal: `/persona`. API: `GET/PUT /core/assistant-settings` |
 | **Global pause** | Stops reminders and briefings and freezes task urgency escalation until resumed | Portal: pause control; Telegram/MCP: `/pause`, resume with the `pause stop` action. API: `POST /core/pause`, `POST /core/pause/resume`, history at `GET /core/pause/history` |
 | **Planning preferences** (`planning.*`) | Wake/sleep time, work target, preferred work windows, workdays, work/office tags, office days per week and minimum minutes, free-text conventions, travel times (stored as rows between locations, also editable on each location's page) | Portal: `/plan`. MCP/Telegram: `day_plan settings` / `set_settings`. API: `GET/PUT /planning/settings` |
 | **Finance settings** | `cycle_start_day` (1-28): the day your monthly finance cycle starts. Budget targets per category are separate | Portal: `/finance/settings`, `/finance/budgets`. API: `GET/PUT /finance/settings`, `/finance/budgets/targets` |
 | **Study settings** | `max_active_plans` (1-10): the global cap on active study plans | API: `GET/PUT /study/settings` |
-| **Calendar notifications** | The reminder offsets (a cascade) for each notification profile; `normal` is the default | API: `GET /organizer/calendar-notification-settings`, `PUT .../{profile}` |
-| **Contact birthday notifications** | Birthday notification timing | API: `GET/PUT /organizer/contact-birthday-settings` |
+| **Calendar notifications** | The reminder offsets (a cascade) for each notification profile (`cant_miss`, `important`, `normal`, `light`, `aware`); `normal` is the default. An unknown profile is a 422 | API: `GET /organizer/calendar-notification-settings`, `PUT .../{profile}` |
+| **Contact birthday notifications** | The birthday offsets per relationship (`family`, `relative`, `friend`, `other`). An unknown relationship is a 422 | API: `GET /organizer/contact-birthday-settings`, `PUT .../{relationship}` |
 | **Interview preferences** | Work regimes, target office days per month, salary range and currency, locations, tech stack, roles, career objectives | Portal: `/interviews/preferences`. API: `GET/PATCH /organizer/interview-preferences` |
 | **Language tracks** | Per track: language code, CEFR level, daily quota, review mode, pause/resume | Portal: `/languages`. API: `/language/tracks` |
 | **Telegram command menu** | Which commands appear in Telegram's `/` menu | `_MENU_COMMANDS` in code; apply with `POST /integration/telegram/set-commands`. See [assistant-layer.md](assistant-layer.md#telegram-command-menu) |
 
 Settings that have no portal form (study, calendar notifications, birthdays) are changed through the API (Swagger UI at `/docs` of the backend) or MCP.
+
+### The settings catalog
+
+`GET /core/settings/catalog` lists every `core.settings` field above (planning, reminders, travel, finance, study, the organizer cascades, assistant) with its label, hint, control (`widget`), type, limits, unit, fieldset (`group`), default and the routes that read and write it, plus `unregistered`: the stored keys no field covers (checklist template, pause state), with their values. `assistant.*` keys never appear there. It holds no values of its own: each namespace is still read and written through its own GET and PUT, so its validation and side effects always run.
+
+The catalog is built from the settings schemas, not a separate registry: each `Update` schema field is declared with `setting(...)` (`app/features/core/settings/metadata.py`: title, description, widget, unit, group, `confirm_note`), and the defaults come from each feature's `DEFAULTS`. A new settings field shows up by being declared; one without a title fails `tests/test_settings_catalog.py`. A new namespace is one entry in `NAMESPACES` (`app/features/core/settings/catalog.py`).
 
 ## 3. Authentication
 

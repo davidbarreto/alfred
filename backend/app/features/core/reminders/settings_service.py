@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 _KEY_PREFIX = "reminders."
 
 # Tunable from the portal. Stored in core.settings as "reminders.<field>"; a missing
-# row falls back to the default below (urgency_reset_days falls back to its env var).
-_DEFAULTS: dict[str, int] = {
+# row falls back to the default below, or to its env var for the fields in `defaults()`.
+DEFAULTS: dict[str, int] = {
     "overload_overdue_threshold": 5,
     "overload_urgent_threshold": 4,
     "overload_max_listed": 5,
@@ -29,6 +29,16 @@ _DEFAULTS: dict[str, int] = {
 }
 
 
+def defaults() -> dict[str, int]:
+    """Every field's default: `DEFAULTS` plus the two that come from env (URGENCY_RESET_DAYS, UNDATED_TASK_SNOOZE_DAYS)."""
+    env = get_settings()
+    return {
+        **DEFAULTS,
+        "urgency_reset_days": env.urgency_reset_days,
+        "undated_task_snooze_days": env.undated_task_snooze_days,
+    }
+
+
 def _key(field: str) -> str:
     return f"{_KEY_PREFIX}{field}"
 
@@ -39,9 +49,8 @@ class ReminderSettingsService:
         self._settings = SettingService(session)
 
     async def get(self) -> ReminderSettingsRead:
-        defaults = {**_DEFAULTS, "urgency_reset_days": get_settings().urgency_reset_days}
         values: dict[str, int] = {}
-        for field, default in defaults.items():
+        for field, default in defaults().items():
             raw = await self._settings.get_value(_key(field))
             values[field] = int(raw) if raw else default
         return ReminderSettingsRead(**values)

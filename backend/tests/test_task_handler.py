@@ -59,27 +59,47 @@ class TestHandleTaskUpdate:
         mock_service.update_task.assert_awaited_once_with(1, TaskUpdate(urgency="NORMAL"))
 
 
+@pytest.fixture
+def mock_reminder_settings():
+    service = AsyncMock()
+    service.get.return_value = MagicMock(undated_task_snooze_days=5)
+    return service
+
+
 class TestHandleTaskSnooze:
-    async def test_snooze_creates_marker_with_default_days(self, mock_service, mock_working_memory_service):
+    async def test_snooze_creates_marker_with_default_days(
+        self, mock_service, mock_working_memory_service, mock_reminder_settings
+    ):
         mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
+        before = datetime.now(timezone.utc)
 
         result = await handle_task(
-            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
+            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service,
+            reminder_settings_service=mock_reminder_settings,
         )
 
         mock_working_memory_service.upsert.assert_awaited_once()
         created = mock_working_memory_service.upsert.call_args.args[0]
         assert created.key == undated_escalation_snooze_key(5)
+        assert 4 <= (created.expires_at - before).days <= 5
         assert result == {"id": 5, "snoozed_until": created.expires_at.isoformat()}
+
+    async def test_snooze_without_days_or_settings_is_unavailable(self, mock_service, mock_working_memory_service):
+        mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
+
+        with pytest.raises(HTTPException) as exc:
+            await handle_task("snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service)
+
+        assert exc.value.status_code == 503
 
     async def test_snooze_again_overwrites_existing_marker(self, mock_service, mock_working_memory_service):
         mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
 
         await handle_task(
-            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
+            "snooze", {"id": "5", "days": "2"}, mock_service, working_memory_service=mock_working_memory_service
         )
         await handle_task(
-            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
+            "snooze", {"id": "5", "days": "2"}, mock_service, working_memory_service=mock_working_memory_service
         )
 
         assert mock_working_memory_service.upsert.await_count == 2

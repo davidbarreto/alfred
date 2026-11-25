@@ -22,12 +22,13 @@ DEFAULT_HOME_TO_AIRPORT_MIN = 45
 DEFAULT_MAX_VISITS_PER_DAY = 4
 DEFAULT_VISIT_DURATION_MIN = 90
 DEFAULT_UNPAID_LEG_DAYS = 30
-_DEFAULTS = {
+DEFAULTS: dict[str, int | bool] = {
     "airport_buffer_min": DEFAULT_AIRPORT_BUFFER_MIN,
     "home_to_airport_min": DEFAULT_HOME_TO_AIRPORT_MIN,
     "max_visits_per_day": DEFAULT_MAX_VISITS_PER_DAY,
     "visit_duration_min": DEFAULT_VISIT_DURATION_MIN,
     "unpaid_leg_days": DEFAULT_UNPAID_LEG_DAYS,
+    "snooze_other_events": False,
 }
 
 
@@ -45,10 +46,12 @@ class TravelSettingsService:
 
     async def get(self) -> TravelSettingsRead:
         values: dict[str, int | str | bool | None] = {}
-        for field, default in _DEFAULTS.items():
+        for field, default in DEFAULTS.items():
             raw = await self._settings.get_value(_key(field))
-            values[field] = int(raw) if raw else default
-        values["snooze_other_events"] = (await self._settings.get_value(_key("snooze_other_events"))) == "1"
+            if isinstance(default, bool):
+                values[field] = raw == "1" if raw else default
+            else:
+                values[field] = int(raw) if raw else default
         # The address lives on the Home location (organizer.locations); trips only read it.
         home = await self._locations.get_home()
         values["home_address"] = home.address if home else None

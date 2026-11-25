@@ -5,11 +5,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from app.features.travel.settings_schemas import DEFAULT_RAIN_MM
+
 logger = logging.getLogger(__name__)
 
 # Open-Meteo forecasts reach 16 days; stay safely inside.
 FORECAST_HORIZON_DAYS = 14
-RAIN_MM = 2.0
 
 # "actual": archive values of a finished trip; "mixed": a finished trip holding more than one kind of day.
 ForecastMode = Literal["forecast", "climate", "actual", "mixed", "none"]
@@ -51,8 +52,8 @@ def a_year_earlier(day: date) -> date:
         return day.replace(year=day.year - 1, day=28)
 
 
-def days_from_daily(daily: dict[str, Any], dates: list[date]) -> list[ForecastDay]:
-    """Open-Meteo's column-wise `daily` block as rows, labelled with the trip's own dates."""
+def days_from_daily(daily: dict[str, Any], dates: list[date], rain_mm: float = DEFAULT_RAIN_MM) -> list[ForecastDay]:
+    """Open-Meteo's column-wise `daily` block as rows, labelled with the trip's own dates; rain from `rain_mm`."""
     mins, maxs, rain = daily.get("temperature_2m_min") or [], daily.get("temperature_2m_max") or [], daily.get("precipitation_sum") or []
 
     def at(values: list, i: int):
@@ -61,7 +62,7 @@ def days_from_daily(daily: dict[str, Any], dates: list[date]) -> list[ForecastDa
     return [
         ForecastDay(
             date=day, min_c=at(mins, i), max_c=at(maxs, i), precip_mm=at(rain, i),
-            rain=(at(rain, i) or 0) >= RAIN_MM,
+            rain=(at(rain, i) or 0) >= rain_mm,
         )
         for i, day in enumerate(dates)
     ]

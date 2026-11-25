@@ -6,6 +6,7 @@ import pytest
 from freezegun import freeze_time
 
 from travel_city_helpers import city_ref
+from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.trips import forecast as fc
 from app.features.travel.trips.forecast import a_year_earlier, days_from_daily, pick_mode
 from app.features.travel.trips.forecast_service import TripForecastService
@@ -35,6 +36,11 @@ class TestDaysFromDaily:
         days = days_from_daily(daily, [date(2027, 3, 1), date(2027, 3, 2)])
         assert [(d.date, d.min_c, d.max_c, d.rain) for d in days] == [
             (date(2027, 3, 1), 1.0, 5.0, False), (date(2027, 3, 2), 2.0, 6.0, True)]
+
+    def test_rain_threshold_is_a_parameter(self):
+        daily = {"precipitation_sum": [0.4, 3.0]}
+        days = days_from_daily(daily, [date(2027, 3, 1), date(2027, 3, 2)], rain_mm=0.3)
+        assert [d.rain for d in days] == [True, True]
 
     def test_missing_columns_become_none(self):
         days = days_from_daily({}, [date(2027, 3, 1)])
@@ -76,6 +82,8 @@ def service():
     svc = TripForecastService(AsyncMock(), AsyncMock())
     svc._client, svc._trips, svc._stays, svc._legs = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
     svc._weather = FakeWeatherRepo()
+    svc._settings = AsyncMock()
+    svc._settings.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45)
     svc._legs.get_legs.return_value = []
     svc._trips.get_trip.return_value = SimpleNamespace(start_date=date(2026, 12, 17), end_date=date(2026, 12, 19))
     svc._stays.get_stays.return_value = [_stay(lat=1.0, lng=2.0)]
@@ -86,6 +94,11 @@ def service():
 
 @freeze_time("2026-12-10 12:00:00")
 class TestService:
+    async def test_rain_days_follow_the_setting(self, service):
+        service._settings.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45, rain_mm=10)
+        result = await service.get_forecast(1)
+        assert [d.rain for d in result.cities[0].days] == [False, False, False]
+
     async def test_forecast_for_each_stay_city_using_place_coordinates(self, service):
         result = await service.get_forecast(1)
         assert result.mode == "forecast" and result.available

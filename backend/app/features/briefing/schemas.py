@@ -102,6 +102,7 @@ class TripMarkBrief(BaseModel):
 class MorningBriefing(BaseModel):
     date: date
     lookahead_days: int = 1
+    holiday_lookahead_days: int = 7
     tasks: list[TaskBriefItem]
     events: list[EventBriefItem]
     weather: WeatherForecast | None

@@ -207,6 +207,8 @@ PLANNING_SETTINGS_FLAGS = {
     "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
     "--office-days": "office_days_per_week", "--office-min": "office_min_minutes", "--conventions": "conventions",
     "--travel": "travel_times", "--default-travel": "default_travel_minutes", "--walk-tolerance": "walk_tolerance_minutes",
+    "--backlog-days": "backlog_stale_days", "--due-days": "due_lookahead_days", "--study-items": "study_items_per_plan",
+    "--assumed-estimate": "assumed_estimate_minutes", "--shopping-run": "shopping_run_minutes",
 }
 _PLANNING_SETTINGS_DETAILS = (
     "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
@@ -222,6 +224,8 @@ _PLANNING_SETTINGS_DETAILS = (
     "default_travel_minutes (default 30, 0 turns it off) is the one-way travel assumed for a trip with no saved travel time "
     "(and for an in-person event with no location and no travel_minutes); walk_tolerance_minutes (default 10) is how many more "
     "minutes walking may take than the fastest public transport and still be the mode to pick. "
+    "backlog_stale_days (default 60), due_lookahead_days (3), study_items_per_plan (5), assumed_estimate_minutes (30) "
+    "and shopping_run_minutes (45) shape what a day plan lists and assumes; empty resets them to the default. "
     "Unset values switch the related section off."
 )
 _DAY_PLAN_GET_DETAILS = (

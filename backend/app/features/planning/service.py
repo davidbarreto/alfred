@@ -47,13 +47,8 @@ logger = logging.getLogger(__name__)
 
 MAX_DAYS = 7
 _TASK_CAP = 30
-_BACKLOG_STALE_DAYS = 60
-_STUDY_ITEMS_PER_PLAN = 5
-_DUE_LOOKAHEAD_DAYS = 3
 _EVENT_LIMIT = 500
-_ASSUMED_ESTIMATE_MINUTES = 30
 _ASSUMED_CONTEXT = "anywhere"
-_SHOPPING_RUN_MINUTES = 45
 _UNCATEGORISED = "other"
 _UTC = timezone.utc
 
@@ -119,7 +114,7 @@ class DayPlanService:
             day.holidays = holidays.get(day.date)
             day.trips = trip_days.get(day.date)
         office = await self._office_summary(first, settings)
-        tasks = await self._task_sections(dates, warnings)
+        tasks = await self._task_sections(dates, warnings, settings)
 
         plan = DayPlanRead(
             date=first.isoformat(),
@@ -130,8 +125,8 @@ class DayPlanService:
             due_tasks=tasks["due"],
             recurring_tasks=tasks["recurring"],
             backlog_tasks=tasks["backlog"],
-            study=await self._study_section(),
-            shopping=await self._shopping_section(),
+            study=await self._study_section(settings.study_items_per_plan),
+            shopping=await self._shopping_section(settings.shopping_run_minutes),
             activity_suggestions=await self._activities.get_suggestions() or None,
             saved_plan=self._saved_plans(saved),
             warnings=warnings,
@@ -295,12 +290,12 @@ class DayPlanService:
 
     # --- tasks -----------------------------------------------------------------------------
 
-    async def _task_sections(self, dates: list[date], warnings: list[str]) -> dict[str, list]:
+    async def _task_sections(self, dates: list[date], warnings: list[str], settings: Any) -> dict[str, list]:
         tasks = await self._tasks.get_tasks(TaskFilters(status="ACTIVE", limit=_EVENT_LIMIT))
         range_start, _ = timeline.day_bounds(dates[0])
         _, range_end = timeline.day_bounds(dates[-1])
         boundary = max(local_now().astimezone(_UTC), range_start.astimezone(_UTC))
-        lookahead_end = (range_end + timedelta(days=_DUE_LOOKAHEAD_DAYS)).astimezone(_UTC)
+        lookahead_end = (range_end + timedelta(days=settings.due_lookahead_days)).astimezone(_UTC)
         range_end_utc = range_end.astimezone(_UTC)
         today = local_today()
 
@@ -331,13 +326,15 @@ class DayPlanService:
         due_items = [_task_item(t) for _, t in sorted(due, key=lambda pair: pair[0])[:_TASK_CAP]]
         backlog_items = [_task_item(t) for t in backlog[:_TASK_CAP]]
         recurring = recurring[:_TASK_CAP]
-        warnings.extend(_assumption_warnings([*overdue_items, *due_items, *recurring, *backlog_items]))
-        warnings.extend(_backlog_warnings(backlog))
+        warnings.extend(_assumption_warnings(
+            [*overdue_items, *due_items, *recurring, *backlog_items], settings.assumed_estimate_minutes
+        ))
+        warnings.extend(_backlog_warnings(backlog, settings.backlog_stale_days))
         return {"overdue": overdue_items, "due": due_items, "recurring": recurring, "backlog": backlog_items}
 
     # --- study, language, shopping ---------------------------------------------------------
 
-    async def _study_section(self) -> StudySection:
+    async def _study_section(self, items_per_plan: int) -> StudySection:
         overview = await self._study.get_overview()
         plans = []
         for plan in overview.active:
@@ -347,7 +344,7 @@ class DayPlanService:
             plans.append(
                 StudyPlanSummary(
                     plan_id=plan.id, title=plan.title, goal=plan.goal, priority=plan.priority,
-                    tags=plan.tags or None, open_items=open_items[:_STUDY_ITEMS_PER_PLAN],
+                    tags=plan.tags or None, open_items=open_items[:items_per_plan],
                 )
             )
         progress = await self._language.get_daily_progress()
@@ -395,7 +392,7 @@ class DayPlanService:
         hidden = {"id", "source", "created_at", "updated_at", "archived_at"}
         return [p.model_dump(mode="json", exclude=hidden, exclude_none=True) for p in plans]
 
-    async def _shopping_section(self) -> ShoppingSection | None:
+    async def _shopping_section(self, run_minutes: int) -> ShoppingSection | None:
         pending = await self._shopping.list_items(ShoppingItemFilters(status="pending", limit=500))
         due_recurring = await self._shopping.list_due_recurrences()
         if not pending and not due_recurring:
@@ -404,7 +401,7 @@ class DayPlanService:
         return ShoppingSection(
             pending_items=len(pending),
             due_recurring=len(due_recurring),
-            suggested_run=SuggestedRun(estimate_minutes=_SHOPPING_RUN_MINUTES, context="out"),
+            suggested_run=SuggestedRun(estimate_minutes=run_minutes, context="out"),
             by_category=_count_by([names.get(item.category_id, _UNCATEGORISED) for item in pending]),
         )
 
@@ -474,36 +471,36 @@ def _recurring_item(task: TaskRead, dates: list[date], today: date) -> Recurring
 _MAX_LISTED_IDS = 5
 
 
-def _assumption_warnings(items: list[TaskItem]) -> list[str]:
+def _assumption_warnings(items: list[TaskItem], assumed_minutes: int) -> list[str]:
     missing_estimate = [t.id for t in items if t.estimate_minutes is None]
     missing_context = [t.id for t in items if t.context is None]
     both = sorted(set(missing_estimate) & set(missing_context))
     only_estimate = sorted(set(missing_estimate) - set(both))
     only_context = sorted(set(missing_context) - set(both))
-    assumed = f"assumed {_ASSUMED_ESTIMATE_MINUTES} min / {_ASSUMED_CONTEXT}"
+    assumed = f"assumed {assumed_minutes} min / {_ASSUMED_CONTEXT}"
     warnings = []
     if both:
         warnings.append(f"{_ids(both)} no estimate and no context; {assumed}.")
     if only_estimate:
-        warnings.append(f"{_ids(only_estimate)} no estimate; assumed {_ASSUMED_ESTIMATE_MINUTES} min.")
+        warnings.append(f"{_ids(only_estimate)} no estimate; assumed {assumed_minutes} min.")
     if only_context:
         warnings.append(f"{_ids(only_context)} no context; assumed {_ASSUMED_CONTEXT}.")
     return warnings
 
 
-def _backlog_warnings(backlog: list[TaskRead]) -> list[str]:
-    """A backlog cut at the cap, and tasks sitting in it past `_BACKLOG_STALE_DAYS`, counted over the whole backlog."""
+def _backlog_warnings(backlog: list[TaskRead], stale_days: int) -> list[str]:
+    """A backlog cut at the cap, and tasks sitting in it past `stale_days`, counted over the whole backlog."""
     warnings = []
     if len(backlog) > _TASK_CAP:
         warnings.append(f"Backlog: showing {_TASK_CAP} of {len(backlog)} tasks (by urgency, priority, newest first).")
     now = local_now()
-    cutoff = now - timedelta(days=_BACKLOG_STALE_DAYS)
+    cutoff = now - timedelta(days=stale_days)
     stale = sorted((t for t in backlog if localize(t.created_at) < cutoff), key=lambda t: localize(t.created_at))
     if stale:
         oldest = stale[0]
         age = (now - localize(oldest.created_at)).days
         warnings.append(
-            f"{_ids([t.id for t in stale])} been in the backlog over {_BACKLOG_STALE_DAYS} days "
+            f"{_ids([t.id for t in stale])} been in the backlog over {stale_days} days "
             f"(oldest: task {oldest.id}, {age} days): plan it, give it a deadline or cancel it."
         )
     return warnings

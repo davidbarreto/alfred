@@ -220,6 +220,166 @@
       }
     },
     {
+      "name": "04b - Plan List Settings Default To The Old Constants",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Defaults', () => {",
+              "    const s = pm.response.json();",
+              "    pm.expect([s.backlog_stale_days, s.due_lookahead_days, s.assumed_estimate_minutes, s.shopping_run_minutes, s.study_items_per_plan]).to.eql([60, 3, 30, 45, 5]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04c - Set The Plan List Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved', () => pm.expect([pm.response.json().backlog_stale_days, pm.response.json().shopping_run_minutes]).to.eql([90, 30]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"backlog_stale_days\": 90,\n  \"shopping_run_minutes\": 30\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04d - Backlog Age Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"backlog_stale_days\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04e - Reset The Plan List Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Back to the defaults', () => pm.expect([pm.response.json().backlog_stale_days, pm.response.json().shopping_run_minutes]).to.eql([60, 45]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"backlog_stale_days\": null,\n  \"shopping_run_minutes\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "05 - Get Day Plan (today)",
       "event": [
         {

@@ -14,6 +14,8 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
+from app.features.briefing.settings_schemas import BriefingSettingsRead, BriefingSettingsUpdate
+from app.features.briefing.settings_service import DEFAULTS as BRIEFING_DEFAULTS
 from app.features.core.assistant_settings.schemas import AssistantSettingsRead, AssistantSettingsUpdate
 from app.features.core.reminders.schemas import ReminderSettingsRead, ReminderSettingsUpdate
 from app.features.core.reminders.settings_service import defaults as reminder_defaults
@@ -96,6 +98,13 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
             TravelSettingsUpdate, TravelSettingsRead, "/travel/settings", "/travel/settings", lambda: TRAVEL_DEFAULTS,
         ),),
         (SettingsLinkRead(label="Checklist template", href="/travel", description="Edited on the Travel page."),),
+    ),
+    CatalogNamespace(
+        "briefing", "Briefing", "What the morning briefing covers and how much of each list it spells out.",
+        (CatalogSource(
+            BriefingSettingsUpdate, BriefingSettingsRead, "/briefing/settings", "/briefing/settings",
+            lambda: BRIEFING_DEFAULTS,
+        ),),
     ),
     CatalogNamespace(
         "finance", "Finance", "How the monthly finance cycle is counted.",

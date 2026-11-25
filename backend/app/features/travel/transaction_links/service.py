@@ -22,15 +22,13 @@ from app.features.travel.transaction_links.schemas import (
     TaggedTransactions,
     TripCosts,
 )
+from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.visits.repository import VisitRepository
 
 logger = logging.getLogger(__name__)
 
-# Tagged charges count as trip charges from this long before the trip until this long after it (prepaid bookings).
-TAG_LEAD_DAYS = 90
-TAG_TAIL_DAYS = 30
 
 _NO_COST = (Decimal("0.00"), 0, 0)
 
@@ -75,6 +73,7 @@ class TransactionLinkService:
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)
+        self._settings = TravelSettingsService(session)
 
     async def _require(self, kind: LinkKind, entity_id: int) -> None:
         if not await self._repo.entity_exists(kind, entity_id):
@@ -135,10 +134,12 @@ class TransactionLinkService:
         )
 
     async def _tagged(self, trip) -> TaggedTransactions:
+        # Tagged charges count from some days before the trip until some days after it (prepaid bookings).
+        settings = await self._settings.get()
         found = await self._repo.get_tagged(
             parse_default_tag_names(trip.default_tag_names),
-            datetime.combine(trip.start_date - timedelta(days=TAG_LEAD_DAYS), time.min),
-            datetime.combine(trip.end_date + timedelta(days=TAG_TAIL_DAYS + 1), time.min),
+            datetime.combine(trip.start_date - timedelta(days=settings.charge_link_lead_days), time.min),
+            datetime.combine(trip.end_date + timedelta(days=settings.charge_link_tail_days + 1), time.min),
         )
         items = [TaggedTransaction(**LinkedTransaction.model_validate(t).model_dump(), linked=linked) for t, linked in found]
         return TaggedTransactions(transactions=items, cost=_sum_cost([i for i in items if not i.linked]))

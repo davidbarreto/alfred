@@ -8,13 +8,11 @@ from pydantic import BaseModel
 from app.features.travel.legs.schemas import LegRead
 from app.shared.utils.links import maps_directions_url, maps_search_url, place_maps_url
 from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.settings_schemas import DEFAULT_LONG_WAIT_HOURS, DEFAULT_TIGHT_CONNECTION_MIN
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.zones import to_local
 from app.shared.utils.timezone import local_timezone
 
-# Arriving this long before the room is ready is worth a heads-up (luggage storage, a cafe).
-LONG_WAIT_BEFORE_CHECK_IN = timedelta(hours=4)
-TIGHT_CONNECTION = timedelta(minutes=90)
 # How far from check-in a leg is still considered "the arrival for that stay".
 ARRIVAL_WINDOW = timedelta(hours=24)
 
@@ -273,8 +271,19 @@ def build_timeline(
     return sorted(items, key=lambda item: (item.at, item.ref_id))
 
 
-def find_warnings(legs: list[LegRead], stays: list[StayRead]) -> list[TripWarning]:
-    """Only from data that exists: no stay means no check-in warning, no legs means no leg warnings."""
+def find_warnings(
+    legs: list[LegRead],
+    stays: list[StayRead],
+    tight_connection_min: int = DEFAULT_TIGHT_CONNECTION_MIN,
+    long_wait_hours: int = DEFAULT_LONG_WAIT_HOURS,
+) -> list[TripWarning]:
+    """Only from data that exists: no stay means no check-in warning, no legs means no leg warnings.
+
+    A connection shorter than `tight_connection_min` is tight; arriving more than `long_wait_hours` before the room
+    is ready is worth a heads-up (luggage storage, a cafe).
+    """
+    tight_connection = timedelta(minutes=tight_connection_min)
+    long_wait = timedelta(hours=long_wait_hours)
     warnings: list[TripWarning] = []
     ordered = sorted(legs, key=lambda leg: (leg.departs_at, leg.id))
 
@@ -287,7 +296,7 @@ def find_warnings(legs: list[LegRead], stays: list[StayRead]) -> list[TripWarnin
             continue
         connected = _same_place(prev.destination, nxt.origin) or _same_place(nxt.origin, prev.destination)
         gap = nxt.departs_at - prev.arrives_at
-        if connected and gap < TIGHT_CONNECTION:
+        if connected and gap < tight_connection:
             warnings.append(TripWarning(
                 kind="tight_connection", leg_id=nxt.id,
                 message=f"Only {_hours(gap)} to connect in {prev.destination}",
@@ -298,7 +307,7 @@ def find_warnings(legs: list[LegRead], stays: list[StayRead]) -> list[TripWarnin
             if not _end_at_city(leg.destination, leg.destination_city.id if leg.destination_city else None, stay.place):
                 continue
             wait = stay.check_in_at - leg.arrives_at
-            if timedelta(0) <= wait <= ARRIVAL_WINDOW and wait > LONG_WAIT_BEFORE_CHECK_IN:
+            if timedelta(0) <= wait <= ARRIVAL_WINDOW and wait > long_wait:
                 warnings.append(TripWarning(
                     kind="long_wait_before_check_in", leg_id=leg.id, stay_id=stay.id,
                     message=(

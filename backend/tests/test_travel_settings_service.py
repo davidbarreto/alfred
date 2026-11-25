@@ -64,6 +64,28 @@ class TestSnoozeOtherEvents:
         assert (await service.get()).snooze_other_events is True
 
 
+class TestMovedConstants:
+    @pytest.mark.asyncio
+    async def test_defaults_are_the_constants_the_code_used(self, service):
+        settings = await service.get()
+        assert (
+            settings.leave_home_lead_min, settings.check_in_opens_hours, settings.checklist_nudge_days,
+            settings.tight_connection_min, settings.long_wait_hours, settings.rain_mm,
+            settings.charge_link_lead_days, settings.charge_link_tail_days,
+        ) == (60, 24, 60, 90, 4, 2.0, 90, 30)
+
+    @pytest.mark.asyncio
+    async def test_rain_threshold_is_read_as_a_number_with_decimals(self, service):
+        service._settings.get_value.side_effect = lambda key: "2.5" if key == "travel.rain_mm" else None
+        assert (await service.get()).rain_mm == 2.5
+
+    @pytest.mark.asyncio
+    async def test_stored_as_text(self, service):
+        await service.update(TravelSettingsUpdate(rain_mm=1.5, check_in_opens_hours=48))
+        stored = {c.args for c in service._settings.set_value.await_args_list}
+        assert stored == {("travel.rain_mm", "1.5"), ("travel.check_in_opens_hours", "48")}
+
+
 def _stored(service, **values):
     service._settings.get_value.side_effect = lambda key: {f"travel.{k}": v for k, v in values.items()}.get(key)
 

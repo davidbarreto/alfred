@@ -3,6 +3,16 @@ from pydantic import BaseModel, field_validator
 from app.features.core.settings.metadata import setting
 from app.features.travel.cities.schemas import CityRef
 
+# Each one is a travel.* setting with this default (the constant the code used before).
+DEFAULT_LEAVE_HOME_LEAD_MIN = 60
+DEFAULT_CHECK_IN_OPENS_HOURS = 24
+DEFAULT_CHECKLIST_NUDGE_DAYS = 60
+DEFAULT_TIGHT_CONNECTION_MIN = 90
+DEFAULT_LONG_WAIT_HOURS = 4
+DEFAULT_RAIN_MM = 2.0
+DEFAULT_CHARGE_LINK_LEAD_DAYS = 90
+DEFAULT_CHARGE_LINK_TAIL_DAYS = 30
+
 
 class TravelSettingsRead(BaseModel):
     airport_buffer_min: int
@@ -17,6 +27,14 @@ class TravelSettingsRead(BaseModel):
     unpaid_leg_days: int = 30
     # During a trip, reminders of calendar events that are not part of it are held back.
     snooze_other_events: bool = False
+    leave_home_lead_min: int = DEFAULT_LEAVE_HOME_LEAD_MIN
+    check_in_opens_hours: int = DEFAULT_CHECK_IN_OPENS_HOURS
+    checklist_nudge_days: int = DEFAULT_CHECKLIST_NUDGE_DAYS
+    tight_connection_min: int = DEFAULT_TIGHT_CONNECTION_MIN
+    long_wait_hours: int = DEFAULT_LONG_WAIT_HOURS
+    rain_mm: float = DEFAULT_RAIN_MM
+    charge_link_lead_days: int = DEFAULT_CHARGE_LINK_LEAD_DAYS
+    charge_link_tail_days: int = DEFAULT_CHARGE_LINK_TAIL_DAYS
 
 
 class TravelSettingsUpdate(BaseModel):
@@ -39,10 +57,42 @@ class TravelSettingsUpdate(BaseModel):
         "Warn about unpaid legs from", "Days before a trip starts. 0 = never.",
         unit="days before", group="Trip warnings", ge=0, le=365,
     )
+    leave_home_lead_min: int | None = setting(
+        "Time to leave reminder", "How long before the leave-home time it is sent.",
+        unit="min before", group="Getting to the airport", ge=0, le=600,
+    )
+    check_in_opens_hours: int | None = setting(
+        "Online check-in opens", "Before a flight; the check-in reminder is sent from then.",
+        unit="hours before", group="Getting to the airport", ge=1, le=168,
+    )
+    tight_connection_min: int | None = setting(
+        "Tight connection under", "A connection shorter than this is a warning.",
+        unit="min", group="Trip warnings", ge=0, le=600,
+    )
+    long_wait_hours: int | None = setting(
+        "Long wait before check-in over", "Arriving this long before a stay's check-in is a warning.",
+        unit="hours", group="Trip warnings", ge=0, le=24,
+    )
+    checklist_nudge_days: int | None = setting(
+        "Checklist reminder from", "Days before a trip, a checklist not generated yet is a warning.",
+        unit="days before", group="Trip warnings", ge=0, le=365,
+    )
     snooze_other_events: bool | None = setting(
         "Snooze other events during a trip",
         "Hold back reminders of calendar events that are not part of the trip while it runs.",
         group="Reminders",
+    )
+    rain_mm: float | None = setting(
+        "Rain day from", "A trip day with at least this much precipitation counts as rainy.",
+        unit="mm", group="Weather", step=0.1, ge=0, le=100,
+    )
+    charge_link_lead_days: int | None = setting(
+        "Tagged charges from", "Charges with the trip's tags count from this long before the trip (prepaid bookings).",
+        unit="days before", group="Charges", ge=0, le=730,
+    )
+    charge_link_tail_days: int | None = setting(
+        "Tagged charges until", "…and until this long after it.",
+        unit="days after", group="Charges", ge=0, le=365,
     )
     # Moved to the Home location: sending it is refused, so an old client fails loudly instead of being ignored.
     home_address: str | None = setting(

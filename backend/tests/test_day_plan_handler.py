@@ -80,6 +80,11 @@ class TestSettings:
             office_min_minutes=60, work_tag="job", office_tag="hq",
         )
 
+    async def test_set_settings_takes_the_plan_list_settings(self, plans, settings, saved):
+        await handle_day_plan("set_settings", {"backlog_stale_days": "90", "shopping_run_minutes": ""}, plans, settings, saved)
+        update = settings.update.await_args.args[0]
+        assert update.model_dump(exclude_unset=True) == {"backlog_stale_days": 90, "shopping_run_minutes": None}
+
     async def test_workdays_are_parsed_from_a_comma_list(self, plans, settings, saved):
         await handle_day_plan("set_settings", {"workdays": "Mon, tue,sat"}, plans, settings, saved)
         assert settings.update.call_args.args[0] == PlanningSettingsUpdate(workdays=["mon", "tue", "sat"])

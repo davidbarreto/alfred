@@ -39,8 +39,6 @@ from app.shared.utils.timezone import local_timezone, local_timezone_name, local
 
 logger = logging.getLogger(__name__)
 
-# The checklist nudge starts this many days before the trip.
-CHECKLIST_NUDGE_DAYS = 60
 _NOT_NULL = ("name", "start_date", "end_date")
 
 
@@ -98,7 +96,7 @@ class TripService:
         paid_legs = await self._link_repo.get_linked_ids("legs", [leg.id for leg in legs])
         paid_stays = await self._link_repo.get_linked_ids("stays", [stay.id for stay in stays])
         warnings = [
-            *find_warnings(legs, stays),
+            *find_warnings(legs, stays, settings.tight_connection_min, settings.long_wait_hours),
             *find_lodging_warnings(legs, stays),
             *find_visit_warnings(all_visits, legs, stays, settings.max_visits_per_day),
             *find_outside_dates_warnings(legs, stays, all_visits, trip.start_date, trip.end_date),
@@ -110,7 +108,7 @@ class TripService:
             *find_visit_overlap_warnings(all_visits, settings.visit_duration_min),
             *find_event_warnings(all_visits, await self._linked_events(all_visits), today, local_timezone()),
         ]
-        if 0 <= (trip.start_date - today).days <= CHECKLIST_NUDGE_DAYS and await self._checklist.is_pending(trip.name):
+        if 0 <= (trip.start_date - today).days <= settings.checklist_nudge_days and await self._checklist.is_pending(trip.name):
             warnings.append(TripWarning(
                 kind="checklist_not_generated",
                 message="The pre-trip checklist has not been generated yet (the Generate checklist button below)",

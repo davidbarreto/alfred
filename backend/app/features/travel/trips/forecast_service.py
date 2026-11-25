@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.forecast import (
-    RAIN_MM, CityForecast, ForecastDay, ForecastMode, TripForecast, a_year_earlier, days_from_daily, pick_mode,
+    CityForecast, ForecastDay, ForecastMode, TripForecast, a_year_earlier, days_from_daily, pick_mode,
 )
+from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.tables import TripWeather
 from app.features.travel.trips.weather_repository import TripWeatherRepository
@@ -39,6 +40,7 @@ class TripForecastService:
         self._stays = StayRepository(session)
         self._legs = LegRepository(session)
         self._weather = TripWeatherRepository(session)
+        self._settings = TravelSettingsService(session)
 
     async def _coordinates(self, place) -> tuple[float, float] | None:
         if place.lat is not None and place.lng is not None:
@@ -109,13 +111,14 @@ class TripForecastService:
                 failed = True
                 logger.warning("Trip weather backfill failed: trip_id=%d error=%s", trip_id, exc)
 
+        rain_mm = (await self._settings.get()).rain_mm
         cities: list[CityForecast] = []
         rows: list[TripWeather] = []
         for key, (place, days) in wanted.items():
             city_rows = [saved[key, d] for d in sorted(days) if d <= shown_until and (key, d) in saved]
             if city_rows:
                 rows.extend(city_rows)
-                cities.append(CityForecast(city=place.city.name, days=[_to_day(r) for r in city_rows]))
+                cities.append(CityForecast(city=place.city.name, days=[_to_day(r, rain_mm) for r in city_rows]))
 
         if finished:
             if not cities:
@@ -193,6 +196,6 @@ class TripForecastService:
         return days_from_daily(daily, dates)
 
 
-def _to_day(row: TripWeather) -> ForecastDay:
+def _to_day(row: TripWeather, rain_mm: float) -> ForecastDay:
     return ForecastDay(date=row.day, min_c=row.min_c, max_c=row.max_c, precip_mm=row.precip_mm,
-                       rain=(row.precip_mm or 0) >= RAIN_MM)
+                       rain=(row.precip_mm or 0) >= rain_mm)

@@ -74,6 +74,16 @@ def _frozen_today():
 
 
 @pytest.fixture(autouse=True)
+def briefing_settings():
+    """The briefing settings on their defaults unless a test says otherwise."""
+    from app.features.briefing.settings_schemas import BriefingSettingsRead
+
+    with patch("app.features.briefing.morning_summary_service.BriefingSettingsService") as settings:
+        settings.return_value.get = AsyncMock(return_value=BriefingSettingsRead())
+        yield settings.return_value
+
+
+@pytest.fixture(autouse=True)
 def weather_place():
     """The weather place setting: Home with coordinates unless a test says otherwise."""
     from app.features.core.weather_settings.schemas import WeatherPlace
@@ -529,6 +539,23 @@ class TestBuild:
         assert args[1:] == (38.7, -9.1)
         weather_place.resolve.assert_awaited_once_with(mock_weather_client.geocode_city)
         assert (result.weather_place, result.weather_note) == ("Home", None)
+
+    @pytest.mark.asyncio
+    async def test_look_ahead_follows_the_settings(self, service, briefing_settings, mock_holiday_client):
+        from app.features.briefing.settings_schemas import BriefingSettingsRead
+
+        briefing_settings.get.return_value = BriefingSettingsRead(lookahead_days=5, holiday_lookahead_days=10)
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            result = await service.build()
+
+        assert (result.lookahead_days, result.holiday_lookahead_days) == (5, 10)
+        start, end = mock_holiday_client.get_holidays.call_args.args[:2]
+        assert (end - start).days == 10
 
     @pytest.mark.asyncio
     async def test_no_weather_place_says_how_to_set_one(self, service, mock_weather_client, weather_place):

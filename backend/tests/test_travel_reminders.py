@@ -94,6 +94,11 @@ class TestCheckIn:
         assert "travel_check_in" in _kinds(reminders)
         assert "XX 123" in [r for r in reminders if r.kind == "travel_check_in"][0].text
 
+    def test_window_follows_the_setting(self):
+        trip = _trip(legs=[_leg()])  # departs 17th 12:00
+        settings = SETTINGS.model_copy(update={"check_in_opens_hours": 48})
+        assert "travel_check_in" in _kinds(build_travel_reminders([trip], _utc(15, 12), date(2026, 12, 15), settings))
+
     def test_closes_at_departure(self):
         trip = _trip(legs=[_leg()])
         assert "travel_check_in" not in _kinds(build_travel_reminders([trip], _utc(17, 12), date(2026, 12, 17), SETTINGS))
@@ -108,6 +113,12 @@ class TestCheckIn:
 
 
 class TestLeaveHome:
+    def test_lead_follows_the_setting(self):
+        trip = _trip(legs=[_leg()])  # leave at 09:00
+        settings = SETTINGS.model_copy(update={"leave_home_lead_min": 30})
+        assert "travel_leave_home" not in _kinds(build_travel_reminders([trip], _utc(17, 8), date(2026, 12, 17), settings))
+        assert "travel_leave_home" in _kinds(build_travel_reminders([trip], _utc(17, 8, 30), date(2026, 12, 17), settings))
+
     def test_announced_an_hour_ahead_of_the_leave_time(self):
         trip = _trip(legs=[_leg()])  # leave at 12:00 - 3h = 09:00
         assert "travel_leave_home" not in _kinds(build_travel_reminders([trip], _utc(17, 7, 59), date(2026, 12, 17), SETTINGS))

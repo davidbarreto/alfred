@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.settings.service import SettingService
 from app.features.organizer.locations.travel_time_service import LocationTravelTimeService
 from app.features.planning.schemas import (
+    DEFAULT_ASSUMED_ESTIMATE_MINUTES,
+    DEFAULT_BACKLOG_STALE_DAYS,
+    DEFAULT_DUE_LOOKAHEAD_DAYS,
+    DEFAULT_SHOPPING_RUN_MINUTES,
+    DEFAULT_STUDY_ITEMS_PER_PLAN,
     DEFAULT_TRAVEL_MINUTES,
     DEFAULT_WALK_TOLERANCE_MINUTES,
     DEFAULT_WORKDAYS,
@@ -27,7 +32,17 @@ DEFAULTS: dict[str, int | str | list[str]] = {
     "office_tag": "office",
     "default_travel_minutes": DEFAULT_TRAVEL_MINUTES,
     "walk_tolerance_minutes": DEFAULT_WALK_TOLERANCE_MINUTES,
+    "backlog_stale_days": DEFAULT_BACKLOG_STALE_DAYS,
+    "due_lookahead_days": DEFAULT_DUE_LOOKAHEAD_DAYS,
+    "assumed_estimate_minutes": DEFAULT_ASSUMED_ESTIMATE_MINUTES,
+    "shopping_run_minutes": DEFAULT_SHOPPING_RUN_MINUTES,
+    "study_items_per_plan": DEFAULT_STUDY_ITEMS_PER_PLAN,
 }
+# Plain numbers read with their default from DEFAULTS.
+_NUMBER_FIELDS = (
+    "default_travel_minutes", "walk_tolerance_minutes", "backlog_stale_days", "due_lookahead_days",
+    "assumed_estimate_minutes", "shopping_run_minutes", "study_items_per_plan",
+)
 
 
 def _int_or(raw: str | None, default: int | None) -> int | None:
@@ -66,8 +81,7 @@ class PlanningSettingsService:
             office_min_minutes=_int_or(raw["office_min_minutes"], None),
             conventions=raw["conventions"] or None,
             travel_times=await self._travel_times.as_preferences(),
-            default_travel_minutes=_int_or(raw["default_travel_minutes"], DEFAULTS["default_travel_minutes"]),
-            walk_tolerance_minutes=_int_or(raw["walk_tolerance_minutes"], DEFAULTS["walk_tolerance_minutes"]),
+            **{field: _int_or(raw[field], DEFAULTS[field]) for field in _NUMBER_FIELDS},
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:

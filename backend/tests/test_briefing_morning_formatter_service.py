@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.features.briefing.morning_formatter_service import (
-    _MAX_EVENTS_TODAY,
-    _MAX_EVENTS_UPCOMING,
-    _MAX_RECURRING_ITEMS,
-    _MAX_SHOPPING_ITEMS,
-    _MAX_TASKS_TODAY,
-    _MAX_TASKS_UPCOMING,
-    MorningBriefingFormatterService,
-    _build_context,
+from app.features.briefing.morning_formatter_service import MorningBriefingFormatterService, _build_context
+from app.features.briefing.settings_schemas import (
+    DEFAULT_MAX_EVENTS_TODAY as _MAX_EVENTS_TODAY,
+    DEFAULT_MAX_EVENTS_UPCOMING as _MAX_EVENTS_UPCOMING,
+    DEFAULT_MAX_RECURRING_ITEMS as _MAX_RECURRING_ITEMS,
+    DEFAULT_MAX_SHOPPING_ITEMS as _MAX_SHOPPING_ITEMS,
+    DEFAULT_MAX_TASKS_TODAY as _MAX_TASKS_TODAY,
+    DEFAULT_MAX_TASKS_UPCOMING as _MAX_TASKS_UPCOMING,
+    BriefingSettingsRead,
 )
 from app.features.briefing.schemas import (
     BirthdayItem,
@@ -227,6 +227,12 @@ class TestBuildContext:
         assert "Take an umbrella" in context
         assert "Take a coat" in context
 
+    def test_list_sizes_follow_the_settings(self):
+        tasks = [_make_task_item(id=i, title=f"Task {i}", is_today=True) for i in range(5)]
+        context = _build_context(_make_briefing(tasks=tasks), BriefingSettingsRead(max_tasks_today=2))
+        assert "Task 1" in context and "Task 2" not in context
+        assert "... and 3 more tasks due today" in context
+
     def test_weather_unavailable_when_none(self):
         briefing = _make_briefing(weather=None)
         context = _build_context(briefing)
@@ -404,6 +410,8 @@ class TestMorningBriefingFormatterService:
         svc._repo = AsyncMock()
         svc._assistant_settings = AsyncMock()
         svc._assistant_settings.user_label.return_value = "Sam"
+        svc._briefing_settings = AsyncMock()
+        svc._briefing_settings.get.return_value = BriefingSettingsRead()
         return svc
 
     @pytest.mark.asyncio

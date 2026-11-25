@@ -33,6 +33,10 @@ VALUES = {
         "unpaid_leg_days": 30, "snooze_other_events": True,
     },
     "/finance/settings": {"cycle_start_day": 1},
+    "/briefing/settings": {
+        "lookahead_days": 3, "holiday_lookahead_days": 7, "max_tasks_today": 8, "max_tasks_upcoming": 4,
+        "max_events_today": 8, "max_events_upcoming": 4, "max_shopping_items": 6, "max_recurring_items": 5,
+    },
     "/study/settings": {"max_active_plans": 3},
     "/organizer/calendar-notification-settings": {"profiles": {
         "cant_miss": ["7d", "3d", "1d", "4h", "1h", "30m", "10m", "5m", "0"], "important": ["1d", "4h", "1h", "15m", "0"],
@@ -139,7 +143,7 @@ class TestSettingsPage:
 
     def test_renders_every_section_with_nav(self, page):
         assert page.status_code == 200
-        for namespace in ("planning", "reminders", "travel", "finance", "study", "organizer", "weather", "assistant"):
+        for namespace in ("planning", "reminders", "travel", "briefing", "finance", "study", "organizer", "weather", "assistant"):
             assert f'id="{namespace}"' in page.text
             assert f'href="#{namespace}"' in page.text
 
@@ -191,7 +195,7 @@ class TestSettingsPage:
 
         html = client.get("/settings").text
 
-        travel = html[html.index('id="travel"'):html.index('id="finance"')]
+        travel = html[html.index('id="travel"'):html.index('id="briefing"')]
         assert "could not be loaded" in travel and "data-setting-row" not in travel
         assert 'data-key="planning.wake_time"' in html
 

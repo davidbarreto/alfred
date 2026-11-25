@@ -7,7 +7,18 @@ from app.features.organizer.locations.repository import LocationRepository
 from app.features.travel.cities.repository import CityRepository
 from app.features.travel.cities.schemas import CityRef
 from app.features.travel.errors import TravelNotFoundError
-from app.features.travel.settings_schemas import TravelSettingsRead, TravelSettingsUpdate
+from app.features.travel.settings_schemas import (
+    DEFAULT_CHARGE_LINK_LEAD_DAYS,
+    DEFAULT_CHARGE_LINK_TAIL_DAYS,
+    DEFAULT_CHECK_IN_OPENS_HOURS,
+    DEFAULT_CHECKLIST_NUDGE_DAYS,
+    DEFAULT_LEAVE_HOME_LEAD_MIN,
+    DEFAULT_LONG_WAIT_HOURS,
+    DEFAULT_RAIN_MM,
+    DEFAULT_TIGHT_CONNECTION_MIN,
+    TravelSettingsRead,
+    TravelSettingsUpdate,
+)
 from app.features.travel.trips.home import HOME_FIELDS
 from app.features.travel.trips.repository import TripRepository
 from app.shared.utils.timezone import local_today
@@ -22,13 +33,21 @@ DEFAULT_HOME_TO_AIRPORT_MIN = 45
 DEFAULT_MAX_VISITS_PER_DAY = 4
 DEFAULT_VISIT_DURATION_MIN = 90
 DEFAULT_UNPAID_LEG_DAYS = 30
-DEFAULTS: dict[str, int | bool] = {
+DEFAULTS: dict[str, int | float | bool] = {
     "airport_buffer_min": DEFAULT_AIRPORT_BUFFER_MIN,
     "home_to_airport_min": DEFAULT_HOME_TO_AIRPORT_MIN,
     "max_visits_per_day": DEFAULT_MAX_VISITS_PER_DAY,
     "visit_duration_min": DEFAULT_VISIT_DURATION_MIN,
     "unpaid_leg_days": DEFAULT_UNPAID_LEG_DAYS,
     "snooze_other_events": False,
+    "leave_home_lead_min": DEFAULT_LEAVE_HOME_LEAD_MIN,
+    "check_in_opens_hours": DEFAULT_CHECK_IN_OPENS_HOURS,
+    "checklist_nudge_days": DEFAULT_CHECKLIST_NUDGE_DAYS,
+    "tight_connection_min": DEFAULT_TIGHT_CONNECTION_MIN,
+    "long_wait_hours": DEFAULT_LONG_WAIT_HOURS,
+    "rain_mm": DEFAULT_RAIN_MM,
+    "charge_link_lead_days": DEFAULT_CHARGE_LINK_LEAD_DAYS,
+    "charge_link_tail_days": DEFAULT_CHARGE_LINK_TAIL_DAYS,
 }
 
 
@@ -51,7 +70,7 @@ class TravelSettingsService:
             if isinstance(default, bool):
                 values[field] = raw == "1" if raw else default
             else:
-                values[field] = int(raw) if raw else default
+                values[field] = type(default)(raw) if raw else default
         # The address lives on the Home location (organizer.locations); trips only read it.
         home = await self._locations.get_home()
         values["home_address"] = home.address if home else None

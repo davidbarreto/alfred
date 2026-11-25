@@ -9,6 +9,7 @@ from sqlalchemy.dialects import postgresql
 
 from app.features.finance.tags.names import merge_tag_names
 from app.features.finance.transactions.schemas import TransactionCreate
+from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import (
     TripDefaultTagService,
@@ -138,8 +139,9 @@ class TestManualTransactionHook:
 @pytest.fixture
 def links():
     svc = TransactionLinkService(AsyncMock())
-    for name in ("_repo", "_trip_repo", "_place_repo", "_leg_repo", "_stay_repo", "_visit_repo"):
+    for name in ("_repo", "_trip_repo", "_place_repo", "_leg_repo", "_stay_repo", "_visit_repo", "_settings"):
         setattr(svc, name, AsyncMock())
+    svc._settings.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45)
     svc._repo.entity_exists.return_value = True
     return svc
 
@@ -296,6 +298,16 @@ class TestTaggedService:
         assert names == ["travel", "work"] and (start, end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
         assert [(t.id, t.linked) for t in result.transactions] == [(1, True), (2, False)]
         assert result.cost.total_eur == Decimal("30.00") and result.cost.transaction_count == 1
+
+    async def test_the_window_follows_the_settings(self, links):
+        links._settings.get.return_value = TravelSettingsRead(
+            airport_buffer_min=120, home_to_airport_min=45, charge_link_lead_days=10, charge_link_tail_days=0)
+        links._trip_repo.get_trip.return_value = SimpleNamespace(
+            start_date=date(2026, 12, 17), end_date=date(2026, 12, 29), default_tag_names="Travel")
+        links._repo.get_tagged.return_value = []
+        await links.get_tagged(1)
+        _, start, end = links._repo.get_tagged.await_args.args
+        assert (start, end) == (datetime(2026, 12, 7), datetime(2026, 12, 30))
 
     async def test_unknown_trip(self, links):
         links._trip_repo.get_trip.return_value = None

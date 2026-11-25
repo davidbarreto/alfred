@@ -260,6 +260,224 @@
       }
     },
     {
+      "name": "01f - Briefing Settings - Defaults",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const s = pm.response.json();",
+              "pm.environment.set('briefing_lookahead_original', s.lookahead_days);",
+              "pm.test('Every field is there', () => ['lookahead_days', 'holiday_lookahead_days', 'max_tasks_today', 'max_tasks_upcoming', 'max_events_today', 'max_events_upcoming', 'max_shopping_items', 'max_recurring_items'].forEach(f => pm.expect(s[f]).to.be.a('number')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "01g - Briefing Settings - Update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved', () => pm.expect(pm.response.json().lookahead_days).to.eql(4));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/briefing/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lookahead_days\": 4\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01h - Briefing Settings - Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/briefing/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lookahead_days\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01i - Morning Briefing Uses The Look-ahead",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Look-ahead from the setting', () => pm.expect(pm.response.json().lookahead_days).to.eql(4));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/morning",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "morning"
+          ]
+        }
+      }
+    },
+    {
+      "name": "01j - Briefing Settings - Restore",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/briefing/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lookahead_days\": \"{{briefing_lookahead_original}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01k - Briefing Settings - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "settings"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
       "name": "02 - Morning Briefing (JSON)",
       "event": [
         {

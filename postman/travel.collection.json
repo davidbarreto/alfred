@@ -3952,6 +3952,165 @@
       }
     },
     {
+      "name": "94a - Moved Constants Default To The Old Values",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const s = pm.response.json();",
+              "pm.environment.set('travel_rain_original', s.rain_mm);",
+              "pm.environment.set('travel_check_in_original', s.check_in_opens_hours);",
+              "pm.test('Fields are present', () => ['leave_home_lead_min', 'check_in_opens_hours', 'checklist_nudge_days', 'tight_connection_min', 'long_wait_hours', 'rain_mm', 'charge_link_lead_days', 'charge_link_tail_days'].forEach(f => pm.expect(s).to.have.property(f)));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "94b - Set A Decimal Rain Threshold",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved with decimals', () => pm.expect([pm.response.json().rain_mm, pm.response.json().check_in_opens_hours]).to.eql([2.5, 48]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rain_mm\": 2.5,\n  \"check_in_opens_hours\": 48\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "94c - Check-in Opening Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"check_in_opens_hours\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "94d - Restore The Moved Constants",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rain_mm\": \"{{travel_rain_original}}\",\n  \"check_in_opens_hours\": \"{{travel_check_in_original}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "95 - Get Checklist Template",
       "event": [
         {

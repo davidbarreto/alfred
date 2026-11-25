@@ -149,6 +149,16 @@ class TestBuildTimeline:
         items = build_timeline([first, second], [], warnings=find_warnings([first, second], []))
         assert [(i.kind, i.ref_id) for i in items if i.warnings] == [("leg", 2)]
 
+    def test_tight_connection_threshold_is_a_parameter(self):
+        first = _leg(1, "Porto", "Madrid", _dt(2, 8), _dt(2, 9))
+        second = _leg(2, "Madrid", "Lisbon", _dt(2, 9, 30), _dt(2, 11))
+        assert find_warnings([first, second], [], tight_connection_min=20) == []
+
+    def test_long_wait_threshold_is_a_parameter(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 6), _dt(2, 8))
+        stay = _stay(5, _dt(2, 15), _dt(4, 10))
+        assert find_warnings([leg], [stay], long_wait_hours=8) == []
+
     def test_non_flight_has_no_flight_lookup(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), mode="train", carrier="XX", number="123")
         assert "check_flight" not in build_timeline([leg], [])[0].links

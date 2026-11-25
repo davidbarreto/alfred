@@ -18,6 +18,12 @@ CONVENTIONS_MAX_LENGTH = 2000
 # many more minutes walking may take than public transport and still be chosen.
 DEFAULT_TRAVEL_MINUTES = 30
 DEFAULT_WALK_TOLERANCE_MINUTES = 10
+# What the day plan lists and assumes; each is a planning.* setting with this default.
+DEFAULT_BACKLOG_STALE_DAYS = 60
+DEFAULT_DUE_LOOKAHEAD_DAYS = 3
+DEFAULT_ASSUMED_ESTIMATE_MINUTES = 30
+DEFAULT_SHOPPING_RUN_MINUTES = 45
+DEFAULT_STUDY_ITEMS_PER_PLAN = 5
 
 
 HOME = "home"
@@ -103,6 +109,11 @@ class PlanningSettingsRead(BaseModel):
     travel_times: list[TravelTime] = []
     default_travel_minutes: int = DEFAULT_TRAVEL_MINUTES
     walk_tolerance_minutes: int = DEFAULT_WALK_TOLERANCE_MINUTES
+    backlog_stale_days: int = DEFAULT_BACKLOG_STALE_DAYS
+    due_lookahead_days: int = DEFAULT_DUE_LOOKAHEAD_DAYS
+    assumed_estimate_minutes: int = DEFAULT_ASSUMED_ESTIMATE_MINUTES
+    shopping_run_minutes: int = DEFAULT_SHOPPING_RUN_MINUTES
+    study_items_per_plan: int = DEFAULT_STUDY_ITEMS_PER_PLAN
 
 
 class PlanningSettingsUpdate(BaseModel):
@@ -138,6 +149,26 @@ class PlanningSettingsUpdate(BaseModel):
     walk_tolerance_minutes: int | None = setting(
         "Walk instead of public transport", "When walking takes at most this many minutes longer.",
         unit="min", group="Travel", ge=0, le=120,
+    )
+    backlog_stale_days: int | None = setting(
+        "Backlog task is old after", "The plan warns about undated tasks created longer ago than this.",
+        unit="days", group="What the plan lists", ge=1, le=3650,
+    )
+    due_lookahead_days: int | None = setting(
+        "Due tasks ahead", "Tasks due this many days after the planned range are listed as due too.",
+        unit="days", group="What the plan lists", ge=0, le=60,
+    )
+    study_items_per_plan: int | None = setting(
+        "Open items per study plan", "How many open items of each active study plan are listed.",
+        unit="items", group="What the plan lists", ge=1, le=50,
+    )
+    assumed_estimate_minutes: int | None = setting(
+        "Assumed task length", "What a task without an estimate is assumed to take (said in the warnings).",
+        unit="min", group="What the plan lists", ge=5, le=480,
+    )
+    shopping_run_minutes: int | None = setting(
+        "Shopping run", "How long the suggested shopping run takes.",
+        unit="min", group="What the plan lists", ge=5, le=480,
     )
 
     @field_validator("wake_time", "sleep_time")

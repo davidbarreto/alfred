@@ -467,6 +467,34 @@ class TestOtherSections:
         assert plan["shopping"]["by_category"] == {}
         parts.shopping.category_names.assert_not_awaited()
 
+    async def test_plan_list_settings_take_effect(self, service, parts):
+        parts.settings.get.return_value = _settings(
+            study_items_per_plan=2, shopping_run_minutes=20, assumed_estimate_minutes=15, backlog_stale_days=120,
+        )
+        items = [SimpleNamespace(id=i, description=f"Item {i}", is_done=False) for i in range(1, 6)]
+        parts.study.get_overview.return_value = SimpleNamespace(
+            active=[SimpleNamespace(id=3, title="Graphs", goal="Pass", priority="high", tags=[], items=items)],
+            backlog=[], max_active_plans=2,
+        )
+        parts.shopping.list_items.return_value = [_shopping_item(1)]
+        parts.tasks.get_tasks.return_value = [
+            _task(1, "Old", context="home", created_at=datetime(2026, 7, 14, 9, 0, tzinfo=timezone.utc)),
+        ]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert [i["item_id"] for i in plan["study"]["plans"][0]["open_items"]] == [1, 2]
+        assert plan["shopping"]["suggested_run"]["estimate_minutes"] == 20
+        assert "Task 1 has no estimate; assumed 15 min." in plan["warnings"]
+        assert not [w for w in plan["warnings"] if "been in the backlog" in w]
+
+    async def test_due_lookahead_setting_widens_the_due_list(self, service, parts):
+        parts.tasks.get_tasks.return_value = [_task(1, "Later", deadline=datetime(2026, 10, 28, 10, 0))]
+        assert _dump(await service.get_plan(date(2026, 10, 21)))["due_tasks"] == []
+
+        parts.settings.get.return_value = _settings(due_lookahead_days=7)
+        assert [t["id"] for t in _dump(await service.get_plan(date(2026, 10, 21)))["due_tasks"]] == [1]
+
     async def test_shopping_section_omitted_when_nothing_to_buy(self, service):
         assert "shopping" not in _dump(await service.get_plan(date(2026, 10, 21)))
 

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 _PORTAL_SOURCES = {"web", "portal"}
 _INT_SETTINGS = (
     "work_target_minutes", "office_days_per_week", "office_min_minutes", "default_travel_minutes", "walk_tolerance_minutes",
+    "backlog_stale_days", "due_lookahead_days", "study_items_per_plan", "assumed_estimate_minutes", "shopping_run_minutes",
 )
 _LIST_SETTINGS = ("preferred_work_windows", "workdays")
 _TEXT_SETTINGS = ("wake_time", "sleep_time", "work_tag", "office_tag", "conventions")

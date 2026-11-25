@@ -91,7 +91,7 @@ All paginated sections follow the same offset-based pattern:
 | Weather | Today's forecast from the structured `/briefing/morning` (no LLM call), with the place it was looked up at (`weather_place`); when there is no weather place the card shows `weather_note` with a link to `/settings#weather` |
 | Today's events | `/organizer/calendar-events` from 14 days back to the end of today, keeping those that overlap today (`todays_events`): multi-day events that started earlier and still run show "Until <date>" instead of a clock range |
 | Upcoming events | Events after today within the briefing look-ahead, from `/briefing/morning` (the briefing also looks 14 days back so a running multi-day event counts as today's); 5 max, "See all N" links to the calendar |
-| Holidays | Public holidays in the next 7 days, also from `/briefing/morning`, each tagged with its country code (PT, BR) |
+| Holidays | Public holidays in the next `briefing.holiday_lookahead_days` (default 7), also from `/briefing/morning`, each tagged with its country code (PT, BR) |
 | Birthdays | Contacts with a birthday in the next 30 days (computed in the portal; 29 Feb falls on 1 Mar in common years), 5 max |
 | Study | Active study plans from `/study/plans/overview`: progress and next open item |
 | Metrics | The 4 most-used active series as 14-day sparklines (inline SVG, count series by entries per day, others by daily total) |

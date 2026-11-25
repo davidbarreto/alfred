@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.briefing.settings_service import BriefingSettingsService
 from app.features.core.weather_settings.schemas import NO_PLACE_HINT
 from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, RecurringBriefItem, ShoppingBriefItem, TaskBriefItem, TripBrief, WeatherForecast
@@ -31,8 +32,6 @@ logger = logging.getLogger(__name__)
 
 _ACTIVE_STATUSES = {"TODO", "DOING"}
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
-_HOLIDAY_LOOKAHEAD_DAYS = 7
-_LOOKAHEAD_DAYS = 3
 # How far back to look for multi-day events that started earlier but are still running today
 _EVENT_LOOKBACK_DAYS = 14
 _EVENT_LIMIT = 500
@@ -53,11 +52,12 @@ class MorningBriefingSummaryService:
 
     async def build(self) -> MorningBriefing:
         today = local_now().date()
+        settings = await BriefingSettingsService(self._session).get()
         today_start = datetime.combine(today, time.min)
         today_end = datetime.combine(today, time.max)
-        lookahead_end = datetime.combine(today + timedelta(days=_LOOKAHEAD_DAYS - 1), time.max)
+        lookahead_end = datetime.combine(today + timedelta(days=settings.lookahead_days - 1), time.max)
 
-        holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
+        holiday_window_end = today + timedelta(days=settings.holiday_lookahead_days)
 
         # These all share a single AsyncSession, which SQLAlchemy does not
         # support using concurrently, so they must run sequentially. Weather
@@ -77,7 +77,8 @@ class MorningBriefingSummaryService:
 
         return MorningBriefing(
             date=today,
-            lookahead_days=_LOOKAHEAD_DAYS,
+            lookahead_days=settings.lookahead_days,
+            holiday_lookahead_days=settings.holiday_lookahead_days,
             tasks=tasks,
             events=events,
             weather=weather,

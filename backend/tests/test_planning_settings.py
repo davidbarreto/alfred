@@ -57,6 +57,11 @@ class TestRead:
     async def test_defaults_are_generic_and_nothing_personal_is_seeded(self, service):
         settings = await service.get()
         assert settings.work_target_minutes == DEFAULTS["work_target_minutes"] == 480
+        # The constants the day plan used before they became settings.
+        assert (
+            settings.backlog_stale_days, settings.due_lookahead_days, settings.assumed_estimate_minutes,
+            settings.shopping_run_minutes, settings.study_items_per_plan,
+        ) == (60, 3, 30, 45, 5)
         assert (settings.work_tag, settings.office_tag) == (DEFAULTS["work_tag"], DEFAULTS["office_tag"]) == ("work", "office")
         assert settings.wake_time is None and settings.sleep_time is None
         assert settings.preferred_work_windows == []

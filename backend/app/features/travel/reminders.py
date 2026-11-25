@@ -20,10 +20,6 @@ logger = logging.getLogger(__name__)
 
 # Days before the first day of a trip on which a "trip starts" reminder is sent.
 TRIP_START_REMINDER_DAYS = (7, 3, 1)
-# Online check-in typically opens this long before a flight.
-CHECK_IN_OPENS_BEFORE = timedelta(hours=24)
-# The scheduler runs hourly: announce "time to leave" this long ahead of the leave-home time.
-LEAVE_HOME_LEAD = timedelta(hours=1)
 # Trips starting further away than this are not loaded for reminders.
 LOOKAHEAD_DAYS = max(TRIP_START_REMINDER_DAYS)
 # Days after a trip ends on which to nudge about the places still to grade or write down.
@@ -53,6 +49,10 @@ def build_travel_reminders(
     trips: list[TripDetail], now: datetime, today: date, settings: TravelSettingsRead
 ) -> list[TravelReminder]:
     reminders: list[TravelReminder] = []
+    # Online check-in opens this long before a flight; "time to leave" is announced this long ahead of the leave-home
+    # time (the scheduler runs hourly).
+    check_in_opens = timedelta(hours=settings.check_in_opens_hours)
+    leave_home_lead = timedelta(minutes=settings.leave_home_lead_min)
     for trip in trips:
         # A trip planned before the settings changed keeps the times it was planned with.
         home = trip.home
@@ -76,7 +76,7 @@ def build_travel_reminders(
 
         flights = [leg for leg in trip.legs if leg.mode == "flight"]
         for leg in flights:
-            if leg.departs_at - CHECK_IN_OPENS_BEFORE <= now < leg.departs_at:
+            if leg.departs_at - check_in_opens <= now < leg.departs_at:
                 ident = " ".join(p for p in (leg.carrier, leg.number) if p) or f"{leg.origin} → {leg.destination}"
                 reminders.append(TravelReminder(
                     "travel_check_in", leg.id,
@@ -88,7 +88,7 @@ def build_travel_reminders(
         first_leg = min(trip.legs, key=lambda leg: leg.departs_at, default=None)
         if first_leg is not None and first_leg.mode == "flight":
             leave_at = first_leg.departs_at - timedelta(minutes=leave_minutes)
-            if leave_at - LEAVE_HOME_LEAD <= now < first_leg.departs_at:
+            if leave_at - leave_home_lead <= now < first_leg.departs_at:
                 reminders.append(TravelReminder(
                     "travel_leave_home", first_leg.id,
                     f"Time to leave for the airport by {_at(leave_at, first_leg.departs_tz)} "

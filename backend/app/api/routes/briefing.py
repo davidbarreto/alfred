@@ -6,16 +6,30 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.auth import require_auth
 from app.dependencies import (
     BriefingHistoryServiceDep,
+    BriefingSettingsServiceDep,
     EveningDigestFormatterServiceDep,
     EveningDigestSummaryServiceDep,
     GlobalPauseServiceDep,
     MorningBriefingFormatterServiceDep,
     MorningBriefingSummaryServiceDep,
 )
+from app.features.briefing.settings_schemas import BriefingSettingsRead, BriefingSettingsUpdate
 from app.features.briefing.schemas import BriefingHistoryItem, EveningDigest, FormattedBriefing, MorningBriefing
 from app.shared.utils.timezone import local_today
 
 router = APIRouter(prefix="/briefing", tags=["briefing"], dependencies=[Depends(require_auth)])
+
+
+@router.get("/settings", response_model=BriefingSettingsRead)
+async def get_briefing_settings(service: BriefingSettingsServiceDep) -> BriefingSettingsRead:
+    return await service.get()
+
+
+@router.put("/settings", response_model=BriefingSettingsRead)
+async def update_briefing_settings(
+    request: BriefingSettingsUpdate, service: BriefingSettingsServiceDep
+) -> BriefingSettingsRead:
+    return await service.update(request)
 
 
 @router.get("/history", response_model=list[BriefingHistoryItem])

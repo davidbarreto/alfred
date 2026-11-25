@@ -101,6 +101,7 @@ async def dashboard(request: Request):
         "weather_place": (morning or {}).get("weather_place"),
         "weather_note": (morning or {}).get("weather_note"),
         "holidays": (morning or {}).get("holidays") or [],
+        "holiday_days": (morning or {}).get("holiday_lookahead_days") or 7,
         "upcoming_events": cards.upcoming_events((morning or {}).get("events")),
         "lookahead_days": (morning or {}).get("lookahead_days"),
         "briefing": latest_briefing,

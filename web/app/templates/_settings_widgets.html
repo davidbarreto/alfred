@@ -1,0 +1,135 @@
+{# One macro per setting control on /settings. Each row carries its loaded value as JSON in data-value; settings-page.js
+   reads the control back into the value the API expects (see readValue there). #}
+
+{% macro number(row) %}
+<input type="number" data-control class="input input-sm input-bordered w-28"
+       {% if row.min is not none %}min="{{ row.min | int if row.type == 'integer' else row.min }}"{% endif %}
+       {% if row.max is not none %}max="{{ row.max | int if row.type == 'integer' else row.max }}"{% endif %}
+       step="{{ row.step or (1 if row.type == 'integer' else 'any') }}"
+       {% if not row.nullable %}required{% endif %}
+       value="{{ '' if row.value is none else row.value }}" aria-label="{{ row.label }}">
+{% endmacro %}
+
+{% macro toggle(row) %}
+<input type="checkbox" data-control class="toggle toggle-sm" {{ 'checked' if row.value }} aria-label="{{ row.label }}">
+{% endmacro %}
+
+{% macro time(row) %}
+<input type="time" data-control class="input input-sm input-bordered w-32" value="{{ row.value or '' }}" aria-label="{{ row.label }}">
+{% endmacro %}
+
+{% macro text(row) %}
+<input type="text" data-control class="input input-sm input-bordered w-full sm:w-56"
+       {% if row.max_length %}maxlength="{{ row.max_length }}"{% endif %}
+       {% if not row.nullable %}required{% endif %}
+       value="{{ row.value or '' }}" aria-label="{{ row.label }}">
+{% endmacro %}
+
+{% macro longtext(row) %}
+<div class="w-full space-y-1">
+  <textarea data-control rows="5" class="textarea textarea-bordered textarea-sm w-full"
+            {% if row.max_length %}maxlength="{{ row.max_length }}"{% endif %} aria-label="{{ row.label }}">{{ row.value or '' }}</textarea>
+  {% if row.max_length %}<p class="text-[11px] text-gray-400 text-right"><span data-counter>{{ (row.value or '') | length }}</span> / {{ row.max_length }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro weekdays(row) %}
+<div class="flex flex-wrap gap-1" data-control-group role="group" aria-label="{{ row.label }}">
+  {% for day, name in [('mon', 'Mon'), ('tue', 'Tue'), ('wed', 'Wed'), ('thu', 'Thu'), ('fri', 'Fri'), ('sat', 'Sat'), ('sun', 'Sun')] %}
+  <label class="flex items-center gap-1 text-xs text-gray-600 px-2 py-1 rounded border border-gray-200 cursor-pointer">
+    <input type="checkbox" class="checkbox checkbox-xs" data-day="{{ day }}" {{ 'checked' if day in (row.value or []) }}>{{ name }}
+  </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro windows(row) %}
+<div class="flex flex-wrap items-center gap-1" data-control-group aria-label="{{ row.label }}">
+  <span data-chips class="flex flex-wrap gap-1">
+    {% for window in row.value or [] %}
+    <span class="badge badge-sm gap-1 bg-[#E6F1FB] text-[#0C447C] border-0" data-chip="{{ window }}">{{ window }}
+      <button type="button" data-chip-remove aria-label="Remove {{ window }}"><i class="ti ti-x text-[10px]"></i></button></span>
+    {% endfor %}
+  </span>
+  <input type="text" data-chip-input placeholder="09:00-12:00" class="input input-xs input-bordered w-28" aria-label="Add a window">
+  <button type="button" data-chip-add class="btn btn-xs btn-ghost">Add</button>
+  <span data-chip-error class="text-[11px] text-red-600"></span>
+</div>
+{% endmacro %}
+
+{% macro city(row) %}
+<div class="flex items-center gap-1" data-control-group>
+  <input data-city-text placeholder="Pick a city" class="input input-sm input-bordered w-48" aria-label="{{ row.label }}"
+         value="{{ row.city.name ~ ', ' ~ row.city.country.name if row.city else '' }}">
+  <input type="hidden" data-city-id value="{{ row.value if row.value is not none else '' }}">
+  <button type="button" class="btn btn-xs btn-ghost" data-city-clear title="No city">clear</button>
+  <script type="application/json" data-city>{{ row.city | tojson }}</script>
+</div>
+{% endmacro %}
+
+{% macro json(row) %}
+<div class="flex items-start gap-2" data-control-group>
+  <ul class="text-xs text-gray-600 font-mono space-y-0.5" data-json-summary>
+    {% for line in row.summary %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+  <button type="button" class="btn btn-xs btn-outline shrink-0" data-json-edit>Edit JSON</button>
+</div>
+{% endmacro %}
+
+{% macro readonly(row) %}
+<p class="text-sm text-gray-700">{{ row.value if row.value not in (none, '') else 'Not set' }}
+  {% if row.href %}<a href="{{ row.href }}" class="ml-1 text-xs text-[#378ADD] hover:underline">Edit</a>{% endif %}</p>
+{% endmacro %}
+
+{% macro link(row) %}
+<a href="{{ row.href }}" class="text-xs text-[#378ADD] hover:underline">Edit on its page <i class="ti ti-arrow-right"></i></a>
+{% endmacro %}
+
+{% macro control(row) %}
+{%- if row.widget == 'number' %}{{ number(row) }}
+{%- elif row.widget == 'toggle' %}{{ toggle(row) }}
+{%- elif row.widget == 'time' %}{{ time(row) }}
+{%- elif row.widget == 'longtext' %}{{ longtext(row) }}
+{%- elif row.widget == 'weekdays' %}{{ weekdays(row) }}
+{%- elif row.widget == 'windows' %}{{ windows(row) }}
+{%- elif row.widget == 'city' %}{{ city(row) }}
+{%- elif row.widget == 'json' %}{{ json(row) }}
+{%- elif row.widget == 'readonly' %}{{ readonly(row) }}
+{%- elif row.widget == 'link' %}{{ link(row) }}
+{%- else %}{{ text(row) }}
+{%- endif %}
+{% endmacro %}
+
+{% macro default_text(row) -%}
+{%- if row.default is mapping -%}the built-in offsets
+{%- elif row.default is iterable and row.default is not string -%}{{ row.default | join(', ') or 'none' }}
+{%- elif row.default is sameas true -%}on
+{%- elif row.default is sameas false -%}off
+{%- else -%}{{ row.default }}{% if row.unit %} {{ row.unit }}{% endif %}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro setting_row(section, row) %}
+<div class="action-row flex items-start gap-3 py-3" data-setting-row
+     data-namespace="{{ section.namespace }}" data-field="{{ row.field }}" data-key="{{ row.key }}"
+     data-widget="{{ row.widget }}" data-type="{{ row.type }}" data-nullable="{{ 'true' if row.nullable else 'false' }}"
+     data-label="{{ row.label }}" data-search="{{ row.search }}"
+     {% if row.confirm_note %}data-confirm-note="{{ row.confirm_note }}"{% endif %}
+     {% if row.options %}data-options='{{ row.options | tojson }}'{% endif %}
+     {% if row.has_default %}data-default='{{ row.default | tojson }}'{% endif %}
+     data-value='{{ row.value | tojson }}'>
+  <div class="space-y-0.5">
+    <p class="text-sm text-gray-900">{{ row.label }}</p>
+    <p class="text-[11px] text-gray-400 font-mono break-all">{{ row.key }}</p>
+    {% if row.description %}<p class="text-xs text-gray-500">{{ row.description }}</p>{% endif %}
+  </div>
+  <div class="flex items-center gap-2 {{ 'w-full sm:w-auto' if row.widget in ('longtext', 'json', 'windows', 'weekdays') else '' }}">
+    {{ control(row) }}
+    {% if row.unit and row.widget == 'number' %}<span class="text-xs text-gray-500 whitespace-nowrap">{{ row.unit }}</span>{% endif %}
+    {% if row.has_default %}
+    <span data-modified class="badge badge-sm border-0 bg-[#FAEEDA] text-[#8A5A00] whitespace-nowrap {{ '' if row.modified else 'hidden' }}"
+          title="Default: {{ default_text(row) }}">modified</span>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}

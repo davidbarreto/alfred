@@ -32,6 +32,7 @@ Build pages from these classes instead of ad-hoc grids, so every page lines up t
 | `card-columns` | Cards of different heights and no popups inside (dashboard): packed in two columns, no holes |
 | `split` + `card-stack` | Two independent stacks of cards (trip page, calendar); one column below `lg`. `split-wide-left` makes it 3:2 |
 | `filter-bar` | Filters above a list: two-column grid on a phone, wrapping row from `sm`; `filter-wide` spans both columns |
+| `settings-layout` + `side-nav` | A page with a section index (`/settings`): from `lg` a sticky side navigation left of the section cards; below `lg` the nav is hidden and the page shows the same links as a `scroll-row` of chips |
 | `action-row` | A list row with text left and its buttons right; the buttons move to their own line when both do not fit. The text is the first child, the buttons the last |
 | `chart-box` | Fixed-height box for a Chart.js canvas (`chart-box-lg` for 14rem); the chart needs `maintainAspectRatio: false` |
 | `table-scroll` | Wrapper for a table that may be wider than its card; give the table a `min-w-[..]` |

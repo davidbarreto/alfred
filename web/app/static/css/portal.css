@@ -281,6 +281,29 @@ html[data-theme="dark"] {
   justify-content: flex-end;
 }
 
+/*
+ * A page with a section index (settings): from 64rem a sticky .side-nav on the
+ * left next to the stack of section cards; below that the nav is hidden and the
+ * page shows a .scroll-row of chips instead.
+ */
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.side-nav { display: none; }
+@media (min-width: 1024px) {
+  .settings-layout { grid-template-columns: 12rem minmax(0, 1fr); }
+  .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    position: sticky;
+    top: 1rem;
+  }
+}
+
 /* ── Calendar ────────────────────────────────────────────────────────── */
 
 /* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */

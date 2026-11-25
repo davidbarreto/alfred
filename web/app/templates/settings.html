@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_settings_widgets.html" import setting_row %}
+{% set active_page = "settings" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Settings</h1>
+      <p class="text-xs text-gray-400">Every runtime setting, a section per area. Changes apply without a restart.</p>
+    </div>
+    {% if sections %}
+    <div class="page-actions">
+      <label class="input input-sm input-bordered flex items-center gap-2 w-full sm:w-64">
+        <i class="ti ti-search text-gray-400"></i>
+        <input type="search" id="settings-search" placeholder="Search settings" class="grow" autocomplete="off" aria-label="Search settings">
+      </label>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not sections %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">The settings are unavailable right now.</p></div></div>
+  {% else %}
+
+  <nav class="scroll-row gap-1 lg:hidden" aria-label="Sections">
+    {% for section in sections %}
+    <a href="#{{ section.namespace }}" data-nav="{{ section.namespace }}" class="badge badge-outline gap-1 text-xs py-3 px-3">
+      {{ section.title }} <span data-nav-count class="text-gray-400">{{ section.count }}</span></a>
+    {% endfor %}
+  </nav>
+
+  <div class="settings-layout">
+    <nav class="side-nav" aria-label="Sections">
+      {% for section in sections %}
+      <a href="#{{ section.namespace }}" data-nav="{{ section.namespace }}" class="nav-link justify-between">
+        <span>{{ section.title }}</span><span data-nav-count class="text-xs text-gray-400">{{ section.count }}</span></a>
+      {% endfor %}
+    </nav>
+
+    <div class="card-stack">
+      <p id="settings-no-match" class="hidden text-sm text-gray-400">No setting matches your search.</p>
+
+      {% for section in sections %}
+      <section id="{{ section.namespace }}" class="card bg-white scroll-mt-4" data-section="{{ section.namespace }}">
+        <div class="card-body p-5 gap-0">
+          <h2 class="text-sm font-semibold text-gray-900">{{ section.title }}</h2>
+          <p class="text-xs text-gray-400">{{ section.description }}</p>
+          <p data-section-error class="text-xs text-red-600 mt-2 {{ '' if section.load_error else 'hidden' }}">
+            {%- if section.load_error %}Some of these settings could not be loaded right now.{% endif %}</p>
+
+          {% for group in section.groups %}
+          <fieldset class="mt-3" data-group>
+            {% if group.name %}<legend class="text-xs font-medium text-gray-600 uppercase tracking-wide">{{ group.name }}</legend>{% endif %}
+            <div class="divide-y divide-gray-100">
+              {% for row in group.rows %}{{ setting_row(section, row) }}{% endfor %}
+            </div>
+          </fieldset>
+          {% endfor %}
+
+          {% for link in section.links %}
+          <div class="action-row flex items-start gap-3 py-3 border-t border-gray-100" data-link-row
+               data-search="{{ (link.label ~ ' ' ~ (link.description or '')) | lower }}">
+            <div class="space-y-0.5">
+              <p class="text-sm text-gray-900">{{ link.label }}</p>
+              {% if link.description %}<p class="text-xs text-gray-500">{{ link.description }}</p>{% endif %}
+            </div>
+            <a href="{{ link.href }}" class="text-xs text-[#378ADD] hover:underline">Open <i class="ti ti-arrow-right"></i></a>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+
+      {% if unregistered_total %}
+      <section id="stored" class="card bg-white" data-stored>
+        <div class="card-body p-5 gap-2">
+          <h2 class="text-sm font-semibold text-gray-900">Other stored settings</h2>
+          <p class="text-xs text-gray-400">Stored values no section edits (the travel checklist template, the pause state). Read-only here.</p>
+          <ul class="divide-y divide-gray-100">
+            {% for row in unregistered %}
+            <li class="action-row flex items-start gap-3 py-2">
+              <span class="text-xs font-mono text-gray-600 break-all">{{ row.key }}</span>
+              <span class="text-xs font-mono text-gray-500 break-all">{{ row.value if row.value != '' else '(empty)' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% if unregistered_total > unregistered | length %}
+          <a href="/settings/stored" class="text-xs text-[#378ADD] hover:underline">See all {{ unregistered_total }}</a>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      <p class="text-xs text-gray-400">Also edited on their own pages:
+        <a href="/interviews/preferences" class="text-[#378ADD] hover:underline">interview preferences</a>,
+        <a href="/languages" class="text-[#378ADD] hover:underline">language tracks</a>,
+        <a href="/persona" class="text-[#378ADD] hover:underline">persona</a>.</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% if sections %}
+<script src="/static/js/settings-page.js"></script>
+{% endif %}
+{% endblock %}

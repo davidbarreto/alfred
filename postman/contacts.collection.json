@@ -707,6 +707,171 @@
       }
     },
     {
+      "name": "15c - Birthday Settings - Look-aheads Default",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Look-aheads are numbers', () => {",
+              "    const s = pm.response.json();",
+              "    pm.expect(s.birthday_lookahead_days).to.be.a('number');",
+              "    pm.expect(s.birthday_dashboard_days).to.be.a('number');",
+              "    pm.environment.set('birthday_lookahead_original', s.birthday_lookahead_days);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15d - Birthday Settings - Update Look-ahead",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved, cascades untouched', () => {",
+              "    const s = pm.response.json();",
+              "    pm.expect(s.birthday_lookahead_days).to.eql(14);",
+              "    pm.expect(s.relationships).to.have.property('family');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"birthday_lookahead_days\": 14\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "15e - Birthday Settings - Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"birthday_dashboard_days\": 400\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "15f - Birthday Settings - Restore Look-ahead",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"birthday_lookahead_days\": \"{{birthday_lookahead_original}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "16 - Birthday Notifications - Get Due Digest",
       "event": [
         {

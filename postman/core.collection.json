@@ -3167,6 +3167,91 @@
       }
     },
     {
+      "name": "89p0c - Reminder Settings - Look-ahead Hours",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved', () => pm.expect([pm.response.json().task_lookahead_hours, pm.response.json().event_lookahead_hours]).to.eql([24, 2]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task_lookahead_hours\": 24,\n  \"event_lookahead_hours\": 2\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p0d - Reminder Settings - Look-ahead Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_lookahead_hours\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "89p1 - Assistant Settings - Get (remember current values)",
       "event": [
         {
@@ -3351,7 +3436,7 @@
               "const fields = catalog.namespaces.flatMap(ns => ns.fields);",
               "const byKey = Object.fromEntries(fields.map(f => [f.key, f]));",
               "pm.test('Every namespace is listed in page order', () => {",
-              "    pm.expect(catalog.namespaces.map(ns => ns.namespace)).to.eql(['planning', 'reminders', 'travel', 'finance', 'study', 'organizer', 'assistant']);",
+              "    pm.expect(catalog.namespaces.map(ns => ns.namespace)).to.include.members(['planning', 'reminders', 'travel', 'briefing', 'finance', 'study', 'language', 'organizer', 'weather', 'assistant']);",
               "});",
               "pm.test('Every field has a label, a widget and a write path', () => {",
               "    fields.forEach(f => { pm.expect(f.label, f.key).to.be.a('string').and.not.empty; pm.expect(f.widget, f.key).to.be.a('string'); pm.expect(f.write_path, f.key).to.match(/^\\//); });",

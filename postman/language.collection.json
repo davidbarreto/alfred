@@ -50,6 +50,199 @@
       }
     },
     {
+      "name": "01a - Language Settings - Get",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const s = pm.response.json();",
+              "pm.environment.set('language_retention_original', s.requested_retention);",
+              "pm.test('Fields', () => {",
+              "    pm.expect(s.requested_retention).to.be.within(0.7, 0.97);",
+              "    pm.expect(s.leech_threshold).to.be.a('number');",
+              "    pm.expect(s.timed_task_seconds).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "01b - Language Settings - Update Retention",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saved with decimals', () => pm.expect(pm.response.json().requested_retention).to.eql(0.85));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requested_retention\": 0.85\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01c - Language Settings - Retention Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requested_retention\": 0.99\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01d - Language Settings - Restore",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requested_retention\": \"{{language_retention_original}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01e - Language Settings - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "settings"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
       "name": "02 - Create Track",
       "event": [
         {

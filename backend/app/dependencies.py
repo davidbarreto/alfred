@@ -61,6 +61,7 @@ from app.features.core.reminders.service import ReminderService
 from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.assistant_settings.service import AssistantSettingsService
 from app.features.core.settings.catalog_service import SettingsCatalogService
+from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.core.api_requests.service import ApiRequestService
 from app.features.core.pause.service import GlobalPauseService
 from app.features.core.urgency_reset.service import UrgencyResetService
@@ -482,6 +483,9 @@ def get_assistant_settings_service(session: AsyncSession = Depends(get_session))
 def get_settings_catalog_service(session: AsyncSession = Depends(get_session)) -> SettingsCatalogService:
     return SettingsCatalogService(session)
 
+def get_weather_settings_service(session: AsyncSession = Depends(get_session)) -> WeatherSettingsService:
+    return WeatherSettingsService(session)
+
 def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
     return ReminderService(session=session, task_service=get_task_service(session))
 
@@ -840,6 +844,7 @@ OverloadServiceDep = Annotated[OverloadService, Depends(get_overload_service)]
 ReminderSettingsServiceDep = Annotated[ReminderSettingsService, Depends(get_reminder_settings_service)]
 AssistantSettingsServiceDep = Annotated[AssistantSettingsService, Depends(get_assistant_settings_service)]
 SettingsCatalogServiceDep = Annotated[SettingsCatalogService, Depends(get_settings_catalog_service)]
+WeatherSettingsServiceDep = Annotated[WeatherSettingsService, Depends(get_weather_settings_service)]
 GlobalPauseServiceDep = Annotated[GlobalPauseService, Depends(get_global_pause_service)]
 ApiRequestServiceDep = Annotated[ApiRequestService, Depends(get_api_request_service)]
 UrgencyResetServiceDep = Annotated[UrgencyResetService, Depends(get_urgency_reset_service)]

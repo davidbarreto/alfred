@@ -5,6 +5,8 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.weather_settings.schemas import NO_PLACE_HINT
+from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, RecurringBriefItem, ShoppingBriefItem, TaskBriefItem, TripBrief, WeatherForecast
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
@@ -69,7 +71,7 @@ class MorningBriefingSummaryService:
         language = await self._fetch_language()
         shopping = await self._fetch_shopping()
         recurring = await self._fetch_recurring()
-        weather = await self._fetch_weather(today)
+        weather, weather_place, weather_note = await self._fetch_weather(today)
         holidays = await self._fetch_holidays(today, holiday_window_end)
         trip = await self._fetch_trip()
 
@@ -79,6 +81,8 @@ class MorningBriefingSummaryService:
             tasks=tasks,
             events=events,
             weather=weather,
+            weather_place=weather_place,
+            weather_note=weather_note,
             holidays=holidays,
             birthdays=birthdays,
             language=language,
@@ -246,12 +250,23 @@ class MorningBriefingSummaryService:
             for r in raw
         ]
 
-    async def _fetch_weather(self, today: date) -> WeatherForecast | None:
+    async def _fetch_weather(self, today: date) -> tuple[WeatherForecast | None, str | None, str | None]:
+        """(forecast, place label, note). The place is the weather setting's (Home by default)."""
         try:
-            return await self._weather_client.get_daily_forecast(today, session=self._session)
+            place = await WeatherSettingsService(self._session).resolve(self._weather_client.geocode_city)
+        except Exception:
+            logger.warning("Failed to resolve the weather place", exc_info=True)
+            return None, None, None
+        if place is None:
+            return None, None, NO_PLACE_HINT
+        try:
+            forecast = await self._weather_client.get_daily_forecast(
+                today, place.latitude, place.longitude, session=self._session
+            )
         except Exception:
             logger.warning("Failed to fetch weather forecast", exc_info=True)
-            return None
+            return None, place.label, None
+        return forecast, place.label, None
 
     async def _fetch_holidays(self, today: date, window_end: date) -> list[HolidayItem]:
         if self._holiday_client is None:

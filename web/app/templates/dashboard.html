@@ -280,7 +280,8 @@
 
     <div class="card bg-white">
       <div class="card-body p-4">
-        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-cloud mr-1"></i>Weather</h2>
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-cloud mr-1"></i>Weather
+          {% if weather_place %}<span class="text-xs font-normal text-gray-400">{{ weather_place }}</span>{% endif %}</h2>
         {% if weather %}
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -311,7 +312,8 @@
         </ul>
         {% endif %}
         {% else %}
-        <p class="text-sm text-gray-400 py-2">Weather unavailable.</p>
+        <p class="text-sm text-gray-400 py-2">Weather unavailable.
+          {% if weather_note %}<a href="/settings#weather" class="block text-xs text-[#378ADD] hover:underline mt-1">{{ weather_note }}</a>{% endif %}</p>
         {% endif %}
       </div>
     </div>

@@ -45,6 +45,7 @@ from app.api.routes.organizer.shopping_categories import router as shopping_cate
 from app.api.routes.organizer.shopping_products import router as shopping_products_router
 from app.api.routes.organizer.locations import router as locations_router
 from app.api.routes.organizer.holidays import router as holidays_router
+from app.features.core.weather_settings.errors import WeatherPlaceInvalidError, WeatherPlaceNotFoundError
 from app.features.organizer.locations.errors import LocationConflictError, LocationValidationError
 from app.features.organizer.shopping.errors import (
     ShoppingItemAlreadyPendingError,
@@ -85,6 +86,7 @@ from app.api.routes.core.reminders import router as core_reminders_router
 from app.api.routes.core.reminder_settings import router as core_reminder_settings_router
 from app.api.routes.core.assistant_settings import router as core_assistant_settings_router
 from app.api.routes.core.settings_catalog import router as core_settings_catalog_router
+from app.api.routes.core.weather_settings import router as core_weather_settings_router
 from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.core.urgency_reset import router as core_urgency_reset_router
 from app.api.routes.core.api_requests import router as core_api_requests_router
@@ -230,6 +232,7 @@ app.include_router(core_catchup_router)
 app.include_router(core_reminder_settings_router)
 app.include_router(core_assistant_settings_router)
 app.include_router(core_settings_catalog_router)
+app.include_router(core_weather_settings_router)
 app.include_router(core_pause_router)
 app.include_router(core_urgency_reset_router)
 app.include_router(core_api_requests_router)
@@ -331,6 +334,16 @@ async def _shopping_conflict_handler(request: Request, exc: Exception) -> JSONRe
 async def _location_conflict_handler(request: Request, exc: LocationConflictError) -> JSONResponse:
     logger.info("Location conflict: %s", exc)
     return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(WeatherPlaceNotFoundError)
+async def _weather_place_not_found_handler(request: Request, exc: WeatherPlaceNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(WeatherPlaceInvalidError)
+async def _weather_place_invalid_handler(request: Request, exc: WeatherPlaceInvalidError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(LocationValidationError)

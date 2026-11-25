@@ -12,7 +12,7 @@ class TestNullWeatherProvider:
     async def test_get_daily_forecast_returns_a_well_formed_placeholder(self):
         provider = NullWeatherProvider()
 
-        forecast = await provider.get_daily_forecast(date(2026, 1, 1))
+        forecast = await provider.get_daily_forecast(date(2026, 1, 1), 38.7, -9.1)
 
         assert forecast.precipitation_probability == 0
         assert forecast.advice == []

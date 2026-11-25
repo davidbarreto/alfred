@@ -34,11 +34,6 @@ class TestGetCurrentConditions:
         client.fetch_current.assert_awaited_once_with(38.7, -9.1)
         assert (snapshot.temp_c, snapshot.precipitation_mm, snapshot.wind_kmh, snapshot.weather_code) == (14.5, 0.2, 12.0, 61)
 
-    async def test_defaults_to_porto_without_coordinates(self):
-        client = AsyncMock()
-        client.fetch_current.return_value = _CURRENT
-        await OpenMeteoProvider(client).get_current_conditions()
-        assert client.fetch_current.await_args.args == (41.1579, -8.6291)
-
     async def test_null_provider_returns_nothing(self):
-        assert await NullWeatherProvider().get_current_conditions() is None
+        assert await NullWeatherProvider().get_current_conditions(38.7, -9.1) is None
+        assert await NullWeatherProvider().geocode_city("Lisbon") is None

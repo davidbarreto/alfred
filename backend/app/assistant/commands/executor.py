@@ -75,6 +75,7 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
 from app.features.core.reminders.settings_service import ReminderSettingsService
+from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.core.catchup.service import CatchupService
 
 logger = logging.getLogger(__name__)
@@ -197,7 +198,9 @@ async def execute(
         return await handle_recall(command, arguments, embedding_service, note_service=note_service)
 
     if cmd_type == "weather":
-        return await handle_weather(command, arguments)
+        return await handle_weather(
+            command, arguments, WeatherSettingsService(session) if session is not None else None
+        )
 
     if cmd_type == "assistant":
         return await handle_assistant(

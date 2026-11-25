@@ -17,6 +17,7 @@ from pydantic.fields import FieldInfo
 from app.features.core.assistant_settings.schemas import AssistantSettingsRead, AssistantSettingsUpdate
 from app.features.core.reminders.schemas import ReminderSettingsRead, ReminderSettingsUpdate
 from app.features.core.reminders.settings_service import defaults as reminder_defaults
+from app.features.core.weather_settings.schemas import WeatherSettingsRead, WeatherSettingsUpdate
 from app.features.core.settings.catalog_schemas import (
     SettingFieldRead,
     SettingsCatalogRead,
@@ -126,6 +127,16 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
         ),
     ),
     CatalogNamespace(
+        "weather", "Weather", "Where the briefing, the dashboard and the weather command look up the weather.",
+        (CatalogSource(
+            WeatherSettingsUpdate, WeatherSettingsRead, "/core/weather-settings", "/core/weather-settings", lambda: {},
+        ),),
+        (SettingsLinkRead(
+            label="Location coordinates", href="/locations",
+            description="Set on each location's page; Home's are used when no place is chosen.",
+        ),),
+    ),
+    CatalogNamespace(
         "assistant", "Assistant", "How Alfred addresses you.",
         (CatalogSource(
             AssistantSettingsUpdate, AssistantSettingsRead, "/core/assistant-settings", "/core/assistant-settings",
@@ -201,6 +212,7 @@ def _field(
         read_path=source.read_path,
         write_path=extra.get("write_path", source.write_path),
         entry_field=extra.get("entry_field"),
+        covers=extra.get("covers"),
     )
 
 

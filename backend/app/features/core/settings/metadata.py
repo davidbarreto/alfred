@@ -9,7 +9,8 @@ from typing import Any, Literal
 from pydantic import Field
 
 Widget = Literal[
-    "number", "toggle", "time", "text", "longtext", "weekdays", "windows", "city", "json", "readonly", "link",
+    "number", "toggle", "time", "text", "longtext", "weekdays", "windows", "city", "place", "json", "readonly", "link",
+    "hidden",
 ]
 
 
@@ -26,6 +27,7 @@ def setting(
     key: str | None = None,
     write_path: str | None = None,
     entry_field: str | None = None,
+    covers: list[str] | None = None,
     default: Any = None,
     **constraints: Any,
 ) -> Any:
@@ -37,12 +39,14 @@ def setting(
 
     `key` is the stored key when it is not `<namespace>.<field>`. `write_path` overrides the namespace's PUT; with an
     `{entry}` placeholder the value is a JSON object written one entry at a time, as `{entry_field: value}`.
+    `covers` names other fields of the same schema this control sets too (the weather place sets location_id and
+    city_id); those are declared with widget="hidden".
     """
     extra = {
         name: value
         for name, value in {
             "widget": widget, "unit": unit, "group": group, "confirm_note": confirm_note, "href": href, "step": step,
-            "key": key, "write_path": write_path, "entry_field": entry_field,
+            "key": key, "write_path": write_path, "entry_field": entry_field, "covers": covers,
         }.items()
         if value is not None
     }

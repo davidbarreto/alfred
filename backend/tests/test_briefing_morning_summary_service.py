@@ -73,6 +73,18 @@ def _frozen_today():
         yield
 
 
+@pytest.fixture(autouse=True)
+def weather_place():
+    """The weather place setting: Home with coordinates unless a test says otherwise."""
+    from app.features.core.weather_settings.schemas import WeatherPlace
+
+    with patch("app.features.briefing.morning_summary_service.WeatherSettingsService") as places:
+        places.return_value.resolve = AsyncMock(
+            return_value=WeatherPlace(source="home", label="Home", latitude=38.7, longitude=-9.1)
+        )
+        yield places.return_value
+
+
 @pytest.fixture
 def mock_session():
     return AsyncMock()
@@ -502,6 +514,36 @@ class TestBuild:
 
         assert mock_weather_client.get_daily_forecast.call_args.kwargs["session"] is mock_session
         assert mock_holiday_client.get_holidays.call_args.kwargs["session"] is mock_session
+
+    @pytest.mark.asyncio
+    async def test_weather_is_looked_up_at_the_weather_place(self, service, mock_weather_client, weather_place):
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            result = await service.build()
+
+        args = mock_weather_client.get_daily_forecast.call_args.args
+        assert args[1:] == (38.7, -9.1)
+        weather_place.resolve.assert_awaited_once_with(mock_weather_client.geocode_city)
+        assert (result.weather_place, result.weather_note) == ("Home", None)
+
+    @pytest.mark.asyncio
+    async def test_no_weather_place_says_how_to_set_one(self, service, mock_weather_client, weather_place):
+        weather_place.resolve.return_value = None
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            result = await service.build()
+
+        mock_weather_client.get_daily_forecast.assert_not_awaited()
+        assert result.weather is None and result.weather_place is None
+        assert "coordinates to the Home location" in result.weather_note
 
     @pytest.mark.asyncio
     async def test_weather_none_when_client_fails(self, mock_session, mock_weather_client, mock_holiday_client):

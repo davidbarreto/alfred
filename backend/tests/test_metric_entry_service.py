@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.features.core.weather_settings.schemas import WeatherPlace
 from app.features.metrics.entries import service as svc
 from app.features.metrics.entries.schemas import (
     MetricEntryCreate,
@@ -59,10 +60,12 @@ def _entry(series=None, id=10, started=NOW - timedelta(minutes=30), ended=None, 
 
 @pytest.fixture
 def make_service():
-    def _make(conditions=None):
+    def _make(conditions=None, place=WeatherPlace(source="home", label="Home", latitude=38.7, longitude=-9.1)):
         service = MetricEntryService(AsyncMock(), conditions)
         service._repo = AsyncMock()
         service._series = AsyncMock()
+        service._weather_places = AsyncMock()
+        service._weather_places.resolve.return_value = place
         return service
 
     return _make
@@ -137,7 +140,7 @@ class TestStart:
         fields, _ = service._repo.create_entry.await_args.args
         assert fields["context"] is None
 
-    async def test_default_location_is_marked(self, make_service):
+    async def test_without_device_coordinates_the_weather_place_is_used(self, make_service):
         conditions = AsyncMock()
         conditions.get_current_conditions.return_value = WeatherSnapshot(
             temp_c=10, precipitation_mm=0, wind_kmh=5, weather_code=0
@@ -149,8 +152,22 @@ class TestStart:
 
         await service.start(MetricStart(series="commute-work"), "telegram")
 
+        conditions.get_current_conditions.assert_awaited_once_with(38.7, -9.1)
         fields, _ = service._repo.create_entry.await_args.args
-        assert fields["context"]["start"]["location_source"] == "default"
+        assert fields["context"]["start"]["location_source"] == "home"
+
+    async def test_no_weather_place_means_no_snapshot(self, make_service):
+        conditions = AsyncMock()
+        service = make_service(conditions, place=None)
+        service._series.get_series_by_name.return_value = _series()
+        service._repo.get_open_entries.return_value = []
+        service._repo.create_entry.return_value = _entry()
+
+        await service.start(MetricStart(series="commute-work"), "telegram")
+
+        conditions.get_current_conditions.assert_not_awaited()
+        fields, _ = service._repo.create_entry.await_args.args
+        assert fields["context"] is None
 
 
 class TestStop:

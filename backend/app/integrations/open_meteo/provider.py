@@ -14,9 +14,6 @@ from .client import OpenMeteoClient
 
 logger = logging.getLogger(__name__)
 
-_PORTO_LAT = 41.1579
-_PORTO_LON = -8.6291
-
 _WMO_DESCRIPTIONS: dict[int, str] = {
     0: "Clear sky",
     1: "Mainly clear",
@@ -69,19 +66,26 @@ class OpenMeteoProvider:
     def __init__(self, client: OpenMeteoClient) -> None:
         self._client = client
 
-    async def get_current_conditions(
-        self, lat: float | None = None, lon: float | None = None
-    ) -> WeatherSnapshot | None:
-        """Conditions right now at the given point, defaulting to Porto when no coordinates are known."""
-        data = await self._client.fetch_current(
-            lat if lat is not None else _PORTO_LAT, lon if lon is not None else _PORTO_LON
-        )
+    async def get_current_conditions(self, lat: float, lon: float) -> WeatherSnapshot | None:
+        """Conditions right now at the given point."""
+        data = await self._client.fetch_current(lat, lon)
         return WeatherSnapshot(
             temp_c=data["temperature_2m"],
             precipitation_mm=data["precipitation"],
             wind_kmh=data["wind_speed_10m"],
             weather_code=int(data["weather_code"]),
         )
+
+    async def geocode_city(self, name: str) -> tuple[float, float] | None:
+        """(latitude, longitude) for "City, Country", retrying with the city alone when the pair finds nothing."""
+        result = await self._client.geocode(name)
+        if result is None and "," in name:
+            result = await self._client.geocode(name.split(",")[0].strip())
+        return (result["latitude"], result["longitude"]) if result else None
+
+    async def get_forecast_at(self, lat: float, lon: float, for_date: date) -> WeatherForecast:
+        """The day's forecast at a point, in the configured timezone."""
+        return self._build_forecast(await self._client.fetch_daily(lat, lon, get_settings().timezone, for_date))
 
     async def get_forecast_for_city(self, city: str, for_date: date) -> tuple[WeatherForecast, str]:
         """Geocode a city name and return its forecast alongside the resolved city name."""
@@ -100,13 +104,12 @@ class OpenMeteoProvider:
         return self._build_forecast(data), label
 
     async def get_daily_forecast(
-        self, for_date: date, session: AsyncSession | None = None
+        self, for_date: date, lat: float, lon: float, session: AsyncSession | None = None
     ) -> WeatherForecast:
         error: str | None = None
         forecast: WeatherForecast | None = None
         try:
-            data = await self._client.fetch_daily(_PORTO_LAT, _PORTO_LON, get_settings().timezone, for_date)
-            forecast = self._build_forecast(data)
+            forecast = await self.get_forecast_at(lat, lon, for_date)
         except Exception as exc:
             error = str(exc)
             await self._write_log(session, for_date, None, error)

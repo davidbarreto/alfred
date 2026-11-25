@@ -230,8 +230,19 @@ class TestBuildContext:
     def test_weather_unavailable_when_none(self):
         briefing = _make_briefing(weather=None)
         context = _build_context(briefing)
-        assert "Weather in Porto:" in context
+        assert "Weather:" in context
         assert "Unavailable" in context
+
+    def test_weather_names_its_place(self):
+        briefing = _make_briefing(weather_place="Home", weather=WeatherForecast(
+            temperature_max_c=10.0, temperature_min_c=5.0, feels_like_max_c=8.0, precipitation_probability=0,
+            wind_speed_max_kmh=5.0, description="Clear", advice=[],
+        ))
+        assert "Weather in Home:" in _build_context(briefing)
+
+    def test_no_weather_place_explains_how_to_set_one(self):
+        briefing = _make_briefing(weather=None, weather_note="Add coordinates to the Home location.")
+        assert "Unavailable. Add coordinates to the Home location." in _build_context(briefing)
 
     def test_all_day_event_label(self):
         briefing = _make_briefing(

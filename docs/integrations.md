@@ -12,7 +12,7 @@ External providers live under `backend/app/integrations/<provider>/` (layout in 
 | **Google (Gemini)** | LLM provider | Chat, memory extraction, briefing formatting, session summaries, language pronunciation analysis (`gemini-2.5-flash` for audio). |
 | **OpenAI** | LLM provider | Alternative `LlmProvider` implementation. |
 | **sentence-transformers** | Embedding provider | Local; feeds `core.embeddings`. |
-| **Open-Meteo** | Weather | Morning briefing and metrics weather snapshots; no API key required. |
+| **Open-Meteo** | Weather | Morning briefing, dashboard, the `weather` command and metrics weather snapshots, at the weather place (`weather.*` setting: a location's coordinates, a city geocoded by name, else the Home location's coordinates; there is no built-in default); no API key required. |
 | **Telegram** | Input channel | Reaches Alfred only via n8n; FastAPI has no Telegram client. Command menu limits: [assistant-layer.md](assistant-layer.md#telegram-command-menu). |
 | **Codeforces / LeetCode** | Programming-practice sync | Feeds the `cs` schema. |
 

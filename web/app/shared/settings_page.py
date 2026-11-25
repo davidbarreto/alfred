@@ -10,6 +10,8 @@ UNREGISTERED_PREVIEW = 5
 
 # Rows that show no value: the value is edited, and may be personal, on another page.
 _VALUELESS_WIDGETS = {"link"}
+# Fields set through another row's control (its `covers`), never shown on their own.
+_HIDDEN_WIDGETS = {"hidden"}
 # Rows the page never sends.
 READ_ONLY_WIDGETS = {"readonly", "link"}
 
@@ -31,8 +33,17 @@ def _summary(value: Any) -> list[str]:
     return [f"{entry}: {', '.join(map(str, items)) if isinstance(items, list) else items}" for entry, items in value.items()]
 
 
+def _value(field: dict, values: dict) -> Any:
+    """The row's value: one field's, or {field: value} over the field and the ones it covers (the weather place)."""
+    if field["widget"] in _VALUELESS_WIDGETS:
+        return None
+    if field.get("covers"):
+        return {name: values.get(name) for name in [field["field"], *field["covers"]]}
+    return values.get(field["field"])
+
+
 def _row(field: dict, values: dict) -> dict:
-    value = None if field["widget"] in _VALUELESS_WIDGETS else values.get(field["field"])
+    value = _value(field, values)
     row = {
         **field,
         "value": value,
@@ -43,6 +54,10 @@ def _row(field: dict, values: dict) -> dict:
     if field["widget"] == "city":
         # The picker shows the city's name: the GET returns the object next to its id (home_city_id -> home_city).
         row["city"] = values.get(field["field"].removesuffix("_id"))
+    if field["widget"] == "place":
+        # The namespace GET lists what can be picked and what is in use now.
+        row["choices"] = values.get("choices") or {"locations": [], "cities": []}
+        row["place_label"] = values.get("place_label")
     return row
 
 
@@ -74,7 +89,8 @@ def build_sections(
             if values is None:
                 failed = True
                 continue
-            rows.append(_row(field, values))
+            if field["widget"] not in _HIDDEN_WIDGETS:
+                rows.append(_row(field, values))
         sections.append({
             "namespace": namespace["namespace"],
             "title": namespace["title"],
@@ -118,10 +134,15 @@ def plan_writes(catalog: dict, changes: dict[str, dict[str, Any]]) -> dict[str, 
         writes: list[tuple[str, dict]] = []
         for name, value in fields.items():
             field = by_key.get((namespace, name))
-            if field is None or field["widget"] in READ_ONLY_WIDGETS:
+            if field is None or field["widget"] in READ_ONLY_WIDGETS | _HIDDEN_WIDGETS:
                 raise SaveError(f"{namespace}.{name} cannot be saved here")
             path = field["write_path"]
-            if "{entry}" in path:
+            if field.get("covers"):
+                names = {name, *field["covers"]}
+                if not isinstance(value, dict) or not set(value) <= names:
+                    raise SaveError(f"{field['key']} must be an object with {', '.join(sorted(names))}")
+                bodies.setdefault(path, {}).update(value)
+            elif "{entry}" in path:
                 if not isinstance(value, dict):
                     raise SaveError(f"{field['key']} must be a JSON object")
                 options = field.get("options")
@@ -143,9 +164,11 @@ def saved_values(catalog: dict, namespace: str, responses: list[dict]) -> dict[s
         merged.update(response or {})
     values: dict[str, Any] = {}
     for field in fields:
-        if field["field"] not in merged or field["widget"] in _VALUELESS_WIDGETS:
+        if field["field"] not in merged or field["widget"] in _VALUELESS_WIDGETS | _HIDDEN_WIDGETS:
             continue
-        values[field["field"]] = merged[field["field"]]
+        values[field["field"]] = _value(field, merged)
+        if field["widget"] == "place":
+            values["place_label"] = merged.get("place_label")
         if field["widget"] == "city":
             values[field["field"].removesuffix("_id")] = merged.get(field["field"].removesuffix("_id"))
     return values

@@ -26,7 +26,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.sleep_time",
@@ -49,7 +50,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.work_target_minutes",
@@ -72,7 +74,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.preferred_work_windows",
@@ -95,7 +98,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.workdays",
@@ -124,7 +128,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.work_tag",
@@ -147,7 +152,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.office_tag",
@@ -170,7 +176,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.office_days_per_week",
@@ -193,7 +200,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.office_min_minutes",
@@ -216,7 +224,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.conventions",
@@ -239,7 +248,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.default_travel_minutes",
@@ -262,7 +272,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "planning.walk_tolerance_minutes",
@@ -285,7 +296,8 @@
      "href": null,
      "read_path": "/planning/settings",
      "write_path": "/planning/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": [
@@ -322,7 +334,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overload_urgent_threshold",
@@ -345,7 +358,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overload_max_listed",
@@ -368,7 +382,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overload_urgent_interval_hours",
@@ -391,7 +406,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overdue_grace_hours_high",
@@ -414,7 +430,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overdue_grace_hours_medium",
@@ -437,7 +454,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.overdue_grace_hours_low",
@@ -460,7 +478,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.undated_escalation_days_high",
@@ -483,7 +502,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.undated_escalation_days_medium",
@@ -506,7 +526,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.undated_escalation_days_low",
@@ -529,7 +550,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.catchup_tasks_per_day",
@@ -552,7 +574,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.catchup_stale_days",
@@ -575,7 +598,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.catchup_missed_habit_threshold",
@@ -598,7 +622,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.urgency_reset_days",
@@ -621,7 +646,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "reminders.undated_task_snooze_days",
@@ -644,7 +670,8 @@
      "href": null,
      "read_path": "/core/reminder-settings",
      "write_path": "/core/reminder-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": []
@@ -675,7 +702,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.home_to_airport_min",
@@ -698,7 +726,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.max_visits_per_day",
@@ -721,7 +750,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.visit_duration_min",
@@ -744,7 +774,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.unpaid_leg_days",
@@ -767,7 +798,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.snooze_other_events",
@@ -790,7 +822,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.home_address",
@@ -813,7 +846,8 @@
      "href": "/locations",
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "travel.home_city_id",
@@ -836,7 +870,8 @@
      "href": null,
      "read_path": "/travel/settings",
      "write_path": "/travel/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": [
@@ -873,7 +908,8 @@
      "href": null,
      "read_path": "/finance/settings",
      "write_path": "/finance/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": [
@@ -910,7 +946,8 @@
      "href": null,
      "read_path": "/study/settings",
      "write_path": "/study/settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": []
@@ -979,7 +1016,8 @@
      "href": null,
      "read_path": "/organizer/calendar-notification-settings",
      "write_path": "/organizer/calendar-notification-settings/{entry}",
-     "entry_field": "offsets"
+     "entry_field": "offsets",
+     "covers": null
     },
     {
      "key": "organizer.contact_birthday_cascades",
@@ -1027,10 +1065,75 @@
      "href": null,
      "read_path": "/organizer/contact-birthday-settings",
      "write_path": "/organizer/contact-birthday-settings/{entry}",
-     "entry_field": "offsets"
+     "entry_field": "offsets",
+     "covers": null
     }
    ],
    "links": []
+  },
+  {
+   "namespace": "weather",
+   "title": "Weather",
+   "description": "Where the briefing, the dashboard and the weather command look up the weather.",
+   "fields": [
+    {
+     "key": "weather.location_id",
+     "field": "location_id",
+     "label": "Weather place",
+     "description": "Where the briefing, the dashboard and the weather command look up the weather. A location needs coordinates; a city is found by name. Empty = the Home location.",
+     "widget": "place",
+     "type": "integer",
+     "options": null,
+     "min": null,
+     "max": null,
+     "max_length": null,
+     "step": null,
+     "nullable": true,
+     "has_default": false,
+     "default": null,
+     "unit": null,
+     "group": null,
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/weather-settings",
+     "write_path": "/core/weather-settings",
+     "entry_field": null,
+     "covers": [
+      "city_id"
+     ]
+    },
+    {
+     "key": "weather.city_id",
+     "field": "city_id",
+     "label": "Weather city",
+     "description": "Set through the weather place.",
+     "widget": "hidden",
+     "type": "integer",
+     "options": null,
+     "min": null,
+     "max": null,
+     "max_length": null,
+     "step": null,
+     "nullable": true,
+     "has_default": false,
+     "default": null,
+     "unit": null,
+     "group": null,
+     "confirm_note": null,
+     "href": null,
+     "read_path": "/core/weather-settings",
+     "write_path": "/core/weather-settings",
+     "entry_field": null,
+     "covers": null
+    }
+   ],
+   "links": [
+    {
+     "label": "Location coordinates",
+     "href": "/locations",
+     "description": "Set on each location's page; Home's are used when no place is chosen."
+    }
+   ]
   },
   {
    "namespace": "assistant",
@@ -1058,7 +1161,8 @@
      "href": null,
      "read_path": "/core/assistant-settings",
      "write_path": "/core/assistant-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     },
     {
      "key": "assistant.persona_additions",
@@ -1081,7 +1185,8 @@
      "href": "/persona",
      "read_path": "/core/assistant-settings",
      "write_path": "/core/assistant-settings",
-     "entry_field": null
+     "entry_field": null,
+     "covers": null
     }
    ],
    "links": []

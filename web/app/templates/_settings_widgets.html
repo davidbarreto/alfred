@@ -67,6 +67,24 @@
 </div>
 {% endmacro %}
 
+{% macro place(row) %}
+{% set current = 'location:' ~ row.value.location_id if row.value.location_id is not none
+   else ('city:' ~ row.value.city_id if row.value.city_id is not none else '') %}
+<div class="space-y-1 w-full sm:w-64">
+  <select data-control class="select select-sm select-bordered w-full" aria-label="{{ row.label }}">
+    <option value="" {{ 'selected' if current == '' }}>Home (default)</option>
+    {% if row.choices.locations %}<optgroup label="Locations">
+      {% for c in row.choices.locations %}<option value="location:{{ c.id }}" {{ 'selected' if current == 'location:' ~ c.id }}>{{ c.label }}</option>{% endfor %}
+    </optgroup>{% endif %}
+    {% if row.choices.cities %}<optgroup label="Cities">
+      {% for c in row.choices.cities %}<option value="city:{{ c.id }}" {{ 'selected' if current == 'city:' ~ c.id }}>{{ c.label }}</option>{% endfor %}
+    </optgroup>{% endif %}
+  </select>
+  <p data-place-label class="text-[11px] {{ 'text-gray-500' if row.place_label else 'text-red-600' }}">
+    {%- if row.place_label %}In use: {{ row.place_label }}{% else %}No weather now: add coordinates to the Home location or pick a place.{% endif %}</p>
+</div>
+{% endmacro %}
+
 {% macro json(row) %}
 <div class="flex items-start gap-2" data-control-group>
   <ul class="text-xs text-gray-600 font-mono space-y-0.5" data-json-summary>
@@ -93,6 +111,7 @@
 {%- elif row.widget == 'weekdays' %}{{ weekdays(row) }}
 {%- elif row.widget == 'windows' %}{{ windows(row) }}
 {%- elif row.widget == 'city' %}{{ city(row) }}
+{%- elif row.widget == 'place' %}{{ place(row) }}
 {%- elif row.widget == 'json' %}{{ json(row) }}
 {%- elif row.widget == 'readonly' %}{{ readonly(row) }}
 {%- elif row.widget == 'link' %}{{ link(row) }}
@@ -124,7 +143,7 @@
     {% if row.description %}<p class="text-xs text-gray-500">{{ row.description }}</p>{% endif %}
     <p data-row-error class="text-xs text-red-600"></p>
   </div>
-  <div class="flex items-center gap-2 {{ 'w-full sm:w-auto' if row.widget in ('longtext', 'json', 'windows', 'weekdays') else '' }}">
+  <div class="flex items-center gap-2 {{ 'w-full sm:w-auto' if row.widget in ('longtext', 'json', 'windows', 'weekdays', 'place') else '' }}">
     {{ control(row) }}
     {% if row.unit and row.widget == 'number' %}<span class="text-xs text-gray-500 whitespace-nowrap">{{ row.unit }}</span>{% endif %}
     {% if row.has_default %}

@@ -115,7 +115,7 @@ class TestGetDailyForecast:
     @pytest.mark.asyncio
     async def test_returns_weather_forecast(self, provider, client):
         client.fetch_daily.return_value = _daily_payload()
-        result = await provider.get_daily_forecast(date(2026, 6, 23))
+        result = await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1)
 
         assert result.temperature_max_c == 22.5
         assert result.temperature_min_c == 15.0
@@ -127,17 +127,17 @@ class TestGetDailyForecast:
     @pytest.mark.asyncio
     async def test_handles_null_precipitation(self, provider, client):
         client.fetch_daily.return_value = _daily_payload(precipitation_probability_max=[None])
-        result = await provider.get_daily_forecast(date(2026, 6, 23))
+        result = await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1)
         assert result.precipitation_probability == 0
 
     @pytest.mark.asyncio
-    async def test_requests_porto_coordinates_and_date(self, provider, client):
+    async def test_requests_the_given_coordinates_and_date(self, provider, client):
         client.fetch_daily.return_value = _daily_payload()
-        await provider.get_daily_forecast(date(2026, 6, 23))
+        await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1)
 
         args, kwargs = client.fetch_daily.call_args
-        assert args[0] == 41.1579
-        assert args[1] == -8.6291
+        assert args[0] == 38.7
+        assert args[1] == -9.1
         assert args[3] == date(2026, 6, 23)
 
     @pytest.mark.asyncio
@@ -145,7 +145,7 @@ class TestGetDailyForecast:
         client.fetch_daily.return_value = _daily_payload()
         session = AsyncMock()
         with patch("app.integrations.open_meteo.provider.create_sync_log", new=AsyncMock()) as mock_log:
-            await provider.get_daily_forecast(date(2026, 6, 23), session=session)
+            await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1, session=session)
 
         mock_log.assert_awaited_once()
         assert mock_log.call_args.kwargs["provider"] == "open_meteo"
@@ -155,7 +155,7 @@ class TestGetDailyForecast:
     async def test_skips_logging_when_session_none(self, provider, client):
         client.fetch_daily.return_value = _daily_payload()
         with patch("app.integrations.open_meteo.provider.create_sync_log", new=AsyncMock()) as mock_log:
-            await provider.get_daily_forecast(date(2026, 6, 23))
+            await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1)
 
         mock_log.assert_not_called()
 
@@ -165,9 +165,30 @@ class TestGetDailyForecast:
         session = AsyncMock()
         with patch("app.integrations.open_meteo.provider.create_sync_log", new=AsyncMock()) as mock_log:
             with pytest.raises(Exception):
-                await provider.get_daily_forecast(date(2026, 6, 23), session=session)
+                await provider.get_daily_forecast(date(2026, 6, 23), 38.7, -9.1, session=session)
 
         assert mock_log.call_args.kwargs["status"] == "error"
+
+
+class TestGeocodeCity:
+    @pytest.mark.asyncio
+    async def test_returns_the_coordinates(self):
+        client = AsyncMock()
+        client.geocode.return_value = {"latitude": 38.72, "longitude": -9.14, "name": "Lisbon"}
+        assert await OpenMeteoProvider(client).geocode_city("Lisbon, Portugal") == (38.72, -9.14)
+
+    @pytest.mark.asyncio
+    async def test_retries_with_the_city_alone(self):
+        client = AsyncMock()
+        client.geocode.side_effect = [None, {"latitude": 38.72, "longitude": -9.14}]
+        assert await OpenMeteoProvider(client).geocode_city("Lisbon, Portugal") == (38.72, -9.14)
+        assert client.geocode.await_args_list[1].args == ("Lisbon",)
+
+    @pytest.mark.asyncio
+    async def test_unknown_city(self):
+        client = AsyncMock()
+        client.geocode.return_value = None
+        assert await OpenMeteoProvider(client).geocode_city("Nowhere") is None
 
 
 class TestGetForecastForCity:

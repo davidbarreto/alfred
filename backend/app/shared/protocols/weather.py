@@ -10,15 +10,19 @@ from app.features.briefing.schemas import WeatherForecast
 
 
 class WeatherProvider(Protocol):
-    """Async interface for daily weather forecasts.
+    """Async interface for daily weather forecasts at a point.
 
-    Swap the implementation (Open-Meteo, OpenWeatherMap, …) without
-    touching the briefing service layer.
+    Swap the implementation (Open-Meteo, OpenWeatherMap, …) without touching the briefing service layer. Where to look
+    is the caller's: the weather place setting (`WeatherSettingsService.resolve`).
     """
 
     async def get_daily_forecast(
-        self, for_date: date, session: AsyncSession | None = None
+        self, for_date: date, lat: float, lon: float, session: AsyncSession | None = None
     ) -> WeatherForecast: ...
+
+    async def geocode_city(self, name: str) -> tuple[float, float] | None:
+        """(latitude, longitude) of a city found by name ("Lisbon, Portugal"), or None."""
+        ...
 
 
 class WeatherSnapshot(BaseModel):
@@ -31,8 +35,8 @@ class WeatherSnapshot(BaseModel):
 
 
 class ConditionsProvider(Protocol):
-    """Current conditions for a location; coordinates default to the provider's home location."""
+    """Current conditions at a point."""
 
-    async def get_current_conditions(
-        self, lat: float | None = None, lon: float | None = None
-    ) -> WeatherSnapshot | None: ...
+    async def get_current_conditions(self, lat: float, lon: float) -> WeatherSnapshot | None: ...
+
+    async def geocode_city(self, name: str) -> tuple[float, float] | None: ...

@@ -15,7 +15,7 @@ Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metr
 
 ## Weather
 
-A best-effort snapshot (`ConditionsProvider.get_current_conditions`, 4 s timeout) that never blocks a start/stop. With no coordinates it uses a built-in default location and is marked `location_source: default`.
+A best-effort snapshot (`ConditionsProvider.get_current_conditions`, 4 s timeout) that never blocks a start/stop. With device coordinates it is marked `location_source: device`; without them it uses the weather place setting (`/settings#weather`: a chosen location or city, else the Home location's coordinates) and is marked with that source (`location`, `city` or `home`); with no weather place there is no snapshot.
 
 ## Entry points
 

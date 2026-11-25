@@ -88,7 +88,7 @@ All paginated sections follow the same offset-based pattern:
 | Current / next trip | `/travel/trips?status=current` (nearest by start date) + the trip's warning count, linking to `/travel/{id}/warnings` |
 | Language | `/language/tracks` + `/language/sessions/daily-progress`: today's reviews against each track's quota (no due counts: that needs a call per track) |
 | Budgets | `/finance/budgets/status`: the 3 categories closest to their limit |
-| Weather | Today's forecast from the structured `/briefing/morning` (no LLM call); empty card when unavailable |
+| Weather | Today's forecast from the structured `/briefing/morning` (no LLM call), with the place it was looked up at (`weather_place`); when there is no weather place the card shows `weather_note` with a link to `/settings#weather` |
 | Today's events | `/organizer/calendar-events` from 14 days back to the end of today, keeping those that overlap today (`todays_events`): multi-day events that started earlier and still run show "Until <date>" instead of a clock range |
 | Upcoming events | Events after today within the briefing look-ahead, from `/briefing/morning` (the briefing also looks 14 days back so a running multi-day event counts as today's); 5 max, "See all N" links to the calendar |
 | Holidays | Public holidays in the next 7 days, also from `/briefing/morning`, each tagged with its country code (PT, BR) |

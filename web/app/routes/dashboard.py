@@ -98,6 +98,8 @@ async def dashboard(request: Request):
         "study": cards.study_card(study),
         "language": cards.language_card(language_tracks, language_progress),
         "weather": (morning or {}).get("weather"),
+        "weather_place": (morning or {}).get("weather_place"),
+        "weather_note": (morning or {}).get("weather_note"),
         "holidays": (morning or {}).get("holidays") or [],
         "upcoming_events": cards.upcoming_events((morning or {}).get("events")),
         "lookahead_days": (morning or {}).get("lookahead_days"),

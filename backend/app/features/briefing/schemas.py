@@ -105,6 +105,9 @@ class MorningBriefing(BaseModel):
     tasks: list[TaskBriefItem]
     events: list[EventBriefItem]
     weather: WeatherForecast | None
+    # Where the weather was looked up ("Home", a location, a city); with no weather, why (weather_note).
+    weather_place: str | None = None
+    weather_note: str | None = None
     holidays: list[HolidayItem]
     birthdays: list[BirthdayItem]
     language: list[LanguageBriefItem] = []

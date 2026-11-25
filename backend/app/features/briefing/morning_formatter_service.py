@@ -93,9 +93,9 @@ def _build_context(briefing: MorningBriefing) -> str:
 
     w = briefing.weather
     lines.append("")
-    lines.append("Weather in Porto:")
+    lines.append(f"Weather in {briefing.weather_place}:" if briefing.weather_place else "Weather:")
     if w is None:
-        lines.append("  Unavailable")
+        lines.append(f"  Unavailable. {briefing.weather_note}" if briefing.weather_note else "  Unavailable")
     else:
         lines.append(
             f"  {w.description}, {w.temperature_min_c}C - {w.temperature_max_c}C"

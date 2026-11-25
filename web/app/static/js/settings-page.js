@@ -95,6 +95,11 @@
       }
       case "json":
         return { value: state.get(row).json };
+      case "place": {
+        // "location:5", "city:3" or "" (Home): the row's value covers both fields.
+        const [kind, id] = input.value.split(":");
+        return { value: { location_id: kind === "location" ? Number(id) : null, city_id: kind === "city" ? Number(id) : null } };
+      }
       default:
         return { value: undefined };
     }
@@ -136,6 +141,9 @@
         break;
       }
       case "city": state.get(row).picker?.reset(extra ?? null); break;
+      case "place":
+        input.value = value?.location_id != null ? `location:${value.location_id}` : value?.city_id != null ? `city:${value.city_id}` : "";
+        break;
       case "json": {
         state.get(row).json = value;
         row.querySelector("[data-json-summary]").replaceChildren(...summaryLines(value).map((line) => {
@@ -328,6 +336,13 @@
       Object.entries(changedEntries(row)).forEach(([entry, items]) => {
         lines.push(`${entry}: ${display(row, loaded[entry])} → ${display(row, items)}`);
       });
+    } else if (row.dataset.widget === "place") {
+      const select = control(row);
+      const labelOf = (v) => {
+        const option = [...select.options].find((o) => o.value === (v?.location_id != null ? `location:${v.location_id}` : v?.city_id != null ? `city:${v.city_id}` : ""));
+        return option ? option.textContent.trim() : "not set";
+      };
+      lines.push(`${labelOf(state.get(row).loaded)} → ${labelOf(readValue(row).value)}`);
     } else if (row.dataset.widget === "city") {
       const loaded = parse(row.querySelector("[data-city]").textContent);
       const now = row.querySelector("[data-city-text]").value;
@@ -406,6 +421,11 @@
         const saved = field in result.values ? result.values[field] : readValue(row).value;
         const extra = row.dataset.widget === "city" ? result.values[field.replace(/_id$/, "")] : undefined;
         if (row.dataset.widget === "city") row.querySelector("[data-city]").textContent = JSON.stringify(extra ?? null);
+        if (row.dataset.widget === "place") {
+          const label = row.querySelector("[data-place-label]");
+          label.textContent = result.values.place_label ? `In use: ${result.values.place_label}` : "No weather now: add coordinates to the Home location or pick a place.";
+          label.className = `text-[11px] ${result.values.place_label ? "text-gray-500" : "text-red-600"}`;
+        }
         state.get(row).loaded = saved;
         row.dataset.value = JSON.stringify(saved);
         setValue(row, saved, extra);

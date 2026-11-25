@@ -33,13 +33,229 @@
         }
       ],
       "request": {
-        "auth": { "type": "noauth" },
+        "auth": {
+          "type": "noauth"
+        },
         "method": "GET",
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "01a - Create A Location With Coordinates For The Weather",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.environment.set('briefing_weather_location_id', json.id);",
+              "pm.environment.set('briefing_weather_location_name', json.name);",
+              "pm.test('Coordinates are stored', () => pm.expect([json.latitude, json.longitude]).to.eql([41.1579, -8.6291]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman weather place {{$timestamp}}\",\n  \"kind\": \"other\",\n  \"coordinates\": \"41.1579, -8.6291\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01b - Weather Settings - Pick That Location",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('The location is in use and listed as a choice', () => {",
+              "    pm.expect(json.location_id).to.eql(pm.environment.get('briefing_weather_location_id'));",
+              "    pm.expect(json.city_id).to.eql(null);",
+              "    pm.expect(json.place_label).to.eql(pm.environment.get('briefing_weather_location_name'));",
+              "    pm.expect(json.choices.locations.map(c => c.id)).to.include(pm.environment.get('briefing_weather_location_id'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/weather-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "weather-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": \"{{briefing_weather_location_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01c - Weather Settings - Location And City Together (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/weather-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "weather-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": \"{{briefing_weather_location_id}}\",\n  \"city_id\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01d - Weather Settings - Unknown Location (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/weather-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "weather-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": 999999999\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "01e - Weather Settings - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/weather-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "weather-settings"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
         }
       }
     },
@@ -85,12 +301,13 @@
               "        pm.expect(s).to.have.property('priority');",
               "    });",
               "});",
-              "pm.test('Has weather object', () => {",
-              "    const weather = pm.response.json().weather;",
-              "    pm.expect(weather).to.have.property('temperature_max_c');",
-              "    pm.expect(weather).to.have.property('temperature_min_c');",
-              "    pm.expect(weather).to.have.property('description');",
-              "    pm.expect(weather.advice).to.be.an('array');",
+              "pm.test('Weather is looked up at the weather place set above', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.weather_place).to.eql(pm.environment.get('briefing_weather_location_name'));",
+              "    pm.expect(json.weather).to.have.property('temperature_max_c');",
+              "    pm.expect(json.weather).to.have.property('temperature_min_c');",
+              "    pm.expect(json.weather).to.have.property('description');",
+              "    pm.expect(json.weather.advice).to.be.an('array');",
               "});"
             ],
             "type": "text/javascript"
@@ -102,8 +319,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/morning",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "morning"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "morning"
+          ]
         }
       }
     },
@@ -138,8 +360,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/morning/formatted",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "morning", "formatted"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "morning",
+            "formatted"
+          ]
         }
       }
     },
@@ -164,8 +392,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/morning/formatted",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "morning", "formatted"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "morning",
+            "formatted"
+          ]
         }
       }
     },
@@ -191,10 +425,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/morning/formatted?force=true",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "morning", "formatted"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "morning",
+            "formatted"
+          ],
           "query": [
-            { "key": "force", "value": "true" }
+            {
+              "key": "force",
+              "value": "true"
+            }
           ]
         }
       }
@@ -236,8 +479,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/evening",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "evening"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "evening"
+          ]
         }
       }
     },
@@ -272,10 +520,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/evening/formatted?force=true",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "evening", "formatted"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "evening",
+            "formatted"
+          ],
           "query": [
-            { "key": "force", "value": "true" }
+            {
+              "key": "force",
+              "value": "true"
+            }
           ]
         }
       }
@@ -301,8 +558,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/evening/formatted",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "evening", "formatted"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "evening",
+            "formatted"
+          ]
         }
       }
     },
@@ -338,8 +601,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/history",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "history"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "history"
+          ]
         }
       }
     },
@@ -366,10 +634,90 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/briefing/history?type=evening",
-          "host": ["{{base_url}}"],
-          "path": ["briefing", "history"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "briefing",
+            "history"
+          ],
           "query": [
-            { "key": "type", "value": "evening" }
+            {
+              "key": "type",
+              "value": "evening"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "11 - Weather Settings - Back To Home",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Nothing is chosen', () => pm.expect([pm.response.json().location_id, pm.response.json().city_id]).to.eql([null, null]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/weather-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "weather-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"location_id\": null,\n  \"city_id\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "12 - Delete The Weather Location",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/locations/{{briefing_weather_location_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "locations",
+            "{{briefing_weather_location_id}}"
           ]
         }
       }

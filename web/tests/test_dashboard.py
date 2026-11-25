@@ -394,6 +394,24 @@ class TestDashboardPage:
         assert "Weather unavailable" in resp.text and "No holidays in the next 7 days" in resp.text
         assert "Pay rent" in resp.text
 
+    def test_weather_card_names_its_place(self, client, mock_api):
+        morning = {"weather": {"temperature_max_c": 20, "temperature_min_c": 10, "feels_like_max_c": 19,
+                               "precipitation_probability": 0, "wind_speed_max_kmh": 5, "description": "Clear",
+                               "advice": []},
+                   "weather_place": "Office", "holidays": [], "events": []}
+        mock_api["get"].side_effect = _backend({"/briefing/morning": morning})
+
+        assert 'Weather\n          <span class="text-xs font-normal text-gray-400">Office</span>' in client.get("/").text
+
+    def test_no_weather_place_links_to_the_setting(self, client, mock_api):
+        morning = {"weather": None, "weather_note": "Add coordinates to the Home location or pick a weather place in Settings.",
+                   "holidays": [], "events": []}
+        mock_api["get"].side_effect = _backend({"/briefing/morning": morning})
+
+        html = client.get("/").text
+
+        assert "Weather unavailable" in html and 'href="/settings#weather"' in html and "Add coordinates" in html
+
     def test_quiet_dashboard_has_no_alert_strip(self, client, mock_api):
         mock_api["get"].side_effect = _backend({"/organizer/tasks": [_task()]})
 

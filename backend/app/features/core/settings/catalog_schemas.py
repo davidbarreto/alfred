@@ -31,6 +31,8 @@ class SettingFieldRead(BaseModel):
     # With an `{entry}` placeholder, the value is an object written one entry at a time as {entry_field: value}.
     write_path: str
     entry_field: str | None = None
+    # Other fields this control sets with its own (they have widget "hidden").
+    covers: list[str] | None = None
 
 
 class SettingsLinkRead(BaseModel):

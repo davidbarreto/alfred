@@ -41,6 +41,10 @@ VALUES = {
     "/organizer/contact-birthday-settings": {"relationships": {
         "family": ["1mo", "15d", "7d", "5d", "1d"], "relative": ["15d", "7d", "1d"], "friend": ["7d", "1d"], "other": ["3d"],
     }},
+    "/core/weather-settings": {
+        "location_id": None, "city_id": 3, "place_label": "Lisbon, Portugal",
+        "choices": {"locations": [{"id": 1, "label": "Office"}], "cities": [{"id": 3, "label": "Lisbon, Portugal"}]},
+    },
     "/core/assistant-settings": {
         "user_name": "Sam", "persona_additions": "SECRET-PERSONA-TEXT", "base_persona": "# Alfred",
     },
@@ -98,6 +102,12 @@ class TestBuildSections:
     def test_city_row_carries_the_city(self):
         assert _rows(build_sections(CATALOG, VALUES))["travel.home_city_id"]["city"] == _CITY
 
+    def test_place_row_covers_both_fields_and_hides_the_city_row(self):
+        rows = _rows(build_sections(CATALOG, VALUES))
+        assert rows["weather.location_id"]["value"] == {"location_id": None, "city_id": 3}
+        assert rows["weather.location_id"]["place_label"] == "Lisbon, Portugal"
+        assert "weather.city_id" not in rows
+
     def test_link_rows_never_carry_their_value(self):
         row = _rows(build_sections(CATALOG, VALUES))["assistant.persona_additions"]
         assert row["value"] is None
@@ -129,7 +139,7 @@ class TestSettingsPage:
 
     def test_renders_every_section_with_nav(self, page):
         assert page.status_code == 200
-        for namespace in ("planning", "reminders", "travel", "finance", "study", "organizer", "assistant"):
+        for namespace in ("planning", "reminders", "travel", "finance", "study", "organizer", "weather", "assistant"):
             assert f'id="{namespace}"' in page.text
             assert f'href="#{namespace}"' in page.text
 
@@ -145,6 +155,11 @@ class TestSettingsPage:
         assert "Edit JSON" in html and "normal: 1h, 10m, 0" in html
         assert "1 Example Street" in html
         assert 'href="/persona"' in html
+
+    def test_place_picker_selects_the_current_place(self, page):
+        assert '<option value="city:3" selected>Lisbon, Portugal</option>' in page.text
+        assert '<option value="location:1" >Office</option>' in page.text
+        assert "In use: Lisbon, Portugal" in page.text
 
     def test_modified_badge_shows_only_when_different(self, page):
         row = re.search(r'data-key="travel.airport_buffer_min".*?data-modified class="([^"]*)"', page.text, re.S)
@@ -210,6 +225,19 @@ class TestPlanWrites:
     def test_fields_sharing_a_path_go_in_one_body(self):
         plan = plan_writes(CATALOG, {"travel": {"airport_buffer_min": 90, "snooze_other_events": False}})
         assert plan == {"travel": [("/travel/settings", {"airport_buffer_min": 90, "snooze_other_events": False})]}
+
+    def test_place_writes_both_fields(self):
+        plan = plan_writes(CATALOG, {"weather": {"location_id": {"location_id": 1, "city_id": None}}})
+        assert plan == {"weather": [("/core/weather-settings", {"location_id": 1, "city_id": None})]}
+
+    @pytest.mark.parametrize("value", [{"location_id": 1, "nope": 2}, 5])
+    def test_place_refuses_other_shapes(self, value):
+        with pytest.raises(SaveError):
+            plan_writes(CATALOG, {"weather": {"location_id": value}})
+
+    def test_hidden_field_is_never_sent_alone(self):
+        with pytest.raises(SaveError):
+            plan_writes(CATALOG, {"weather": {"city_id": 3}})
 
     def test_cascades_split_into_one_put_per_entry(self):
         plan = plan_writes(CATALOG, {"organizer": {
@@ -300,6 +328,16 @@ class TestSave:
         assert body["travel"]["values"]["home_city_id"] is None
         assert "home_city" in body["travel"]["values"]
         assert "home_address" in body["travel"]["values"]
+
+    def test_place_save_returns_the_place_and_its_label(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        body = client.post("/settings/save", json={"weather": {"location_id": {"location_id": 1, "city_id": None}}}).json()
+
+        assert mock_api["put"].await_args.kwargs["json"] == {"location_id": 1, "city_id": None}
+        assert body["weather"]["values"]["location_id"] == {"location_id": 1, "city_id": None}
+        assert "place_label" in body["weather"]["values"]
 
     def test_never_returns_persona_additions(self, client, mock_api):
         mock_api["get"].side_effect = _get()

@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.weather_settings.service import WeatherSettingsService
 from app.features.metrics.entries.durations import format_duration
 from app.features.metrics.entries.repository import MetricEntryRepository
 from app.features.metrics.entries.schemas import (
@@ -78,6 +79,7 @@ class MetricEntryService:
         self._repo = MetricEntryRepository(session)
         self._series = MetricSeriesRepository(session)
         self._conditions = conditions
+        self._weather_places = WeatherSettingsService(session)
 
     # --- reads -------------------------------------------------------------------------------
 
@@ -284,6 +286,13 @@ class MetricEntryService:
         if self._conditions is None:
             return None
         try:
+            source = "device"
+            if lat is None or lon is None:
+                # No device coordinates: the weather place setting (Home by default); none means no snapshot.
+                place = await self._weather_places.resolve(self._conditions.geocode_city)
+                if place is None:
+                    return None
+                lat, lon, source = place.latitude, place.longitude, place.source
             snapshot = await asyncio.wait_for(
                 self._conditions.get_current_conditions(lat, lon), timeout=_WEATHER_TIMEOUT_S
             )
@@ -292,7 +301,7 @@ class MetricEntryService:
             return None
         if snapshot is None:
             return None
-        return {**snapshot.model_dump(), "location_source": "default" if lat is None else "device"}
+        return {**snapshot.model_dump(), "location_source": source}
 
     @staticmethod
     def _validated_fields(

@@ -14,7 +14,7 @@ class NullWeatherProvider:
     """
 
     async def get_daily_forecast(
-        self, for_date: date, session: AsyncSession | None = None
+        self, for_date: date, lat: float, lon: float, session: AsyncSession | None = None
     ) -> WeatherForecast:
         return WeatherForecast(
             temperature_max_c=0.0,
@@ -26,7 +26,8 @@ class NullWeatherProvider:
             advice=[],
         )
 
-    async def get_current_conditions(
-        self, lat: float | None = None, lon: float | None = None
-    ) -> WeatherSnapshot | None:
+    async def get_current_conditions(self, lat: float, lon: float) -> WeatherSnapshot | None:
+        return None
+
+    async def geocode_city(self, name: str) -> tuple[float, float] | None:
         return None

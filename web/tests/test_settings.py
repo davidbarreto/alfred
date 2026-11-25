@@ -179,6 +179,10 @@ class TestSettingsPage:
         assert "1 Example Street" in html
         assert 'href="/persona"' in html
 
+    def test_long_text_takes_the_full_row_width(self, page):
+        row = re.search(r'data-key="planning.conventions".*?</div>\s*<div class="([^"]*)"', page.text, re.S)
+        assert "w-full" in row.group(1).split() and "sm:w-auto" not in row.group(1)
+
     def test_place_picker_selects_the_current_place(self, page):
         assert '<option value="city:3" selected>Lisbon, Portugal</option>' in page.text
         assert '<option value="location:1" >Office</option>' in page.text

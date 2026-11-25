@@ -143,7 +143,7 @@
     {% if row.description %}<p class="text-xs text-gray-500">{{ row.description }}</p>{% endif %}
     <p data-row-error class="text-xs text-red-600"></p>
   </div>
-  <div class="flex items-center gap-2 {{ 'w-full sm:w-auto' if row.widget in ('longtext', 'json', 'windows', 'weekdays', 'place') else '' }}">
+  <div class="flex items-center gap-2 {{ 'w-full' if row.widget == 'longtext' else 'w-full sm:w-auto' if row.widget in ('json', 'windows', 'weekdays', 'place') else '' }}">
     {{ control(row) }}
     {% if row.unit and row.widget == 'number' %}<span class="text-xs text-gray-500 whitespace-nowrap">{{ row.unit }}</span>{% endif %}
     {% if row.has_default %}

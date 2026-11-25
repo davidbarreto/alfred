@@ -3,7 +3,7 @@ FSRS-5 spaced repetition algorithm.
 
 Reference: https://github.com/open-spaced-repetition/fsrs4anki
 Stability = number of days for ~90% retention.
-Interval ≈ stability (for REQUESTED_RETENTION=0.9).
+Interval ≈ stability (for a requested retention of 0.9, the default).
 """
 import math
 from dataclasses import dataclass
@@ -20,8 +20,9 @@ _W = [
 
 _DECAY = -0.5
 _FACTOR = 0.9 ** (1 / _DECAY) - 1  # ≈ 19/81
-_REQUESTED_RETENTION = 0.9
-_LEECH_THRESHOLD = 8
+# Defaults of the language.requested_retention and language.leech_threshold settings; callers pass the settings.
+DEFAULT_REQUESTED_RETENTION = 0.9
+DEFAULT_LEECH_THRESHOLD = 8
 
 
 class Rating(IntEnum):
@@ -75,8 +76,8 @@ def _retrievability(elapsed_days: float, stability: float) -> float:
     return (1 + _FACTOR * elapsed_days / stability) ** _DECAY
 
 
-def _next_interval(stability: float) -> int:
-    interval = stability / _FACTOR * (_REQUESTED_RETENTION ** (1 / _DECAY) - 1)
+def _next_interval(stability: float, requested_retention: float) -> int:
+    interval = stability / _FACTOR * (requested_retention ** (1 / _DECAY) - 1)
     return max(1, round(interval))
 
 
@@ -112,8 +113,14 @@ def _next_forget_stability(d: float, s: float, r: float) -> float:
     return _W[11] * d ** (-_W[12]) * ((s + 1) ** _W[13] - 1) * math.exp((1 - r) * _W[14])
 
 
-def next_card_state(card: CardState, rating: Rating, now: datetime | None = None) -> CardState:
-    """Compute the next FSRS card state after a review with the given rating."""
+def next_card_state(
+    card: CardState, rating: Rating, now: datetime | None = None,
+    requested_retention: float = DEFAULT_REQUESTED_RETENTION,
+) -> CardState:
+    """Compute the next FSRS card state after a review with the given rating.
+
+    `requested_retention` is the recall probability intervals aim for: higher means shorter intervals.
+    """
     now = now or datetime.now(timezone.utc)
     elapsed_days = 0.0
     if card.last_review_at is not None:
@@ -135,7 +142,7 @@ def next_card_state(card: CardState, rating: Rating, now: datetime | None = None
             interval_days = max(1, round(stability))
         else:
             new_state = State.REVIEW
-            interval_days = _next_interval(stability)
+            interval_days = _next_interval(stability, requested_retention)
         repetitions = 0 if rating == Rating.AGAIN else 1
         lapses = 0
         consecutive_failures = 1 if rating == Rating.AGAIN else 0
@@ -153,7 +160,7 @@ def next_card_state(card: CardState, rating: Rating, now: datetime | None = None
         else:
             stability = _next_recall_stability(card.difficulty, card.stability, r, rating)
             new_state = State.REVIEW
-            interval_days = _next_interval(stability)
+            interval_days = _next_interval(stability, requested_retention)
             repetitions = card.repetitions + 1
             lapses = card.lapses
             consecutive_failures = 0
@@ -171,14 +178,18 @@ def next_card_state(card: CardState, rating: Rating, now: datetime | None = None
     )
 
 
-def is_leech(consecutive_failures: int) -> bool:
-    return consecutive_failures >= _LEECH_THRESHOLD
+def is_leech(consecutive_failures: int, threshold: int = DEFAULT_LEECH_THRESHOLD) -> bool:
+    return consecutive_failures >= threshold
 
 
-def preview_next_intervals(card: CardState, now: datetime | None = None) -> dict[str, int]:
+def preview_next_intervals(
+    card: CardState, now: datetime | None = None, requested_retention: float = DEFAULT_REQUESTED_RETENTION,
+) -> dict[str, int]:
     """Days until due for each rating, without persisting any state change."""
     now = now or datetime.now(timezone.utc)
     return {
-        rating.name.lower(): max(0, round((next_card_state(card, rating, now).due_at - now).total_seconds() / 86400))
+        rating.name.lower(): max(
+            0, round((next_card_state(card, rating, now, requested_retention).due_at - now).total_seconds() / 86400)
+        )
         for rating in Rating
     }

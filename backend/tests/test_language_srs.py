@@ -174,3 +174,25 @@ class TestIntervalGrowth:
             assert intervals[i + 1] >= intervals[i], (
                 f"Interval did not grow: {intervals}"
             )
+
+
+class TestSettingsParameters:
+    def test_higher_retention_gives_shorter_intervals(self):
+        default = next_card_state(_new_card(), Rating.EASY, _NOW)
+        stricter = next_card_state(_new_card(), Rating.EASY, _NOW, requested_retention=0.97)
+        looser = next_card_state(_new_card(), Rating.EASY, _NOW, requested_retention=0.75)
+        assert stricter.due_at < default.due_at < looser.due_at
+
+    def test_default_retention_is_the_old_constant(self):
+        assert next_card_state(_new_card(), Rating.EASY, _NOW) == next_card_state(
+            _new_card(), Rating.EASY, _NOW, requested_retention=0.9
+        )
+
+    def test_preview_uses_the_retention(self):
+        assert preview_next_intervals(_new_card(), _NOW, requested_retention=0.97)["easy"] < preview_next_intervals(
+            _new_card(), _NOW
+        )["easy"]
+
+    def test_leech_threshold_is_a_parameter(self):
+        assert is_leech(8) and not is_leech(7)
+        assert is_leech(3, threshold=3) and not is_leech(7, threshold=10)

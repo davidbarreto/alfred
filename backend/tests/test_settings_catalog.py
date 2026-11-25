@@ -129,7 +129,8 @@ class TestRoute:
         assert response.status_code == 200
         body = response.json()
         assert [ns["namespace"] for ns in body["namespaces"]] == [
-            "planning", "reminders", "travel", "briefing", "finance", "study", "organizer", "weather", "assistant",
+            "planning", "reminders", "travel", "briefing", "finance", "study", "language", "organizer", "weather",
+            "assistant",
         ]
         assert body["unregistered"] == [{"key": "core.paused_at", "value": ""}]
 

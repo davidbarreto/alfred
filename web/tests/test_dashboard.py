@@ -190,6 +190,11 @@ class TestUpcomingBirthdays:
 
         assert [(b["name"], b["date"]) for b in found] == [("Eva", date(2027, 1, 2))]
 
+    def test_window_is_a_parameter(self):
+        contacts = [{"name": "Ana", "birthday": "1990-01-10"}]
+        assert cards.upcoming_birthdays(contacts, date(2026, 12, 20), window_days=7) == []
+        assert len(cards.upcoming_birthdays(contacts, date(2026, 12, 20), window_days=30)) == 1
+
     def test_leap_day_birthday_falls_on_march_first_in_common_years(self):
         found = cards.upcoming_birthdays([{"name": "Leo", "birthday": "2000-02-29"}], date(2027, 2, 20))
 
@@ -280,6 +285,7 @@ def _backend(overrides=None):
         "/planning/saved": [_plan([_block("13:00", "14:00", "Deep work")])],
         "/finance/budgets/status": [{"category_name": "Food", "limit_amount": "400", "spent": "380"}],
         "/organizer/contacts": [{"name": "Bruno", "birthday": "1985-11-14"}],
+        "/organizer/contact-birthday-settings": {"birthday_dashboard_days": 30},
         "/study/plans/overview": {"active": [{"title": "Graphs", "items": [{"description": "BFS", "is_done": False}]}]},
         "/briefing/history": [{"date": "2026-11-13", "type": "morning", "text": "Good morning Sam"}],
         "/metrics/series": [{"name": "coffee", "kind": "count", "unit": None, "is_archived": False, "entry_count": 4}],
@@ -393,6 +399,12 @@ class TestDashboardPage:
         assert resp.status_code == 200
         assert "Weather unavailable" in resp.text and "No holidays in the next 7 days" in resp.text
         assert "Pay rent" in resp.text
+
+    def test_birthday_window_comes_from_the_setting(self, client, mock_api):
+        mock_api["get"].side_effect = _backend({"/organizer/contact-birthday-settings": {"birthday_dashboard_days": 0},
+                                                "/organizer/contacts": [{"name": "Bruno", "birthday": "1985-12-24"}]})
+
+        assert "No birthdays in the next 0 days." in client.get("/").text
 
     def test_weather_card_names_its_place(self, client, mock_api):
         morning = {"weather": {"temperature_max_c": 20, "temperature_min_c": 10, "feels_like_max_c": 19,

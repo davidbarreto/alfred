@@ -5,14 +5,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.organizer.contacts.notification_settings.schemas import (
+    DEFAULT_BIRTHDAY_DASHBOARD_DAYS,
+    DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS,
     BirthdayRelationship,
     ContactBirthdayCascadeUpdate,
     ContactBirthdayCascadesRead,
+    ContactBirthdaySettingsUpdate,
 )
 
 logger = logging.getLogger(__name__)
 
 CASCADES_KEY = "organizer.contact_birthday_cascades"
+_LOOKAHEAD_DEFAULTS = {
+    "birthday_lookahead_days": DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS,
+    "birthday_dashboard_days": DEFAULT_BIRTHDAY_DASHBOARD_DAYS,
+}
+
+
+def _key(field: str) -> str:
+    return f"organizer.{field}"
 
 DEFAULT_CASCADES: dict[str, list[str]] = {
     "family": ["1mo", "15d", "7d", "5d", "1d"],
@@ -32,7 +43,18 @@ class ContactBirthdaySettingsService:
         stored: dict[str, list[str]] = json.loads(raw) if raw else {}
         # A relationship the app does not know (stored before the PUT checked it) is ignored, not served.
         relationships = {**DEFAULT_CASCADES, **{k: v for k, v in stored.items() if k in DEFAULT_CASCADES}}
-        return ContactBirthdayCascadesRead(relationships=relationships)
+        lookaheads = {}
+        for field, default in _LOOKAHEAD_DEFAULTS.items():
+            value = await self._settings.get_value(_key(field))
+            lookaheads[field] = int(value) if value else default
+        return ContactBirthdayCascadesRead(relationships=relationships, **lookaheads)
+
+    async def update(self, data: ContactBirthdaySettingsUpdate) -> ContactBirthdayCascadesRead:
+        changes = data.model_dump(exclude_unset=True, exclude_none=True)
+        for field, value in changes.items():
+            await self._settings.set_value(_key(field), str(value))
+        logger.info("Birthday settings updated: fields=%s", list(changes))
+        return await self.get()
 
     async def get_cascade(self, relationship: str | None) -> list[str]:
         settings = await self.get()

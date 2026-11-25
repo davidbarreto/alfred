@@ -26,6 +26,8 @@ DEFAULTS: dict[str, int] = {
     "catchup_tasks_per_day": 3,
     "catchup_stale_days": 30,
     "catchup_missed_habit_threshold": 3,
+    "task_lookahead_hours": 24,
+    "event_lookahead_hours": 2,
 }
 
 

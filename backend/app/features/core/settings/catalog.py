@@ -29,11 +29,17 @@ from app.features.core.settings.catalog_schemas import (
 )
 from app.features.finance.settings.schemas import FinanceSettingsRead, FinanceSettingsUpdate
 from app.features.finance.settings.service import DEFAULTS as FINANCE_DEFAULTS
+from app.features.language.settings_schemas import LanguageSettingsRead, LanguageSettingsUpdate
+from app.features.language.settings_service import DEFAULTS as LANGUAGE_DEFAULTS
 from app.features.organizer.calendar_events.notification_settings.schemas import CalendarNotificationCascadesRead
 from app.features.organizer.calendar_events.notification_settings.service import (
     DEFAULT_CASCADES as CALENDAR_CASCADES,
 )
 from app.features.organizer.contacts.notification_settings.schemas import ContactBirthdayCascadesRead
+from app.features.organizer.contacts.notification_settings.schemas import (
+    DEFAULT_BIRTHDAY_DASHBOARD_DAYS,
+    DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS,
+)
 from app.features.organizer.contacts.notification_settings.service import DEFAULT_CASCADES as BIRTHDAY_CASCADES
 from app.features.planning.schemas import PlanningSettingsRead, PlanningSettingsUpdate
 from app.features.planning.settings_service import DEFAULTS as PLANNING_DEFAULTS
@@ -121,6 +127,14 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
         ),),
     ),
     CatalogNamespace(
+        "language", "Language", "How language reviews are scheduled, for every track.",
+        (CatalogSource(
+            LanguageSettingsUpdate, LanguageSettingsRead, "/language/settings", "/language/settings",
+            lambda: LANGUAGE_DEFAULTS,
+        ),),
+        (SettingsLinkRead(label="Language tracks", href="/languages", description="Level, quota and review mode per track."),),
+    ),
+    CatalogNamespace(
         "organizer", "Organizer", "Calendar and birthday notifications.",
         (
             CatalogSource(
@@ -131,7 +145,11 @@ NAMESPACES: tuple[CatalogNamespace, ...] = (
             CatalogSource(
                 ContactBirthdayCascadesRead, ContactBirthdayCascadesRead,
                 "/organizer/contact-birthday-settings", "/organizer/contact-birthday-settings",
-                lambda: {"relationships": BIRTHDAY_CASCADES},
+                lambda: {
+                    "relationships": BIRTHDAY_CASCADES,
+                    "birthday_lookahead_days": DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS,
+                    "birthday_dashboard_days": DEFAULT_BIRTHDAY_DASHBOARD_DAYS,
+                },
             ),
         ),
     ),

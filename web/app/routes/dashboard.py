@@ -57,7 +57,7 @@ async def dashboard(request: Request):
     briefing_kind = cards.briefing_type(now)
 
     (tasks, shopping_items, events, spending, saved_plans, budgets, contacts, study, briefing_history, metrics,
-     trip, language_tracks, language_progress, morning) = await asyncio.gather(
+     trip, language_tracks, language_progress, morning, birthday_settings) = await asyncio.gather(
         _optional("/organizer/tasks", {"status": "TODO", "limit": _TASK_SCAN_LIMIT}),
         _optional("/organizer/shopping", {"status": "pending", "limit": 8}),
         _optional("/organizer/calendar-events", {"start_from": events_from, "start_to": today_end, "limit": _EVENT_LIMIT}),
@@ -72,7 +72,9 @@ async def dashboard(request: Request):
         _optional("/language/tracks"),
         _optional("/language/sessions/daily-progress"),
         _optional("/briefing/morning"),
+        _optional("/organizer/contact-birthday-settings"),
     )
+    birthday_days = (birthday_settings or {}).get("birthday_dashboard_days", cards.BIRTHDAY_WINDOW_DAYS)
 
     errors = [name for name, value in (("tasks", tasks), ("shopping", shopping_items), ("events", events),
                                        ("spending", spending)) if value is None]
@@ -94,7 +96,8 @@ async def dashboard(request: Request):
         "trip": trip,
         "metrics": metrics or [],
         "budgets": cards.budget_rows(budgets),
-        "birthdays": cards.upcoming_birthdays(contacts, today),
+        "birthdays": cards.upcoming_birthdays(contacts, today, birthday_days),
+        "birthday_days": birthday_days,
         "study": cards.study_card(study),
         "language": cards.language_card(language_tracks, language_progress),
         "weather": (morning or {}).get("weather"),

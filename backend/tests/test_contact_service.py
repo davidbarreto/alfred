@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
@@ -259,7 +260,10 @@ class TestContactService:
 
     @pytest.fixture
     def service(self, mock_client, mock_session):
-        return ContactService(session=mock_session, client=mock_client)
+        svc = ContactService(session=mock_session, client=mock_client)
+        svc._birthday_settings = AsyncMock()
+        svc._birthday_settings.get.return_value = SimpleNamespace(birthday_lookahead_days=7)
+        return svc
 
     @pytest.fixture
     def service_with_provider(self, mock_client, mock_provider, mock_session):
@@ -391,6 +395,24 @@ class TestContactService:
             result = await service.get_upcoming_birthdays(today)
 
         assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_window_follows_the_setting(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "Friend"
+        contact.birthday = date(1990, 7, 5)
+        contact.is_self = False
+        contact.relationship = "friend"
+        service._birthday_settings.get.return_value = SimpleNamespace(birthday_lookahead_days=14)
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert [r["name"] for r in result] == ["Friend"]
 
     @pytest.mark.asyncio
     async def test_get_upcoming_birthdays_family_gets_30_day_window(self, service):

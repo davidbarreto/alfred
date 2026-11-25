@@ -44,6 +44,8 @@ from app.features.language.production.schemas import (
 from app.features.language.sessions.repository import SessionRepository
 from app.features.language.sessions.schemas import ProductionSessionCreate
 from app.features.language.sessions.service import SessionService
+from app.features.language.settings_schemas import DEFAULT_TIMED_TASK_SECONDS
+from app.features.language.settings_service import LanguageSettingsService
 from app.features.language.srs import score_to_quality
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
@@ -56,7 +58,6 @@ logger = logging.getLogger(__name__)
 _MAX_VOCABULARY_CANDIDATES = 3
 _MAX_VOCABULARY_CANDIDATES_CHUNKLESS = 5
 _MAX_SUGGESTED_CHUNKS = 3
-_TIMED_TASK_SECONDS = 300
 
 
 def _next_task_type(last_task_type: str | None) -> str:
@@ -76,14 +77,16 @@ def _build_prompt_text(task_type: str, language_name: str, chunk) -> str:
     )
 
 
-def _build_open_ended_prompt(task_type: str, language_name: str, suggested_chunks: list) -> str:
+def _build_open_ended_prompt(
+    task_type: str, language_name: str, suggested_chunks: list, timed_seconds: int = DEFAULT_TIMED_TASK_SECONDS
+) -> str:
     suggestion_line = ""
     if suggested_chunks:
         chunk_list = ", ".join(f'"{c.text}"' for c in suggested_chunks)
         suggestion_line = SUGGESTION_LINE_TEMPLATE.format(chunk_list=chunk_list)
     if task_type == "timed":
         return TIMED_TASK_TEMPLATE.format(
-            minutes=_TIMED_TASK_SECONDS // 60,
+            minutes=max(1, round(timed_seconds / 60)),
             language_name=language_name,
             topic=random.choice(TIMED_TOPICS),
             suggestion_line=suggestion_line,
@@ -157,6 +160,7 @@ class ProductionService:
         self._audio_storage = audio_storage
         self._audio_converter = audio_converter
         self._transcription_service = transcription_service
+        self._language_settings = LanguageSettingsService(session)
 
     async def get_next_task(
         self,
@@ -180,7 +184,7 @@ class ProductionService:
         if task_type in SPOKEN_TASK_TYPES:
             return await self._build_spoken_task(track, task_type, batches, level_override)
         if task_type in OPEN_ENDED_TASK_TYPES:
-            return self._build_open_ended_task(track, task_type, batches)
+            return await self._build_open_ended_task(track, task_type, batches)
         if not batches:
             return None
         batch = batches[0]
@@ -208,9 +212,10 @@ class ProductionService:
             total_due=batch.total_due,
         )
 
-    def _build_open_ended_task(self, track, task_type: str, batches: list) -> ProductionTaskRead:
+    async def _build_open_ended_task(self, track, task_type: str, batches: list) -> ProductionTaskRead:
         suggested = batches[0].chunks[:_MAX_SUGGESTED_CHUNKS] if batches else []
-        prompt_text = _build_open_ended_prompt(task_type, track.name, suggested)
+        timed_seconds = (await self._language_settings.get()).timed_task_seconds
+        prompt_text = _build_open_ended_prompt(task_type, track.name, suggested, timed_seconds)
         return ProductionTaskRead(
             track_id=track.id,
             track_code=track.code,
@@ -221,7 +226,7 @@ class ProductionService:
             text=None,
             translation=None,
             total_due=1,
-            time_limit_seconds=_TIMED_TASK_SECONDS if task_type == "timed" else None,
+            time_limit_seconds=timed_seconds if task_type == "timed" else None,
         )
 
     async def _build_spoken_task(

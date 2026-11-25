@@ -38,13 +38,14 @@ VALUES = {
         "max_events_today": 8, "max_events_upcoming": 4, "max_shopping_items": 6, "max_recurring_items": 5,
     },
     "/study/settings": {"max_active_plans": 3},
+    "/language/settings": {"requested_retention": 0.9, "leech_threshold": 8, "timed_task_seconds": 300},
     "/organizer/calendar-notification-settings": {"profiles": {
         "cant_miss": ["7d", "3d", "1d", "4h", "1h", "30m", "10m", "5m", "0"], "important": ["1d", "4h", "1h", "15m", "0"],
         "normal": ["1h", "10m", "0"], "light": ["10m", "0"], "aware": ["3d", "1d"],
     }},
     "/organizer/contact-birthday-settings": {"relationships": {
         "family": ["1mo", "15d", "7d", "5d", "1d"], "relative": ["15d", "7d", "1d"], "friend": ["7d", "1d"], "other": ["3d"],
-    }},
+    }, "birthday_lookahead_days": 7, "birthday_dashboard_days": 30},
     "/core/weather-settings": {
         "location_id": None, "city_id": 3, "place_label": "Lisbon, Portugal",
         "choices": {"locations": [{"id": 1, "label": "Office"}], "cities": [{"id": 3, "label": "Lisbon, Portugal"}]},
@@ -118,7 +119,7 @@ class TestBuildSections:
 
     def test_rows_are_grouped_in_order(self):
         reminders = _section(build_sections(CATALOG, VALUES), "reminders")
-        assert [g["name"] for g in reminders["groups"]][:2] == ["When am I overloaded?", "Reminders while overloaded"]
+        assert [g["name"] for g in reminders["groups"]][:2] == ["What is reminded", "When am I overloaded?"]
 
     def test_a_failing_get_leaves_only_its_rows_out(self):
         values = {**VALUES, "/travel/settings": None, "/organizer/contact-birthday-settings": None}
@@ -143,7 +144,7 @@ class TestSettingsPage:
 
     def test_renders_every_section_with_nav(self, page):
         assert page.status_code == 200
-        for namespace in ("planning", "reminders", "travel", "briefing", "finance", "study", "organizer", "weather", "assistant"):
+        for namespace in ("planning", "reminders", "travel", "briefing", "finance", "study", "language", "organizer", "weather", "assistant"):
             assert f'id="{namespace}"' in page.text
             assert f'href="#{namespace}"' in page.text
 

@@ -26,8 +26,6 @@ from app.shared.utils.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
-_TASK_LOOKAHEAD = timedelta(hours=24)
-_EVENT_LOOKAHEAD = timedelta(hours=2)
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 
 
@@ -156,7 +154,7 @@ class ReminderService:
         if previous_level == "overloaded" and snapshot.level == "ok":
             lines.append("✅ Backlog cleared, you're no longer overloaded.")
         lines.extend(_format_task_lines(shown, omitted, summary_lines, today))
-        lines.extend(await self._collect_event_lines(now, today))
+        lines.extend(await self._collect_event_lines(now, today, settings.event_lookahead_hours))
         lines.extend(await self._collect_shopping_lines(today))
         lines.extend(await self._collect_study_plan_lines(today))
         lines.extend(await self._collect_travel_lines(today))
@@ -181,8 +179,9 @@ class ReminderService:
     async def _collect_dated_task_entries(
         self, now: datetime, today, settings: ReminderSettingsRead
     ) -> list[_TaskReminder]:
+        lookahead = timedelta(hours=settings.task_lookahead_hours)
         tasks = await self._task_service.get_tasks(
-            TaskFilters(status="ACTIVE", deadline_to=now + _TASK_LOOKAHEAD, limit=100)
+            TaskFilters(status="ACTIVE", deadline_to=now + lookahead, limit=100)
         )
         entries: list[_TaskReminder] = []
         for task in tasks:
@@ -193,7 +192,7 @@ class ReminderService:
             ):
                 continue
             is_overdue = task.deadline < now
-            if not is_overdue and task.deadline > now + _TASK_LOOKAHEAD:
+            if not is_overdue and task.deadline > now + lookahead:
                 continue
 
             urgency = task.urgency
@@ -263,9 +262,9 @@ class ReminderService:
 
         return entries, summary_lines
 
-    async def _collect_event_lines(self, now: datetime, today) -> list[str]:
+    async def _collect_event_lines(self, now: datetime, today, lookahead_hours: int) -> list[str]:
         events = await self._event_service.get_events(
-            EventFilters(start_from=now, start_to=now + _EVENT_LOOKAHEAD, limit=50)
+            EventFilters(start_from=now, start_to=now + timedelta(hours=lookahead_hours), limit=50)
         )
         lines: list[str] = []
         for event in events:

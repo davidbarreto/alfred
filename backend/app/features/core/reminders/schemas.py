@@ -27,10 +27,21 @@ class ReminderSettingsRead(BaseModel):
     catchup_missed_habit_threshold: int
     urgency_reset_days: int
     undated_task_snooze_days: int
+    task_lookahead_hours: int = 24
+    event_lookahead_hours: int = 2
 
 
 class ReminderSettingsUpdate(BaseModel):
     """Partial update: a field left out, or sent as null, is untouched."""
+
+    task_lookahead_hours: int | None = setting(
+        "Tasks due within", "Tasks due this soon are reminded (overdue ones always are).",
+        unit="hours", group="What is reminded", ge=1, le=168,
+    )
+    event_lookahead_hours: int | None = setting(
+        "Events starting within", "Events starting this soon get a \"starting soon\" reminder.",
+        unit="hours", group="What is reminded", ge=1, le=48,
+    )
 
     overload_overdue_threshold: int | None = setting(
         "Overdue tasks", "Overloaded at this many overdue tasks…",

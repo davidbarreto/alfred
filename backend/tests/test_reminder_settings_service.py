@@ -38,6 +38,7 @@ class TestGet:
         assert result.catchup_tasks_per_day == 3
         assert result.catchup_stale_days == 30
         assert result.catchup_missed_habit_threshold == 3
+        assert (result.task_lookahead_hours, result.event_lookahead_hours) == (24, 2)
 
     async def test_urgency_reset_days_defaults_to_the_env_value(self, service):
         assert (await service.get()).urgency_reset_days == 9

@@ -20,6 +20,7 @@ from app.features.language.chunks.schemas import (
 from app.features.language.level_guidance import level_guidance
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
+from app.features.language.settings_service import LanguageSettingsService
 from app.features.language.srs import (
     CardState,
     Rating,
@@ -50,11 +51,11 @@ def _recognition_card(orm) -> CardState:
     )
 
 
-def _chunk_read_with_preview(orm) -> ChunkRead:
+def _chunk_read_with_preview(orm, requested_retention: float) -> ChunkRead:
     """Recognition ChunkRead with real FSRS-derived interval previews attached, for the
     review UI's Again/Hard/Good/Easy button labels."""
     read = ChunkRead.model_validate(orm)
-    read.preview_intervals = preview_next_intervals(_recognition_card(orm))
+    read.preview_intervals = preview_next_intervals(_recognition_card(orm), requested_retention=requested_retention)
     return read
 
 
@@ -88,6 +89,7 @@ class ChunkService:
         self._repo = ChunkRepository(session)
         self._track_repo = TrackRepository(session)
         self._llm_provider = llm_provider
+        self._language_settings = LanguageSettingsService(session)
 
     async def get_chunk(self, chunk_id: int) -> ChunkRead | None:
         orm = await self._repo.get_chunk(chunk_id)
@@ -133,8 +135,9 @@ class ChunkService:
         rating = quality_to_rating(quality_score)
         now = datetime.now(timezone.utc)
         was_new = orm.state == "new"
-        new_card = next_card_state(_recognition_card(orm), rating, now)
-        leech = is_leech(new_card.consecutive_failures)
+        settings = await self._language_settings.get()
+        new_card = next_card_state(_recognition_card(orm), rating, now, settings.requested_retention)
+        leech = is_leech(new_card.consecutive_failures, settings.leech_threshold)
 
         await self._repo.update_srs_fields(
             chunk_id=chunk_id,
@@ -170,7 +173,8 @@ class ChunkService:
 
         rating = quality_to_rating(quality_score)
         now = datetime.now(timezone.utc)
-        new_card = next_card_state(_production_card(orm), rating, now)
+        settings = await self._language_settings.get()
+        new_card = next_card_state(_production_card(orm), rating, now, settings.requested_retention)
 
         await self._repo.update_production_srs_fields(
             chunk_id=chunk_id,
@@ -184,7 +188,7 @@ class ChunkService:
             state=new_card.state,
         )
 
-        if is_leech(new_card.consecutive_failures):
+        if is_leech(new_card.consecutive_failures, settings.leech_threshold):
             logger.warning(
                 "Chunk struggling in production: id=%d prod_consecutive_failures=%d",
                 chunk_id, new_card.consecutive_failures,
@@ -310,6 +314,7 @@ class ChunkService:
         if track_id is not None:
             tracks_query = [t for t in tracks_query if t.id == track_id]
 
+        retention = (await self._language_settings.get()).requested_retention
         batches = []
         for track in tracks_query:
             tag_names = track.active_tags or None
@@ -322,7 +327,7 @@ class ChunkService:
             batches.append(DailyBatchRead(
                 track_id=track.id,
                 track_code=track.code,
-                chunks=[_chunk_read_with_preview(c) for c in chunks_orm],
+                chunks=[_chunk_read_with_preview(c, retention) for c in chunks_orm],
                 total_due=total_due,
             ))
         return batches
@@ -337,6 +342,7 @@ class ChunkService:
         if track is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
 
+        retention = (await self._language_settings.get()).requested_retention
         seen: set[str] = set()
         deduped: list[str] = []
         for text in texts:
@@ -374,7 +380,7 @@ class ChunkService:
                     "Chunk force-created for practice: id=%d track_id=%d text=%r",
                     orm.id, track_id, text,
                 )
-            results.append(_chunk_read_with_preview(orm))
+            results.append(_chunk_read_with_preview(orm, retention))
         return results
 
     async def _enrich_chunk_via_llm(self, track, text: str, level_override: str | None) -> dict:

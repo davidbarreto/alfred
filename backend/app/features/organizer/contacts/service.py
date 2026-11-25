@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.organizer.contacts.notification_settings.service import ContactBirthdaySettingsService
 from app.features.organizer.contacts.repository import ContactRepository
 from app.features.organizer.contacts.schemas import (
     ContactCreate,
@@ -18,7 +19,7 @@ from app.shared.protocols.storage import StorageProvider
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS = 7
+# Close relatives are listed at least this far ahead, whatever the birthday look-ahead setting says.
 _BIRTHDAY_LOOKAHEAD_DAYS_BY_RELATIONSHIP = {
     "family": 30,
     "relative": 30,
@@ -45,6 +46,7 @@ class ContactService:
         self._client = client
         self._session = session
         self._provider = provider
+        self._birthday_settings = ContactBirthdaySettingsService(session)
 
     async def sync(self) -> int:
         if self._client is None:
@@ -127,13 +129,13 @@ class ContactService:
         logger.info("Contact deleted: id=%d", contact_id)
 
     async def get_upcoming_birthdays(self, today: date) -> list[dict]:
+        """Birthdays within `organizer.birthday_lookahead_days` (family and relatives at least 30 days)."""
         repo = ContactRepository(self._session)
         contacts = await repo.get_all_with_birthday()
+        base = (await self._birthday_settings.get()).birthday_lookahead_days
         result = []
         for contact in contacts:
-            lookahead = _BIRTHDAY_LOOKAHEAD_DAYS_BY_RELATIONSHIP.get(
-                contact.relationship, _DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS
-            )
+            lookahead = max(base, _BIRTHDAY_LOOKAHEAD_DAYS_BY_RELATIONSHIP.get(contact.relationship, 0))
             window_end = today + timedelta(days=lookahead)
             next_bd = _next_birthday(contact.birthday, today)  # type: ignore[arg-type]
             if today <= next_bd <= window_end:

@@ -5,7 +5,7 @@ CARD_CAP = 5
 SPARK_DAYS = 14
 SPARK_WIDTH = 100
 SPARK_HEIGHT = 24
-BIRTHDAY_WINDOW_DAYS = 30
+BIRTHDAY_WINDOW_DAYS = 30  # when the organizer.birthday_dashboard_days setting can't be read
 BUDGET_ROWS = 3
 METRIC_CARDS = 4
 EVENING_FROM = time(21, 30)  # when the evening digest cron runs
@@ -130,15 +130,15 @@ def _next_birthday(born: date, today: date) -> date:
     return upcoming if upcoming >= today else on_year(today.year + 1)
 
 
-def upcoming_birthdays(contacts: list[dict] | None, today: date) -> list[dict]:
-    """Contacts with a birthday in the next 30 days, soonest first (capped)."""
+def upcoming_birthdays(contacts: list[dict] | None, today: date, window_days: int = BIRTHDAY_WINDOW_DAYS) -> list[dict]:
+    """Contacts with a birthday in the next `window_days` days, soonest first (capped)."""
     found = []
     for contact in contacts or []:
         if not contact.get("birthday") or contact.get("is_self"):
             continue
         when = _next_birthday(date.fromisoformat(contact["birthday"]), today)
         days = (when - today).days
-        if days <= BIRTHDAY_WINDOW_DAYS:
+        if days <= window_days:
             found.append({"name": contact["name"], "date": when, "days_until": days})
     found.sort(key=lambda b: (b["days_until"], b["name"]))
     return found[:CARD_CAP]

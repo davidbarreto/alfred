@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 
+from app.features.language.settings_schemas import LanguageSettingsRead
 from app.features.language.production.prompts import JOURNAL_TOPICS, SPEAK_TOPICS, TIMED_TOPICS
 from app.features.language.production.schemas import ProductionAttemptCreate
 from app.features.language.production.service import (
@@ -111,6 +112,8 @@ def _make_service(llm_text: str = _GRADING_JSON, with_audio: bool = False):
         session_repo=session_repo,
         **audio_kwargs,
     )
+    service._language_settings = AsyncMock()
+    service._language_settings.get.return_value = LanguageSettingsRead()
     return service, llm_provider, session_service, chunk_service, chunk_repo, track_repo, session_repo
 
 
@@ -320,6 +323,17 @@ class TestGetNextTask:
 
         assert task.task_type == "timed"
         assert task.time_limit_seconds == 300
+
+    async def test_timed_task_length_follows_the_setting(self):
+        service, _, _, chunk_service, _, track_repo, _ = _make_service()
+        service._language_settings.get.return_value = LanguageSettingsRead(timed_task_seconds=600)
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = []
+
+        task = await service.get_next_task(1, task_type="timed")
+
+        assert task.time_limit_seconds == 600
+        assert "10" in task.prompt_text
 
     async def test_open_ended_task_suggests_up_to_three_due_chunks(self):
         service, _, _, chunk_service, _, track_repo, _ = _make_service()

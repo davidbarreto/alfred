@@ -109,6 +109,33 @@ def _service(session, task_service):
     return ReminderService(session=session, task_service=task_service)
 
 
+class TestLookAheadSettings:
+    async def test_windows_follow_the_settings(self, mock_session, mock_task_service, mock_reminder_settings):
+        mock_reminder_settings.get.return_value = default_reminder_settings(task_lookahead_hours=48, event_lookahead_hours=6)
+        mock_task_service.get_tasks.return_value = []
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            await _service(mock_session, mock_task_service).build_due_digest()
+            event_filters = MockEventService.return_value.get_events.await_args.args[0]
+
+        task_filters = mock_task_service.get_tasks.await_args_list[0].args[0]
+        now = NOW.replace(tzinfo=None)
+        assert task_filters.deadline_to == now + timedelta(hours=48)
+        assert event_filters.start_to == now + timedelta(hours=6)
+
+    def test_defaults_are_the_old_constants(self):
+        settings = default_reminder_settings()
+        assert (settings.task_lookahead_hours, settings.event_lookahead_hours) == (24, 2)
+
+
 class TestBuildDueDigestTasks:
     async def test_overdue_normal_task_is_escalated_and_included(self, mock_session, mock_task_service):
         task = _make_task(id=1, deadline=NOW - timedelta(hours=2), urgency="NORMAL", priority="HIGH")

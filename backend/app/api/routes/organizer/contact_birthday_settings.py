@@ -6,6 +6,7 @@ from app.features.organizer.contacts.notification_settings.schemas import (
     BirthdayRelationship,
     ContactBirthdayCascadeUpdate,
     ContactBirthdayCascadesRead,
+    ContactBirthdaySettingsUpdate,
 )
 
 router = APIRouter(
@@ -16,6 +17,13 @@ router = APIRouter(
 @router.get("", response_model=ContactBirthdayCascadesRead)
 async def get_contact_birthday_settings(service: ContactBirthdaySettingsServiceDep):
     return await service.get()
+
+
+@router.put("", response_model=ContactBirthdayCascadesRead)
+async def update_contact_birthday_settings(
+    request: ContactBirthdaySettingsUpdate, service: ContactBirthdaySettingsServiceDep
+):
+    return await service.update(request)
 
 
 @router.put("/{relationship}", response_model=ContactBirthdayCascadesRead)

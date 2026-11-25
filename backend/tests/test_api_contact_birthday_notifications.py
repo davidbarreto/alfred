@@ -91,6 +91,23 @@ class TestGetContactBirthdaySettings:
         assert response.status_code == 200
         service.update_relationship.assert_awaited_once()
 
+    def test_update_look_aheads(self, client):
+        from app.dependencies import get_contact_birthday_settings_service
+        from app.features.organizer.contacts.notification_settings.schemas import ContactBirthdayCascadesRead
+        from app.main import app
+
+        service = AsyncMock()
+        service.update.return_value = ContactBirthdayCascadesRead(relationships={}, birthday_lookahead_days=14)
+        app.dependency_overrides[get_contact_birthday_settings_service] = lambda: service
+
+        response = client.put("/organizer/contact-birthday-settings", json={"birthday_lookahead_days": 14}, headers=AUTH)
+
+        assert response.status_code == 200 and response.json()["birthday_lookahead_days"] == 14
+        assert service.update.await_args.args[0].model_dump(exclude_unset=True) == {"birthday_lookahead_days": 14}
+        assert client.put(
+            "/organizer/contact-birthday-settings", json={"birthday_dashboard_days": 400}, headers=AUTH
+        ).status_code == 422
+
     def test_unknown_relationship_is_refused(self, client):
         from app.dependencies import get_contact_birthday_settings_service
         from app.main import app

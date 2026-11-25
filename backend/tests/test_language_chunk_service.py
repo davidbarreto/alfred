@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 
+from app.features.language.settings_schemas import LanguageSettingsRead
 from app.features.language.chunks.service import ChunkService
 from app.features.language.chunks.schemas import ChunkCreate, ChunkFilters, ChunkUpdate, NewVocabularyCandidate
 
@@ -87,6 +88,8 @@ def service(mock_session):
     svc = ChunkService(session=mock_session)
     svc._repo = AsyncMock()
     svc._track_repo = AsyncMock()
+    svc._language_settings = AsyncMock()
+    svc._language_settings.get.return_value = LanguageSettingsRead()
     return svc
 
 

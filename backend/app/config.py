@@ -99,6 +99,9 @@ class Settings(BaseSettings):
     # Statement storage — original bank statement files kept per import batch
     statement_storage_dir: str = Field(default="/data/statements", validation_alias="STATEMENT_STORAGE_DIR")
 
+    # Media storage — city and country cover photos
+    media_storage_dir: str = Field(default="/data/media", validation_alias="MEDIA_STORAGE_DIR")
+
     # CORS — comma-separated list of allowed origins for browser clients
     # e.g. "http://localhost:8080,https://portal.example.com"
     cors_origins: str = Field(default="", validation_alias="CORS_ORIGINS")

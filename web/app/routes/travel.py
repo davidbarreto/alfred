@@ -20,7 +20,6 @@ _PAGE_SIZE = 20
 _TIMELINE_PREVIEW = 8
 _STATUSES = {"current": "Upcoming & ongoing", "upcoming": "Upcoming", "ongoing": "Ongoing", "past": "Past", "all": "All"}
 _WARNING_PREVIEW = 5
-_LOCATION_PREVIEW = 5
 _PLACE_KINDS = ["hotel", "restaurant", "cafe", "activity", "museum", "attraction", "shop", "other"]
 _LEG_MODES = ["flight", "train", "bus", "ferry", "car", "other"]
 # Suggestions for the time zone fields; any IANA name can still be typed.
@@ -270,35 +269,38 @@ async def create_city(request: Request):
 
 # "/cities..." and "/countries..." are registered before "/{trip_id}" so they are never read as a trip id.
 
+_LOCATION_SORTS = {"name": "Name", "trips": "Trips", "days": "Days", "spend": "Spend", "last_visit": "Last visit"}
+_LOCATION_PAGE = 25
+
+
+def location_list_params(params) -> dict:
+    """Sort column, direction and page of a read-only city or country table; unknown values fall back."""
+    sort = params.get("sort") if params.get("sort") in _LOCATION_SORTS else "name"
+    return {"sort": sort, "desc": params.get("desc") in ("1", "true"), "offset": _int_param(params.get("offset"))}
+
+
+async def _location_table(request: Request, kind: str):
+    """Travel's read-only list of the cities or countries it has data for; rows open their Places page."""
+    state = location_list_params(request.query_params)
+    rows = await safe_get(f"/travel/{kind}", params={
+        "sort": state["sort"], "desc": str(state["desc"]).lower(), "limit": _LOCATION_PAGE + 1, "offset": state["offset"],
+    })
+    items = rows or []
+    return templates.TemplateResponse(request, "travel_locations.html", {
+        "kind": kind, "rows": items[:_LOCATION_PAGE], "available": rows is not None, "state": state,
+        "sorts": _LOCATION_SORTS, "has_next": len(items) > _LOCATION_PAGE, "has_prev": state["offset"] > 0,
+        "page_size": _LOCATION_PAGE,
+    })
+
+
 @router.get("/cities", response_class=HTMLResponse)
 async def cities_page(request: Request):
-    countries = await safe_get("/location/countries")
-    cities = await safe_get("/location/cities", default=[])
-    by_country: dict[int, list] = {}
-    for city in cities or []:
-        by_country.setdefault(city["country"]["id"], []).append(city)
-    groups = [{"country": c, "cities": by_country.get(c["id"], [])} for c in countries or []]
-    return templates.TemplateResponse(request, "travel_cities.html", {"groups": groups, "available": countries is not None})
+    return await _location_table(request, "cities")
 
 
-@router.patch("/cities/{city_id}")
-async def update_city(city_id: int, request: Request):
-    return await forward(api.patch(f"/location/cities/{city_id}", json=await request.json()), "Could not update the city.")
-
-
-@router.delete("/cities/{city_id}")
-async def delete_city(city_id: int):
-    return await forward(api.delete(f"/location/cities/{city_id}"), "Could not delete the city.")
-
-
-@router.patch("/countries/{country_id}")
-async def update_country(country_id: int, request: Request):
-    return await forward(api.patch(f"/location/countries/{country_id}", json=await request.json()), "Could not update the country.")
-
-
-@router.delete("/countries/{country_id}")
-async def delete_country(country_id: int):
-    return await forward(api.delete(f"/location/countries/{country_id}"), "Could not delete the country.")
+@router.get("/countries", response_class=HTMLResponse)
+async def countries_page(request: Request):
+    return await _location_table(request, "countries")
 
 
 @router.post("/cities/{city_id}/links")
@@ -311,86 +313,26 @@ async def create_country_link(country_id: int, request: Request):
     return await forward(api.post(f"/travel/countries/{country_id}/links", json=await request.json()), "Could not add the link.")
 
 
-@router.get("/cities/{city_id}", response_class=HTMLResponse)
-async def city_page(city_id: int, request: Request):
-    city = await safe_get(f"/travel/cities/{city_id}")
-    if city is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    links = await safe_get(f"/travel/cities/{city_id}/links", default=[])
-    countries = await safe_get("/location/countries", default=[])
-    return templates.TemplateResponse(request, "travel_city.html", {
-        "city": city, "countries": countries, "web_links": links, "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
-        "preview": _LOCATION_PREVIEW, "today": local_today().isoformat(),
-    })
+# The city and country pages moved to the Places section; these keep old links working.
+
+@router.get("/cities/{city_id}")
+async def city_redirect(city_id: int):
+    return RedirectResponse(f"/places/cities/{city_id}", status_code=301)
 
 
-@router.get("/cities/{city_id}/trips", response_class=HTMLResponse)
-async def city_trips_page(city_id: int, request: Request):
-    city = await safe_get(f"/travel/cities/{city_id}")
-    if city is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    return templates.TemplateResponse(request, "travel_location_list.html", {
-        "title": f"Trips in {city['name']}", "back_url": f"/travel/cities/{city_id}", "back_name": city["name"],
-        "trips": city["trips"], "cities": None, "today": local_today().isoformat(),
-    })
+@router.get("/cities/{city_id}/{rest:path}")
+async def city_sub_redirect(city_id: int, rest: str):
+    return RedirectResponse(f"/places/cities/{city_id}/{rest}" if rest in ("trips", "links") else f"/places/cities/{city_id}", status_code=301)
 
 
-@router.get("/cities/{city_id}/links", response_class=HTMLResponse)
-async def city_links_page(city_id: int, request: Request):
-    city = await safe_get(f"/travel/cities/{city_id}")
-    if city is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    links = await safe_get(f"/travel/cities/{city_id}/links", default=[])
-    return templates.TemplateResponse(request, "travel_links.html", {
-        "owner_kind": "city", "owner_id": city_id, "owner_name": city["name"], "back_url": f"/travel/cities/{city_id}",
-        "web_links": links, "link_kinds": LINK_KINDS,
-    })
+@router.get("/countries/{country_id}")
+async def country_redirect(country_id: int):
+    return RedirectResponse(f"/places/countries/{country_id}", status_code=301)
 
 
-@router.get("/countries/{country_id}", response_class=HTMLResponse)
-async def country_page(country_id: int, request: Request):
-    country = await safe_get(f"/travel/countries/{country_id}")
-    if country is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    links = await safe_get(f"/travel/countries/{country_id}/links", default=[])
-    return templates.TemplateResponse(request, "travel_country.html", {
-        "country": country, "web_links": links, "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
-        "preview": _LOCATION_PREVIEW, "today": local_today().isoformat(),
-    })
-
-
-@router.get("/countries/{country_id}/cities", response_class=HTMLResponse)
-async def country_cities_page(country_id: int, request: Request):
-    country = await safe_get(f"/travel/countries/{country_id}")
-    if country is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    return templates.TemplateResponse(request, "travel_location_list.html", {
-        "title": f"Cities in {country['name']}", "back_url": f"/travel/countries/{country_id}", "back_name": country["name"],
-        "trips": None, "cities": country["cities"], "today": local_today().isoformat(),
-    })
-
-
-@router.get("/countries/{country_id}/trips", response_class=HTMLResponse)
-async def country_trips_page(country_id: int, request: Request):
-    country = await safe_get(f"/travel/countries/{country_id}")
-    if country is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    return templates.TemplateResponse(request, "travel_location_list.html", {
-        "title": f"Trips in {country['name']}", "back_url": f"/travel/countries/{country_id}", "back_name": country["name"],
-        "trips": country["trips"], "cities": None, "today": local_today().isoformat(),
-    })
-
-
-@router.get("/countries/{country_id}/links", response_class=HTMLResponse)
-async def country_links_page(country_id: int, request: Request):
-    country = await safe_get(f"/travel/countries/{country_id}")
-    if country is None:
-        return RedirectResponse("/travel/cities", status_code=302)
-    links = await safe_get(f"/travel/countries/{country_id}/links", default=[])
-    return templates.TemplateResponse(request, "travel_links.html", {
-        "owner_kind": "country", "owner_id": country_id, "owner_name": country["name"],
-        "back_url": f"/travel/countries/{country_id}", "web_links": links, "link_kinds": LINK_KINDS,
-    })
+@router.get("/countries/{country_id}/{rest:path}")
+async def country_sub_redirect(country_id: int, rest: str):
+    return RedirectResponse(f"/places/countries/{country_id}/{rest}" if rest in ("trips", "links") else f"/places/countries/{country_id}", status_code=301)
 
 
 @router.post("/places")
@@ -620,8 +562,8 @@ async def warnings_page(trip_id: int, request: Request):
 _CHARGE_SCOPES = {
     "trip": ("/travel/trips/{id}/charges", "/travel/{id}"),
     "place": ("/travel/places/{id}/charges", "/places/{id}"),
-    "city": ("/travel/cities/{id}/charges", "/travel/cities/{id}"),
-    "country": ("/travel/countries/{id}/charges", "/travel/countries/{id}"),
+    "city": ("/travel/cities/{id}/charges", "/places/cities/{id}"),
+    "country": ("/travel/countries/{id}/charges", "/places/countries/{id}"),
     "leg": ("/travel/legs/{id}/transactions", None),
     "stay": ("/travel/stays/{id}/transactions", None),
     "visit": ("/travel/visits/{id}/transactions", None),

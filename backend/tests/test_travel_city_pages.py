@@ -102,6 +102,7 @@ def service():
     svc._repo, svc._cities, svc._countries, svc._place_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
     svc._cost_repo, svc._places = AsyncMock(), AsyncMock()
     svc._places.get_home.return_value = None
+    svc._repo.get_last_local_visits.return_value = {}
     svc._cost_repo.get_place_linked_ids.return_value = set()
     svc._cost_repo.get_unlinked_tagged_ids.return_value = set()
     svc._cost_repo.get_cost.return_value = (Decimal("0.00"), 0, 0)

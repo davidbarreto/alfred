@@ -12,9 +12,20 @@ from app.features.travel.tags.schemas import normalize_tags
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.trip_cities import TripCity
 from app.features.travel.trips.timeline import TimelineItem, TripWarning
+from app.shared.utils.links import photo_album_label
 from app.shared.utils.timezone import local_today
 
 TripStatus = Literal["upcoming", "ongoing", "past"]
+
+
+def clean_album_url(value: str | None) -> str | None:
+    """A trip's photo album link: http or https only; blank clears it."""
+    if value is None or not value.strip():
+        return None
+    value = value.strip()
+    if not value.lower().startswith(("http://", "https://")):
+        raise ValueError("photo_album_url must start with http:// or https://")
+    return value
 
 
 def trip_status(start: date, end: date, today: date) -> TripStatus:
@@ -33,11 +44,18 @@ class TripCreate(BaseModel):
     notes: str | None = None
     default_tag_names: str | None = None
     tags: list[str] = Field(default_factory=list)
+    # The trip's shared photo album; blank or null means none.
+    photo_album_url: str | None = None
 
     @field_validator("tags")
     @classmethod
     def _clean_tags(cls, tags: list[str]) -> list[str]:
         return normalize_tags(tags) or []
+
+    @field_validator("photo_album_url")
+    @classmethod
+    def _album(cls, value: str | None) -> str | None:
+        return clean_album_url(value)
 
     @model_validator(mode="after")
     def _dates_in_order(self) -> "TripCreate":
@@ -61,11 +79,18 @@ class TripUpdate(BaseModel):
     home_address: str | None = Field(default=None, max_length=300)
     airport_buffer_min: int | None = Field(default=None, ge=0, le=600)
     home_to_airport_min: int | None = Field(default=None, ge=0, le=600)
+    # Blank or null clears it.
+    photo_album_url: str | None = None
 
     @field_validator("tags")
     @classmethod
     def _clean_tags(cls, tags: list[str] | None) -> list[str] | None:
         return normalize_tags(tags)
+
+    @field_validator("photo_album_url")
+    @classmethod
+    def _album(cls, value: str | None) -> str | None:
+        return clean_album_url(value)
 
 
 class TripRead(BaseModel):
@@ -82,11 +107,18 @@ class TripRead(BaseModel):
     home_address: str | None = None
     airport_buffer_min: int | None = None
     home_to_airport_min: int | None = None
+    photo_album_url: str | None = None
     tags: list[str]
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def photo_album_label(self) -> str | None:
+        """"Google Photos", "iCloud", "Flickr", "OneDrive" or "Photo album", from the link's domain."""
+        return photo_album_label(self.photo_album_url)
 
     @field_validator("tags", mode="before")
     @classmethod

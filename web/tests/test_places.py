@@ -159,7 +159,7 @@ class TestListPage:
         assert re.search(r'href="/places\?view=visited" class="[^"]*bg-\[#378ADD\][^"]*" data-view="visited"', text)
         assert 'href="/places?view=everyday"' in text and 'href="/places?view=all"' in text
         assert '<a href="/places" class="nav-link active">' in text
-        assert 'href="/travel/cities"' in text  # the section's tabs
+        assert 'href="/places/cities"' in text and 'href="/places/countries"' in text  # the section's tabs
 
     def test_visited_rows_show_city_grade_last_visit_and_tags(self, client, mock_api):
         mock_api["get"].side_effect = _routes(travel_list=[
@@ -170,7 +170,7 @@ class TestListPage:
 
         assert 'href="/places/3"' in text and "4.5/5" in text and "would return" in text
         assert "last 14 Mar 2026" in text
-        assert 'href="/travel/cities/15"' in text
+        assert 'href="/places/cities/15"' in text
         assert 'name="min_grade"' in text and 'value="family"' in text
 
     def test_everyday_view_has_no_travel_filters(self, client, mock_api):

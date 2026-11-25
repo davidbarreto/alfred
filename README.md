@@ -33,7 +33,7 @@ $EDITOR .env          # fill in secrets, URLs and the *_DATA_DIR folders (see be
 
 # 2. Create the host folders referenced by the *_DATA_DIR variables
 #    (locally, anything under infra/docker_volumes/ works; it is gitignored)
-mkdir -p docker_volumes/{postgres_data,n8n_data,hf_cache_data,audio,statements,mcp}
+mkdir -p docker_volumes/{postgres_data,n8n_data,hf_cache_data,audio,statements,media,mcp}
 
 # 3. One-time network used by the MCP server
 docker network create mcp-shared
@@ -65,7 +65,7 @@ On every start the API container applies database migrations and loads the seed 
 
 ### Where your data lives
 
-Everything persistent is a bind-mounted host folder: the database, uploaded bank statements, language audio, the model cache, n8n state and MCP OAuth tokens. **Back up the database folder** (or use `pg_dump`) and the statements folder. What each folder contains and what happens if you lose it: [docs/docker.md](docs/docker.md#volumes-data-that-lives-on-the-host).
+Everything persistent is a bind-mounted host folder: the database, uploaded bank statements, language audio, city cover photos, the model cache, n8n state and MCP OAuth tokens. **Back up the database folder** (or use `pg_dump`) and the statements folder. What each folder contains and what happens if you lose it: [docs/docker.md](docs/docker.md#volumes-data-that-lives-on-the-host).
 
 ## Day-to-day commands
 

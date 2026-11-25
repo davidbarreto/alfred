@@ -84,7 +84,7 @@ class TestTrips:
         assert services.trips.get_trips.await_args.args[0].status == "current"
         assert result["trips"][0] == {
             "id": 1, "name": "Example trip", "start_date": "2031-12-17", "end_date": "2031-12-24",
-            "status": "upcoming", "travelers": None, "tags": ["Family"],
+            "status": "upcoming", "travelers": None, "tags": ["Family"], "photo_album_url": None,
         }
 
     async def test_list_passes_filters(self, services):
@@ -124,6 +124,21 @@ class TestTrips:
         await run("travel_trip", "update", {"id": "1", "notes": "", "tags": "A"}, services)
         update = services.trips.update_trip.await_args.args[1]
         assert update.model_dump(exclude_unset=True) == {"notes": None, "tags": ["a"]}
+
+    async def test_album_is_set_on_add_and_an_empty_album_clears_it(self, services):
+        services.trips.create_trip.return_value = _trip()
+        await run("travel_trip", "add", {
+            "name": "X", "start": "2031-12-17", "end": "2031-12-24", "album": "https://photos.app.goo.gl/abc",
+        }, services)
+        assert services.trips.create_trip.await_args.args[0].photo_album_url == "https://photos.app.goo.gl/abc"
+        services.trips.update_trip.return_value = _trip()
+        await run("travel_trip", "update", {"id": "1", "album": ""}, services)
+        assert services.trips.update_trip.await_args.args[1].model_dump(exclude_unset=True) == {"photo_album_url": None}
+
+    async def test_an_album_that_is_not_http_is_a_400(self, services):
+        with pytest.raises(HTTPException) as exc:
+            await run("travel_trip", "update", {"id": "1", "album": "photos.app.goo.gl/abc"}, services)
+        assert exc.value.status_code == 400 and "http" in exc.value.detail
 
     async def test_update_nothing_is_a_400(self, services):
         with pytest.raises(HTTPException):

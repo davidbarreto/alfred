@@ -19,7 +19,7 @@
         <div class="min-w-0 space-y-0.5">
           <h1 class="text-base font-semibold text-gray-900"><i class="ti {{ place.kind | location_icon }}"></i> {{ place.name }}</h1>
           <p class="text-xs text-gray-500">{{ place.kind | replace('_', ' ') }} · {{ place.city.country | country_flag_of }}
-            <a class="hover:underline text-[#378ADD]" href="/travel/cities/{{ place.city.id }}">{{ place.city.name }}</a>, {{ place.city.country.name }}
+            <a class="hover:underline text-[#378ADD]" href="/places/cities/{{ place.city.id }}">{{ place.city.name }}</a>, {{ place.city.country.name }}
             {%- if not place.active %} · archived{% endif %}</p>
           {% if place.address %}<p class="text-xs text-gray-400">{{ place.address }}</p>{% endif %}
           <a class="inline-flex items-center gap-1 text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener"><i class="ti ti-map-pin"></i>Open in Maps</a>

@@ -161,6 +161,7 @@ def _trip_summary(trip: TripRead) -> dict[str, Any]:
     return {
         "id": trip.id, "name": trip.name, "start_date": trip.start_date.isoformat(), "end_date": trip.end_date.isoformat(),
         "status": trip.status, "travelers": trip.travelers, "tags": trip.tags,
+        "photo_album_url": trip.photo_album_url,
     }
 
 
@@ -364,6 +365,7 @@ async def _trip(command: str, arguments: dict[str, Any], services: TravelService
             travelers=_text(arguments, "travelers"), preferences=_text(arguments, "preferences"),
             notes=_text(arguments, "notes"), default_tag_names=_text(arguments, "finance_tags"),
             checklist_note_id=parse_int(arguments.get("checklist_note"), "checklist_note"), tags=parse_tags(arguments.get("tags")),
+            photo_album_url=_text(arguments, "album"),
         )
         trip = await services.trips.create_trip(data)
         return {"id": trip.id, "message": f"Trip '{trip.name}' created for {trip.start_date} to {trip.end_date}"}
@@ -381,6 +383,8 @@ async def _trip(command: str, arguments: dict[str, Any], services: TravelService
             fields["checklist_note_id"] = parse_int(arguments.get("checklist_note"), "checklist_note")
         if "tags" in arguments:
             fields["tags"] = parse_tags(arguments.get("tags"))
+        if "album" in arguments:
+            fields["photo_album_url"] = _text(arguments, "album") or ""
         if not fields:
             raise _bad_request("Nothing to update")
         trip = await services.trips.update_trip(trip_id, build_model(TripUpdate, **fields))

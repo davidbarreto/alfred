@@ -94,6 +94,16 @@ def _number(value: int | float | None) -> str:
     return f"{float(value):.3f}".rstrip("0").rstrip(".")
 
 
+def _month_year(value: str | None) -> str:
+    """An ISO date rendered like 'Mar 2026'."""
+    if not value:
+        return ""
+    try:
+        return datetime.fromisoformat(str(value)[:10]).strftime("%b %Y")
+    except ValueError:
+        return str(value)[:7]
+
+
 def _short_date(value: str | None) -> str:
     """An ISO date or datetime rendered like '17 Dec 2026' (no timezone conversion: dates are local already)."""
     if not value:
@@ -115,6 +125,7 @@ templates.env.filters["duration"] = _duration
 templates.env.filters["local_dt"] = _local_dt
 templates.env.filters["number"] = _number
 templates.env.filters["short_date"] = _short_date
+templates.env.filters["month_year"] = _month_year
 templates.env.filters["compact_number"] = _compact_number
 templates.env.filters["money"] = _money
 templates.env.filters["location_icon"] = location_icon

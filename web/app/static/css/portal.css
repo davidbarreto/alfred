@@ -327,6 +327,75 @@ html[data-theme="dark"] {
   .save-bar { left: 208px; /* the sidebar width in base.html */ }
 }
 
+/* ── Covers (Places: cities and countries) ────────────────────────────── */
+
+/*
+ * A cover photo at a fixed ratio, cropped to fill (`object-fit: cover`), with a
+ * dark gradient at the bottom for the name over it. Without a photo the box
+ * shows a soft gradient placeholder. `cover-hero` is the detail page's wide
+ * banner (full width, capped height); `cover-mosaic` is a 2x2 grid
+ * of covers (a country's cities).
+ */
+.cover-box {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--rounded-box);
+  background: linear-gradient(135deg, var(--tint-blue-bg), var(--tint-green-bg));
+}
+.cover-box > img, .cover-mosaic > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cover-box > img { position: absolute; inset: 0; }
+.cover-shade {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 2.5rem 0.875rem 0.75rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0));
+  color: #fff;
+}
+.cover-badge { position: absolute; top: 0.5rem; right: 0.5rem; }
+.cover-mosaic {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+}
+.cover-mosaic.cover-mosaic-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.cover-mosaic.cover-mosaic-2 { grid-template-rows: 1fr; }
+.cover-mosaic.cover-mosaic-3 > img:first-child { grid-row: span 2; }
+.cover-placeholder-flag {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+}
+/* Full width; the height follows the viewport (about 4:3 on a phone, 21:9 on a desktop) up to a cap. */
+.cover-hero { aspect-ratio: auto; width: 100%; height: min(72vw, 22rem); }
+@media (min-width: 640px) {
+  .cover-hero { height: min(36vw, 22rem); }
+}
+.cover-credit {
+  position: absolute;
+  top: 0.375rem;
+  left: 0.5rem;
+  max-width: calc(100% - 1rem);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cover-credit a { color: inherit; text-decoration: underline; }
+
 /* ── Calendar ────────────────────────────────────────────────────────── */
 
 /* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */

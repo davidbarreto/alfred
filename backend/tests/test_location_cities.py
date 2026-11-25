@@ -24,13 +24,17 @@ NOW = datetime(2026, 11, 1, tzinfo=timezone.utc)
 
 
 def _country(id=1, name="Examplia", code=None):
-    return SimpleNamespace(id=id, name=name, code=code, default_tag_names=None, created_at=NOW, updated_at=NOW)
+    return SimpleNamespace(
+        id=id, name=name, code=code, default_tag_names=None, cover_path=None, cover_credit=None, cover_source_url=None,
+        created_at=NOW, updated_at=NOW,
+    )
 
 
 def _city(id=1, name="Alpha", country=None):
     country = country or _country()
     return SimpleNamespace(
-        id=id, name=name, country_id=country.id, country=country, default_tag_names=None, created_at=NOW, updated_at=NOW,
+        id=id, name=name, country_id=country.id, country=country, default_tag_names=None, latitude=None, longitude=None,
+        cover_path=None, cover_credit=None, cover_source_url=None, created_at=NOW, updated_at=NOW,
     )
 
 
@@ -360,9 +364,10 @@ class TestRoutes:
 
     def test_countries(self, client):
         c, _, countries = client
-        countries.get_countries.return_value = [{"id": 1, "name": "Examplia", "code": "EX"}]
+        countries.get_countries.return_value = [self._country_read()]
         r = c.get("/location/countries", headers=AUTH)
         assert r.status_code == 200 and r.json()[0]["code"] == "EX"
+        assert r.json()[0]["has_cover"] is False and r.json()[0]["photos_url"].endswith("/search/Examplia")
 
     def test_one_country_and_its_404(self, client):
         c, _, countries = client
@@ -434,7 +439,7 @@ class TestRoutes:
     def test_the_travel_paths_no_longer_edit(self, client):
         c, _, _ = client
         assert c.post("/travel/cities", headers=AUTH, json={"name": "Alpha", "country_id": 1}).status_code in (404, 405)
-        assert c.get("/travel/countries", headers=AUTH).status_code in (404, 405)
+        assert c.patch("/travel/countries/1", headers=AUTH, json={"name": "X"}).status_code in (404, 405)
 
 
 class TestMigration:

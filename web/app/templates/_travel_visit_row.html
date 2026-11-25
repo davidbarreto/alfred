@@ -15,7 +15,7 @@
     </p>
     <p class="text-xs text-gray-500">
       {% if show_place %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}{% if v.visit_time %} {{ v.visit_time[:5] }}{% endif %}
-      {% if show_place %} · <a class="hover:underline" href="/travel/cities/{{ v.place.city.id }}">{{ v.place.city.name }}</a>{% endif %}
+      {% if show_place %} · <a class="hover:underline" href="/places/cities/{{ v.place.city.id }}">{{ v.place.city.name }}</a>{% endif %}
       {% if show_trip and v.trip_id %} · <a class="hover:underline" href="/travel/{{ v.trip_id }}">{{ v.trip_name }}</a>{% endif %}
       · <a class="text-[#378ADD] hover:underline" href="{{ v.place.maps_link }}" target="_blank" rel="noopener">Map</a>
     </p>

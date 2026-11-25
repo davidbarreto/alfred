@@ -1,0 +1,6 @@
+{# A country's cover: its uploaded cover, else a mosaic of up to four city covers, else its flag on the placeholder.
+   Needs `country` (id, code, name, has_cover, updated_at) and `mosaic` (city ids with a cover). #}
+{% if country.has_cover %}<img src="/places/countries/{{ country.id }}/cover?v={{ country.updated_at }}" alt="" loading="lazy">
+{% elif mosaic %}
+<div class="cover-mosaic cover-mosaic-{{ mosaic | length }}">{% for city_id in mosaic %}<img src="/places/cities/{{ city_id }}/cover" alt="" loading="lazy">{% endfor %}</div>
+{% else %}<span class="cover-placeholder-flag" aria-hidden="true">{{ country | country_flag_of or '🌍' }}</span>{% endif %}

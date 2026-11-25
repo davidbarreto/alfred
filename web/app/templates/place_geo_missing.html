@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}Not found{% endblock %}
+
+{% block content %}
+<div class="page space-y-4 max-w-2xl mx-auto">
+  <a href="/places/{{ 'cities' if what == 'city' else 'countries' }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ 'Cities' if what == 'city' else 'Countries' }}</a>
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">This {{ what }} does not exist (or Places is unavailable right now).</p></div></div>
+</div>
+{% endblock %}

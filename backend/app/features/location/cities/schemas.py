@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Query
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
-from app.features.location.countries.schemas import CountryRef
+from app.features.location.countries.schemas import CountryRef, CoverFields
+from app.shared.utils.links import photos_search_url
 
 
 class CityRef(BaseModel):
@@ -15,10 +16,18 @@ class CityRef(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CityRead(CityRef):
+class CityRead(CoverFields, CityRef):
     default_tag_names: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def photos_url(self) -> str:
+        """The user's Google Photos library searched by the city's name."""
+        return photos_search_url(self.name)
 
 
 class CityCreate(BaseModel):
@@ -49,5 +58,15 @@ class CityFilters:
 class CityUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     country_id: int | None = None
+    # Both or neither; null clears them (the marker leaves the map).
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     # Comma-separated finance tag names; blank or null clears them.
     default_tag_names: str | None = None
+
+    @model_validator(mode="after")
+    def _both_coordinates(self) -> "CityUpdate":
+        sent = self.model_fields_set
+        if ("latitude" in sent) != ("longitude" in sent) or (self.latitude is None) != (self.longitude is None):
+            raise ValueError("Send latitude and longitude together")
+        return self

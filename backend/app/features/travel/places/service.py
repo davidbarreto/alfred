@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.location.cities.enrichment import CityEnricher
 from app.features.location.cities.repository import CityRepository
 from app.features.location.cities.service import CityResolver
 from app.features.location.countries.repository import CountryRepository
@@ -36,11 +37,16 @@ class TravelPlaceService:
     """Travel's view of places (tags, derived grade, visits and stays), and creating or editing a place with its tags
     in one call. What a place is goes through location's `PlaceService`."""
 
-    def __init__(self, session: AsyncSession, places: PlaceService, embedding_service: EmbeddingService | None = None):
+    def __init__(
+        self, session: AsyncSession, places: PlaceService, embedding_service: EmbeddingService | None = None,
+        enricher: CityEnricher | None = None,
+    ):
         self._places = places
         self._repo = TravelPlaceRepository(session)
         self._city_repo = CityRepository(session)
-        self._cities = CityResolver(self._city_repo, CountryRepository(session), TravelLocationHooks(session, embedding_service))
+        self._cities = CityResolver(
+            self._city_repo, CountryRepository(session), TravelLocationHooks(session, embedding_service), enricher
+        )
         self._tag_repo = TravelTagRepository(session)
         self._visit_repo = VisitRepository(session)
         self._stay_repo = StayRepository(session)

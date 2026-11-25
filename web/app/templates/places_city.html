@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}{{ city.name }}{% endblock %}
+
+{% block content %}
+{% set costs = travel.costs %}
+{% set spend = costs.overall.total_eur if costs and costs.overall.transaction_count else none %}
+<div class="page space-y-4">
+  <a href="/places/cities" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Cities</a>
+
+  <div class="cover-box cover-hero" id="city-hero">
+    {% if city.has_cover %}<img src="/places/cities/{{ city.id }}/cover?v={{ city.updated_at }}" alt="{{ city.name }}">{% endif %}
+    {% if city.cover_credit or city.cover_source_url %}
+    <p class="cover-credit">{% if city.cover_source_url %}<a href="{{ city.cover_source_url }}" target="_blank" rel="noopener noreferrer">{{ city.cover_credit or 'Source' }}</a>{% else %}{{ city.cover_credit }}{% endif %}</p>
+    {% endif %}
+    <div class="cover-shade">
+      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ city.name }}{% if home %} <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-blue-700 align-middle" id="city-home"><i class="ti ti-home"></i> Home</span>{% endif %}</h1>
+      <p class="text-sm"><a class="hover:underline" href="/places/countries/{{ city.country.id }}">{{ city.country | country_flag_of }} {{ city.country.name }}</a></p>
+    </div>
+  </div>
+
+  <div class="page-head">
+    <div class="page-actions">
+      <a class="btn btn-xs btn-outline" href="https://www.google.com/maps/search/?api=1&query={{ (city.latitude ~ ',' ~ city.longitude) if city.latitude is not none else (city.name ~ ', ' ~ city.country.name) | urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-map-2"></i> Maps</a>
+      <a class="btn btn-xs btn-outline" href="{{ city.photos_url }}" target="_blank" rel="noopener noreferrer" id="city-photos"><i class="ti ti-photo"></i> Photos</a>
+      <button type="button" class="btn btn-xs btn-outline" id="edit-open">Edit</button>
+      {% with cover_base='/places/cities/' ~ city.id, has_cover=city.has_cover, can_find=true %}{% include "_place_geo_cover_menu.html" %}{% endwith %}
+    </div>
+  </div>
+
+  <div class="stat-row" id="city-stats">
+    {% if travel.trips %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></div>{% endif %}
+    {% if travel.days %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Days</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.days }}</p></div></div>{% endif %}
+    {% if places_total %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Places</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ places_total }}</p></div></div>{% endif %}
+    {% if travel.grade %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Average grade</p><p class="text-2xl font-semibold text-amber-600 mt-1" id="city-grade">{{ travel.grade | number }}<span class="text-sm font-normal text-gray-400">/5 · {{ travel.grade_count }}</span></p></div></div>{% endif %}
+    {% if spend is not none %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></div>{% endif %}
+  </div>
+
+  <div class="split split-wide-left">
+    <div class="card-stack">
+      {% set places_card %}
+      <div class="card bg-white" id="city-places">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-900">Places <span class="text-xs font-normal text-gray-400">{{ places_total }}</span></h2>
+            <div class="flex gap-1">
+              <a href="/places?view=everyday&city_id={{ city.id }}" class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600 hover:bg-gray-200">Everyday</a>
+              <a href="/places?view=visited&city_id={{ city.id }}" class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600 hover:bg-gray-200">Visited</a>
+            </div>
+          </div>
+          {% for p in places %}
+          <a href="/places/{{ p.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+            <span class="text-gray-900 min-w-0 truncate"><i class="ti {{ p.kind | location_icon }} text-gray-400"></i> {{ p.name }}</span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">{{ p.kind | replace('_', ' ') }}</span>
+          </a>
+          {% else %}<p class="text-sm text-gray-400">No places here yet.</p>{% endfor %}
+          {% if places_total > places | length %}<a href="/places?view=all&city_id={{ city.id }}" class="text-xs text-[#378ADD] hover:underline">See all {{ places_total }} places</a>{% endif %}
+        </div>
+      </div>
+      {% endset %}
+      {% set trips_card %}
+      <div class="card bg-white" id="city-trips">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Trips <span class="text-xs font-normal text-gray-400">{{ trips_total }}</span></h2>
+          {% set rows = trips %}{% include "_travel_trip_rows.html" %}
+          {% if not trips %}<p class="text-sm text-gray-400">No trip has a stay, a visit or a leg here yet.</p>{% endif %}
+          {% if trips_total > trips | length %}<a href="/places/cities/{{ city.id }}/trips" class="text-xs text-[#378ADD] hover:underline">See all {{ trips_total }} trips</a>{% endif %}
+        </div>
+      </div>
+      {% endset %}
+      {% if home %}{{ places_card }}{% if trips %}{{ trips_card }}{% endif %}{% else %}{{ trips_card }}{{ places_card }}{% endif %}
+
+      {% if costs %}{% set scope = 'city' %}{% set owner = city %}{% set tags = city.default_tag_names %}{% include "_travel_location_spend.html" %}{% endif %}
+
+      {% set owner_kind = 'city' %}{% set owner_id = city.id %}{% set links_url = '/places/cities/' ~ city.id ~ '/links' %}
+      {% include "_travel_web_links_card.html" %}
+    </div>
+
+    <div class="card-stack">
+      {% set photos_name = city.name %}{% set photos_url = city.photos_url %}{% set albums_url = '/places/cities/' ~ city.id ~ '/albums' %}
+      {% include "_place_geo_photos_card.html" %}
+
+      <div class="card bg-white" id="city-about">
+        <div class="card-body p-5 space-y-1 text-sm">
+          <h2 class="text-sm font-semibold text-gray-900">About</h2>
+          <p class="text-gray-700">Country: <a class="text-[#378ADD] hover:underline" href="/places/countries/{{ city.country.id }}">{{ city.country.name }}</a></p>
+          <p class="text-gray-700">Coordinates: {% if city.latitude is not none %}{{ city.latitude }}, {{ city.longitude }}{% else %}<span class="text-gray-400">not known yet (Edit, or they are looked up when the city is created)</span>{% endif %}</p>
+          <p class="text-gray-700">Default finance tags: {{ city.default_tag_names or '—' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "_travel_web_link_dialog.html" %}
+
+  <dialog id="edit-dialog" class="modal">
+    <form method="dialog" class="modal-box max-w-md space-y-3">
+      <h3 class="text-sm font-semibold">Edit {{ city.name }}</h3>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span>
+        <input name="name" value="{{ city.name }}" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span>
+        <select name="country_id" data-kind="id" class="select select-sm select-bordered w-full">{% for c in countries %}<option value="{{ c.id }}" {{ 'selected' if c.id == city.country.id }}>{{ c.name }}</option>{% endfor %}</select></label>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="space-y-1 block"><span class="block text-xs text-gray-500">Latitude</span>
+          <input name="latitude" data-kind="number" type="number" step="any" min="-90" max="90" value="{{ city.latitude if city.latitude is not none else '' }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 block"><span class="block text-xs text-gray-500">Longitude</span>
+          <input name="longitude" data-kind="number" type="number" step="any" min="-180" max="180" value="{{ city.longitude if city.longitude is not none else '' }}" class="input input-sm input-bordered w-full"></label>
+      </div>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Default tags (finance tags that count towards its spend)</span>
+        <input name="default_tag_names" value="{{ city.default_tag_names or '' }}" class="input input-sm input-bordered w-full"></label>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </div>
+    </form>
+  </dialog>
+</div>
+
+<script src="/static/js/travel-web-links.js"></script>
+<script>initWebLinks();</script>
+{% with cover_base='/places/cities/' ~ city.id, delete_confirm='Delete this city and its links?', after_delete='/places/cities' %}{% include "_place_geo_script.html" %}{% endwith %}
+{% endblock %}

@@ -3,25 +3,34 @@ import logging
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.location.cities.enrichment import CityEnricher
 from app.features.location.cities.repository import CityRepository
 from app.features.location.cities.schemas import CityCreate, CityFilters, CityRead, CityUpdate
 from app.features.location.cities.tables import City
 from app.features.location.countries.repository import CountryRepository
 from app.features.location.countries.tables import Country
+from app.features.location.covers import delete_cover_file
 from app.features.location.default_tags import clean_tag_names
 from app.features.location.errors import LocationConflictError, LocationNotFoundError
 from app.features.location.hooks import LocationHooks
+from app.shared.protocols.audio import FileStorage
 
 logger = logging.getLogger(__name__)
+
+# Fields a PATCH may set to null (the others ignore a null).
+_NULLABLE = ("default_tag_names", "latitude", "longitude")
 
 
 class CityResolver:
     """Find or create a country and a city from names, without committing: the caller owns the transaction."""
 
-    def __init__(self, cities: CityRepository, countries: CountryRepository, hooks: LocationHooks):
+    def __init__(
+        self, cities: CityRepository, countries: CountryRepository, hooks: LocationHooks, enricher: CityEnricher | None = None,
+    ):
         self._cities = cities
         self._countries = countries
         self._hooks = hooks
+        self._enricher = enricher
 
     async def resolve_country(self, name: str, code: str | None = None) -> Country:
         code = code.strip().upper() if code and code.strip() else None
@@ -44,15 +53,21 @@ class CityResolver:
         city = await self._cities.create_city(name, country.id)
         await self._hooks.city_created(city)
         logger.info("City created: id=%d name=%r country_id=%d", city.id, city.name, country.id)
+        if self._enricher is not None:
+            self._enricher.schedule(city.id)
         return city
 
 
 class CityService:
-    def __init__(self, session: AsyncSession, hooks: LocationHooks):
+    def __init__(
+        self, session: AsyncSession, hooks: LocationHooks, enricher: CityEnricher | None = None,
+        storage: FileStorage | None = None,
+    ):
         self._repo = CityRepository(session)
         self._country_repo = CountryRepository(session)
-        self._resolver = CityResolver(self._repo, self._country_repo, hooks)
+        self._resolver = CityResolver(self._repo, self._country_repo, hooks, enricher)
         self._hooks = hooks
+        self._storage = storage
 
     async def get_cities(self, filters: CityFilters) -> list[CityRead]:
         cities = await self._repo.get_cities(filters)
@@ -88,7 +103,7 @@ class CityService:
         if city is None:
             return None
         sent = data.model_dump(exclude_unset=True)
-        changes = {k: v for k, v in sent.items() if v is not None and k != "default_tag_names"}
+        changes = {k: v for k, v in sent.items() if v is not None and k not in _NULLABLE}
         target_country = changes.get("country_id", city.country_id)
         if "country_id" in changes and await self._country_repo.get_country(target_country) is None:
             raise LocationNotFoundError(f"Country {target_country} not found")
@@ -100,6 +115,8 @@ class CityService:
             changes["name"] = changes["name"].strip()
         if "default_tag_names" in sent:
             changes["default_tag_names"] = clean_tag_names(sent["default_tag_names"])
+        if "latitude" in sent:
+            changes["latitude"], changes["longitude"] = sent["latitude"], sent["longitude"]
         await self._repo.update(city, changes)
         logger.info("City updated: id=%d fields=%s", city_id, list(changes.keys()))
         return CityRead.model_validate(city)
@@ -112,6 +129,7 @@ class CityService:
         if reason:
             raise LocationConflictError(reason)
         after_delete = await self._hooks.before_delete(city_id=city_id)
+        cover_path = city.cover_path
         try:
             await self._repo.delete(city)
         except IntegrityError as exc:
@@ -119,4 +137,6 @@ class CityService:
             raise LocationConflictError("The city is still in use") from exc
         logger.info("City deleted: id=%d", city_id)
         await after_delete()
+        if self._storage is not None:
+            await delete_cover_file(self._storage, cover_path)
         return True

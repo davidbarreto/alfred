@@ -17,6 +17,10 @@ class Country(Base):
     code: Mapped[Optional[str]] = mapped_column(String(2), nullable=True)
     # Comma-separated *finance* tag names; a charge carrying all of them counts towards the country's spend.
     default_tag_names: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # An uploaded cover (countries get no fetched photo), relative to MEDIA_STORAGE_DIR.
+    cover_path: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    cover_credit: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cover_source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

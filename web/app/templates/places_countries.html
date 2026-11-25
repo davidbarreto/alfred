@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% set places_tab = "countries" %}
+{% block title %}Countries{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Countries</h1>
+      <p class="text-xs text-gray-400">The countries of your cities. A country is added with its first city.</p>
+    </div>
+    <form class="page-actions" method="get" action="/places/countries">
+      <input name="q" value="{{ q }}" class="input input-sm input-bordered w-44" placeholder="Search" aria-label="Search countries">
+    </form>
+  </div>
+
+  {% include "_places_tabs.html" %}
+
+  {% if not available %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Countries are unavailable right now.</p></div></div>
+  {% elif not cards %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No country matches.</p></div></div>
+  {% else %}
+  <div class="card-row" style="--card-min: 14rem" id="country-cards">
+    {% for card in cards %}{% set country = card.item %}{% set t = card.travel %}{% set mosaic = card.mosaic %}
+    <a href="/places/countries/{{ country.id }}" class="card bg-white overflow-hidden hover:shadow-md transition-shadow" id="country-{{ country.id }}">
+      <div class="cover-box rounded-b-none">
+        {% include "_place_geo_mosaic.html" %}
+        <div class="cover-shade"><p class="text-sm font-semibold leading-tight">{{ country | country_flag_of }} {{ country.name }}</p></div>
+      </div>
+      <div class="px-3 py-2 text-xs text-gray-500">
+        {{ card.city_count }} cit{{ 'y' if card.city_count == 1 else 'ies' }}{% if t and t.trips %} · {{ t.trips }} trip{{ '' if t.trips == 1 else 's' }} · {{ t.days }} day{{ '' if t.days == 1 else 's' }}{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% if has_prev or has_next %}
+  <div class="flex justify-between pt-3">
+    {% if has_prev %}<a class="btn btn-xs btn-outline" href="/places/countries?q={{ q | urlencode }}&offset={{ [offset - page_size, 0] | max }}">Previous</a>{% else %}<span></span>{% endif %}
+    {% if has_next %}<a class="btn btn-xs btn-outline" href="/places/countries?q={{ q | urlencode }}&offset={{ offset + page_size }}">Next</a>{% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

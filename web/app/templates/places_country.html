@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}{{ country.name }}{% endblock %}
+
+{% block content %}
+{% set costs = travel.costs %}
+{% set spend = costs.overall.total_eur if costs and costs.overall.transaction_count else none %}
+<div class="page space-y-4">
+  <a href="/places/countries" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Countries</a>
+
+  <div class="cover-box cover-hero" id="country-hero">
+    {% include "_place_geo_mosaic.html" %}
+    {% if country.has_cover and (country.cover_credit or country.cover_source_url) %}
+    <p class="cover-credit">{% if country.cover_source_url %}<a href="{{ country.cover_source_url }}" target="_blank" rel="noopener noreferrer">{{ country.cover_credit or 'Source' }}</a>{% else %}{{ country.cover_credit }}{% endif %}</p>
+    {% endif %}
+    <div class="cover-shade">
+      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ country | country_flag_of }} {{ country.name }}</h1>
+      {% if country.code %}<p class="text-sm opacity-90">{{ country.code }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="page-head">
+    <div class="page-actions">
+      <a class="btn btn-xs btn-outline" href="https://www.google.com/maps/search/?api=1&query={{ country.name | urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-map-2"></i> Maps</a>
+      <a class="btn btn-xs btn-outline" href="{{ country.photos_url }}" target="_blank" rel="noopener noreferrer" id="country-photos"><i class="ti ti-photo"></i> Photos</a>
+      <button type="button" class="btn btn-xs btn-outline" id="edit-open">Edit</button>
+      {% with cover_base='/places/countries/' ~ country.id, has_cover=country.has_cover, can_find=false %}{% include "_place_geo_cover_menu.html" %}{% endwith %}
+    </div>
+  </div>
+
+  <div class="stat-row" id="country-stats">
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ cities_total }}</p></div></div>
+    {% if travel.trips %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></div>{% endif %}
+    {% if travel.days %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Days</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.days }}</p></div></div>{% endif %}
+    {% if spend is not none %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></div>{% endif %}
+  </div>
+
+  <div class="split split-wide-left">
+    <div class="card-stack">
+      <div class="card bg-white" id="country-cities">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Cities <span class="text-xs font-normal text-gray-400">{{ cities_total }}</span></h2>
+          {% for c in cities %}
+          <a href="/places/cities/{{ c.id }}" class="flex items-center gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+            <span class="cover-box shrink-0 w-16" style="aspect-ratio: 4 / 3">{% if c.has_cover %}<img src="/places/cities/{{ c.id }}/cover?v={{ c.updated_at }}" alt="" loading="lazy">{% endif %}</span>
+            <span class="min-w-0 flex-1 truncate text-gray-900">{{ c.name }}</span>
+            {% if c.travel %}<span class="text-xs text-gray-400 whitespace-nowrap">{{ c.travel.place_count }} place{{ '' if c.travel.place_count == 1 else 's' }}{% if c.travel.grade %} · <span class="text-amber-600">{{ c.travel.grade | number }}/5</span>{% endif %}</span>{% endif %}
+          </a>
+          {% else %}<p class="text-sm text-gray-400">No cities.</p>{% endfor %}
+          {% if cities_total > cities | length %}<a href="/places/cities?country_id={{ country.id }}" class="text-xs text-[#378ADD] hover:underline">See all {{ cities_total }} cities</a>{% endif %}
+        </div>
+      </div>
+
+      <div class="card bg-white" id="country-trips">
+        <div class="card-body p-5 space-y-2">
+          <h2 class="text-sm font-semibold text-gray-900">Trips <span class="text-xs font-normal text-gray-400">{{ trips_total }}</span></h2>
+          {% set rows = trips %}{% include "_travel_trip_rows.html" %}
+          {% if not trips %}<p class="text-sm text-gray-400">No trip has a stay, a visit or a leg here yet.</p>{% endif %}
+          {% if trips_total > trips | length %}<a href="/places/countries/{{ country.id }}/trips" class="text-xs text-[#378ADD] hover:underline">See all {{ trips_total }} trips</a>{% endif %}
+        </div>
+      </div>
+
+      {% if costs %}{% set scope = 'country' %}{% set owner = country %}{% set tags = country.default_tag_names %}{% include "_travel_location_spend.html" %}{% endif %}
+
+      {% set owner_kind = 'country' %}{% set owner_id = country.id %}{% set links_url = '/places/countries/' ~ country.id ~ '/links' %}
+      {% include "_travel_web_links_card.html" %}
+    </div>
+
+    <div class="card-stack">
+      {% set photos_name = country.name %}{% set photos_url = country.photos_url %}{% set albums_url = '/places/countries/' ~ country.id ~ '/albums' %}
+      {% include "_place_geo_photos_card.html" %}
+
+      <div class="card bg-white" id="country-about">
+        <div class="card-body p-5 space-y-1 text-sm">
+          <h2 class="text-sm font-semibold text-gray-900">About</h2>
+          <p class="text-gray-700">ISO code: {{ country.code or '—' }}</p>
+          <p class="text-gray-700">Default finance tags: {{ country.default_tag_names or '—' }}</p>
+          {% if travel.grade %}<p class="text-gray-700">Average grade: <span class="text-amber-600" id="country-grade">{{ travel.grade | number }}/5</span> <span class="text-xs text-gray-400">({{ travel.grade_count }} graded {{ 'city' if travel.grade_count == 1 else 'cities' }})</span></p>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "_travel_web_link_dialog.html" %}
+
+  <dialog id="edit-dialog" class="modal">
+    <form method="dialog" class="modal-box max-w-md space-y-3">
+      <h3 class="text-sm font-semibold">Edit {{ country.name }}</h3>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span>
+        <input name="name" value="{{ country.name }}" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">ISO code (two letters, e.g. ES)</span>
+        <input name="code" value="{{ country.code or '' }}" maxlength="2" class="input input-sm input-bordered w-24 uppercase"></label>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Default tags (finance tags that count towards its spend)</span>
+        <input name="default_tag_names" value="{{ country.default_tag_names or '' }}" class="input input-sm input-bordered w-full"></label>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </div>
+    </form>
+  </dialog>
+</div>
+
+<script src="/static/js/travel-web-links.js"></script>
+<script>initWebLinks();</script>
+{% with cover_base='/places/countries/' ~ country.id, delete_confirm='Delete this country and its links?', after_delete='/places/countries' %}{% include "_place_geo_script.html" %}{% endwith %}
+{% endblock %}

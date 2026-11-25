@@ -50,7 +50,7 @@
       <div class="space-y-1 min-w-0">
         <p class="text-sm font-semibold text-gray-900"><a href="/places/{{ p.id }}" class="after:absolute after:inset-0">
           <i class="ti {{ p.kind | location_icon }} text-sm" title="{{ p.kind }}"></i> {{ p.name }}</a></p>
-        <p class="text-xs text-gray-500">{{ p.kind | replace('_', ' ') }} · {{ p.city.country | country_flag_of }} <a class="relative z-10 hover:underline" href="/travel/cities/{{ p.city.id }}">{{ p.city.name }}</a>
+        <p class="text-xs text-gray-500">{{ p.kind | replace('_', ' ') }} · {{ p.city.country | country_flag_of }} <a class="relative z-10 hover:underline" href="/places/cities/{{ p.city.id }}">{{ p.city.name }}</a>
           {%- if p.last_visit %}<span class="hidden sm:inline"> · last {{ p.last_visit | short_date }}</span>{% endif %}{% if not p.active %} · archived{% endif %}</p>
         {% if p.tags %}
         <div class="flex flex-wrap gap-1">{% for tag in p.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>

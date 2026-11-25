@@ -35,7 +35,7 @@ Values below are the defaults from `Settings` when the variable is optional. **R
 
 ### Storage locations
 
-`DB_DATA_DIR`, `N8N_DATA_DIR`, `STATEMENT_DATA_DIR`, `AUDIO_DATA_DIR`, `HF_CACHE_DIR`, `MCP_DATA_DIR` are host folders; `STATEMENT_STORAGE_DIR` and `AUDIO_STORAGE_DIR` are the matching container paths (defaults `/data/statements`, `/data/audio`). Details: [docker.md](docker.md#volumes-data-that-lives-on-the-host).
+`DB_DATA_DIR`, `N8N_DATA_DIR`, `STATEMENT_DATA_DIR`, `AUDIO_DATA_DIR`, `MEDIA_DATA_DIR`, `HF_CACHE_DIR`, `MCP_DATA_DIR` are host folders; `STATEMENT_STORAGE_DIR`, `AUDIO_STORAGE_DIR` and `MEDIA_STORAGE_DIR` are the matching container paths (defaults `/data/statements`, `/data/audio`, `/data/media`). Details: [docker.md](docker.md#volumes-data-that-lives-on-the-host).
 
 ### Integrations
 
@@ -83,7 +83,7 @@ Values below are the defaults from `Settings` when the variable is optional. **R
 
 ### Test and CI only
 
-`DISABLE_INTEGRATIONS=true` swaps the LLM and Notion providers for null implementations so the API boots without real credentials (used by the CI smoke test).
+`DISABLE_INTEGRATIONS=true` swaps the LLM and Notion providers for null implementations so the API boots without real credentials (used by the CI smoke test). It also turns off the city enrichment (no geocoding, no Wikipedia covers, no image URL fetches: *Find photo* answers 404 and a pasted image URL 422).
 
 ## 2. Settings you change at runtime
 

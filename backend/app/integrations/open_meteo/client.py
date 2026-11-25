@@ -29,6 +29,16 @@ class OpenMeteoClient:
         results = response.json().get("results", [])
         return results[0] if results else None
 
+    async def search(self, name: str, count: int = 10, country_code: str | None = None) -> list[dict[str, Any]]:
+        """Up to `count` places named `name`, best match first; `country_code` (ISO alpha-2) limits them to a country."""
+        params: dict[str, Any] = {"name": name, "count": count, "language": "en"}
+        if country_code:
+            params["countryCode"] = country_code
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(_GEOCODING_URL, params=params)
+            response.raise_for_status()
+        return response.json().get("results", []) or []
+
     async def fetch_daily(self, lat: float, lon: float, timezone: str, for_date: date) -> dict[str, Any]:
         params = {
             "latitude": lat,

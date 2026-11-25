@@ -360,6 +360,7 @@ _TRAVEL_LINK_DETAILS = (
 TRIP_FLAGS = {
     "--start": "start", "--end": "end", "--travelers": "travelers", "--preferences": "preferences",
     "--notes": "notes", "--finance-tags": "finance_tags", **FLAG_TAGS, "--checklist-note": "checklist_note",
+    "--album": "album",
 }
 LEG_FLAGS = {
     "--from": "origin", "--to": "destination", "--from-code": "origin_code", "--to-code": "destination_code",
@@ -1232,8 +1233,9 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["name"],
         },
         "update": {
-            "description": "Update a trip by ID: name, dates, travelers, preferences, notes, tags, finance tags, checklist note",
-            "details": _TRIP_OVERVIEW + " Passing tags replaces the whole tag list. Changing the dates does not retag existing expenses; use apply_tags.",
+            "description": "Update a trip by ID: name, dates, travelers, preferences, notes, tags, finance tags, checklist note, photo album link",
+            "details": _TRIP_OVERVIEW + " Passing tags replaces the whole tag list. Changing the dates does not retag existing expenses; use apply_tags. "
+            "album is the trip's shared photo album URL (Google Photos, iCloud, Flickr, ...); an empty album clears it.",
             "aliases": ["/tripupdate"],
             "flags": {**TRIP_FLAGS, "--name": "name"},
             "requires_args": True,

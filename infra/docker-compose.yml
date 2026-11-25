@@ -32,6 +32,7 @@ services:
       - ${HF_CACHE_DIR}:/root/.cache/huggingface
       - ${AUDIO_DATA_DIR}:/data/audio
       - ${STATEMENT_DATA_DIR}:/data/statements
+      - ${MEDIA_DATA_DIR}:/data/media
     environment:
       - ENV=${ENV}
       - LOG_LEVEL=${LOG_LEVEL}
@@ -68,6 +69,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - AUDIO_STORAGE_DIR=${AUDIO_STORAGE_DIR}
       - STATEMENT_STORAGE_DIR=${STATEMENT_STORAGE_DIR}
+      - MEDIA_STORAGE_DIR=${MEDIA_STORAGE_DIR:-/data/media}
       - TIMEZONE=${TIMEZONE}
       - SESSION_EXPIRY_HOURS=${SESSION_EXPIRY_HOURS}
       - LEETCODE_SESSION=${LEETCODE_SESSION}

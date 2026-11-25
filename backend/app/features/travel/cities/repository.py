@@ -1,9 +1,12 @@
+from datetime import date
+
 from sqlalchemy import func, or_, select, union, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
-from app.features.travel.legs.tables import Leg
 from app.features.location.places.tables import Place
+from app.features.travel.legs.tables import Leg
+from app.features.travel.links.tables import WebLink
 from app.features.travel.stays.tables import Stay
 from app.features.travel.trips.tables import Trip
 from app.features.travel.visits.tables import Visit
@@ -62,3 +65,58 @@ class TravelCityRepository:
 
     async def count_places(self, city_id: int) -> int:
         return int(await self._session.scalar(select(func.count()).select_from(Place).where(Place.city_id == city_id)) or 0)
+
+    async def get_travel_city_ids(self) -> set[int]:
+        """Cities with travel data: a stay or visit at one of their places, a leg end, or a link."""
+        stmt = union(
+            select(Place.city_id).where(Place.id.in_(select(Stay.place_id))),
+            select(Place.city_id).where(Place.id.in_(select(Visit.place_id))),
+            select(Leg.origin_city_id).where(Leg.origin_city_id.is_not(None)),
+            select(Leg.destination_city_id).where(Leg.destination_city_id.is_not(None)),
+            select(WebLink.city_id).where(WebLink.city_id.is_not(None)),
+        )
+        return set((await self._session.scalars(stmt)).all())
+
+    async def get_link_country_ids(self) -> set[int]:
+        stmt = select(WebLink.country_id).where(WebLink.country_id.is_not(None)).distinct()
+        return set((await self._session.scalars(stmt)).all())
+
+    async def get_trip_city_pairs(self, city_ids: list[int]) -> list[tuple[int, int]]:
+        """(trip id, city id) for every trip with a stay, a visit or a leg end in one of the cities."""
+        if not city_ids:
+            return []
+        stmt = union(
+            select(Stay.trip_id, Place.city_id).join(Place, Stay.place_id == Place.id)
+            .where(Stay.trip_id.is_not(None), Place.city_id.in_(city_ids)),
+            select(Visit.trip_id, Place.city_id).join(Place, Visit.place_id == Place.id)
+            .where(Visit.trip_id.is_not(None), Place.city_id.in_(city_ids)),
+            select(Leg.trip_id, Leg.origin_city_id).where(Leg.origin_city_id.in_(city_ids)),
+            select(Leg.trip_id, Leg.destination_city_id).where(Leg.destination_city_id.in_(city_ids)),
+        )
+        return [(trip_id, city_id) for trip_id, city_id in (await self._session.execute(stmt)).all()]
+
+    async def get_trips(self, trip_ids: set[int]) -> list[Trip]:
+        if not trip_ids:
+            return []
+        return list((await self._session.scalars(select(Trip).where(Trip.id.in_(sorted(trip_ids))))).all())
+
+    async def get_last_local_visits(self, city_ids: list[int], today: date) -> dict[int, date]:
+        """City id -> the latest day something was done there (a visited visit, or a stay begun), up to `today`."""
+        if not city_ids:
+            return {}
+        visits = (
+            select(Place.city_id, func.max(Visit.visit_date)).join(Place, Visit.place_id == Place.id)
+            .where(Place.city_id.in_(city_ids), Visit.status == "visited", Visit.visit_date <= today)
+            .group_by(Place.city_id)
+        )
+        stays = (
+            select(Place.city_id, func.max(func.date(Stay.check_in_at))).join(Place, Stay.place_id == Place.id)
+            .where(Place.city_id.in_(city_ids), func.date(Stay.check_in_at) <= today)
+            .group_by(Place.city_id)
+        )
+        found: dict[int, date] = {}
+        for stmt in (visits, stays):
+            for city_id, day in (await self._session.execute(stmt)).all():
+                if day is not None and (city_id not in found or day > found[city_id]):
+                    found[city_id] = day
+        return found

@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import CountryServiceDep
-from app.features.location.countries.schemas import CountryRead, CountryRef, CountryUpdate
+from app.features.location.countries.schemas import CountryRead, CountryUpdate
 from app.features.location.errors import LocationConflictError
 
 router = APIRouter(prefix="/location/countries", tags=["location"], dependencies=[Depends(require_auth)])
 
 
-@router.get("", response_model=list[CountryRef])
-async def get_countries(service: CountryServiceDep) -> list[CountryRef]:
+@router.get("", response_model=list[CountryRead])
+async def get_countries(service: CountryServiceDep) -> list[CountryRead]:
     return await service.get_countries()
 
 

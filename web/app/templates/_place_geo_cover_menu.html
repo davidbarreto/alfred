@@ -1,0 +1,13 @@
+{# The cover menu of a city or country page. Needs `cover_base` (/places/cities/1), `has_cover`, `can_find` (cities). #}
+<div class="dropdown dropdown-end">
+  <label tabindex="0" class="btn btn-xs btn-outline" id="cover-menu"><i class="ti ti-dots"></i> More</label>
+  <ul tabindex="0" class="dropdown-content menu menu-xs z-10 w-56 p-2 shadow bg-white rounded-box">
+    {% if can_find %}<li><button type="button" data-cover-action="find"><i class="ti ti-world-search"></i> Find photo (Wikipedia)</button></li>{% endif %}
+    <li><button type="button" data-cover-action="upload"><i class="ti ti-upload"></i> Upload cover</button></li>
+    <li><button type="button" data-cover-action="url"><i class="ti ti-link"></i> Cover from an image address</button></li>
+    {% if has_cover %}<li><button type="button" data-cover-action="remove"><i class="ti ti-photo-off"></i> Remove cover</button></li>{% endif %}
+    <li><button type="button" data-cover-action="delete" class="text-red-600"><i class="ti ti-trash"></i> Delete</button></li>
+  </ul>
+</div>
+<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" id="cover-file">
+<span class="text-xs text-gray-500" id="cover-msg" role="status"></span>

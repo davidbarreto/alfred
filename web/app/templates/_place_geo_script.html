@@ -1,0 +1,70 @@
+{# Cover menu, edit dialog and delete for a city or country page. Needs cover_base, delete_confirm, after_delete. #}
+<script>
+(() => {
+  const BASE = {{ cover_base | tojson }};
+  const msg = document.getElementById('cover-msg');
+  const say = (text) => { msg.textContent = text; };
+  async function json(res) { return res.json().catch(() => ({})); }
+  async function upload(form) {
+    say('Saving the cover…');
+    const res = await fetch(`${BASE}/cover`, { method: 'PUT', body: form });
+    const data = await json(res);
+    if (!res.ok) { say(data.error || 'Could not save the cover.'); return; }
+    location.reload();
+  }
+  const file = document.getElementById('cover-file');
+  file.addEventListener('change', () => {
+    if (!file.files.length) return;
+    const form = new FormData(); form.append('file', file.files[0]); upload(form);
+  });
+  const actions = {
+    async find() {
+      say('Looking on Wikipedia…');
+      const res = await fetch(`${BASE}/cover/find`, { method: 'POST' });
+      const data = await json(res);
+      if (!res.ok) { say(data.error || 'No photo found.'); return; }
+      location.reload();
+    },
+    upload() { file.click(); },
+    url() {
+      const address = prompt('Address of an image (it is downloaded once and kept here):');
+      if (!address || !address.trim()) return;
+      const form = new FormData(); form.append('url', address.trim()); upload(form);
+    },
+    async remove() {
+      if (!confirm('Remove the cover photo?')) return;
+      const res = await fetch(`${BASE}/cover`, { method: 'DELETE' });
+      if (!res.ok) { say((await json(res)).error || 'Could not remove the cover.'); return; }
+      location.reload();
+    },
+    async delete() {
+      if (!confirm({{ delete_confirm | tojson }})) return;
+      const res = await fetch(BASE, { method: 'DELETE' });
+      if (!res.ok) { alert((await json(res)).error || 'Could not delete.'); return; }
+      location.href = {{ after_delete | tojson }};
+    },
+  };
+  document.querySelectorAll('[data-cover-action]').forEach((button) => {
+    button.addEventListener('click', () => { document.activeElement.blur(); actions[button.dataset.coverAction](); });
+  });
+
+  const dialog = document.getElementById('edit-dialog');
+  document.getElementById('edit-open').addEventListener('click', () => dialog.showModal());
+  dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+  dialog.querySelector('form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const body = {};
+    for (const input of form.querySelectorAll('[name]')) {
+      const value = input.value.trim();
+      if (input.dataset.kind === 'number') body[input.name] = value === '' ? null : Number(value);
+      else if (input.dataset.kind === 'id') body[input.name] = Number(value);
+      else body[input.name] = value || (input.required ? value : null);
+    }
+    const res = await fetch(BASE, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await json(res);
+    if (!res.ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+    location.reload();
+  });
+})();
+</script>

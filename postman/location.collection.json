@@ -682,6 +682,502 @@
    }
   },
   {
+   "name": "18a - City Has No Cover Yet",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "pm.test('No cover, a photos search, coordinates fields', () => { pm.expect(j.has_cover).to.eql(false); pm.expect(j).to.not.have.property('cover_path'); pm.expect(j.photos_url).to.match(/^https:\\/\\/photos\\.google\\.com\\/search\\//); pm.expect(j).to.have.property('latitude'); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18b - No Cover Is 404",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18c - Upload A Cover",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "pm.test('Has a cover, no credit for an upload', () => { pm.expect(j.has_cover).to.eql(true); pm.expect(j.cover_credit).to.eql(null); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "file",
+       "type": "file",
+       "src": "fixtures/sample_cover.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18d - Read The Cover",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('It is the PNG', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('image/png'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18e - A File That Is Not An Image (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Says why', () => pm.expect(pm.response.json().detail).to.include('not a JPEG'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "file",
+       "type": "file",
+       "src": "fixtures/activobank_sample.csv"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f - Neither File Nor URL (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "note",
+       "value": "nothing",
+       "type": "text"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18g - Latitude Alone (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"latitude\": 38.72\n}"
+    }
+   }
+  },
+  {
+   "name": "18h - Set Coordinates",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "pm.test('Saved', () => { pm.expect(j.latitude).to.eql(38.72); pm.expect(j.longitude).to.eql(-9.14); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"latitude\": 38.72,\n  \"longitude\": -9.14\n}"
+    }
+   }
+  },
+  {
+   "name": "18i - Remove The Cover",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Gone', () => pm.expect(pm.response.json().has_cover).to.eql(false));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18j - Cover Of An Unknown City (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/999999999/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "999999999",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "file",
+       "type": "file",
+       "src": "fixtures/sample_cover.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18k - Upload A Country Cover",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Has a cover', () => pm.expect(pm.response.json().has_cover).to.eql(true));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{place_other_country_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{place_other_country_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "file",
+       "type": "file",
+       "src": "fixtures/sample_cover.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18l - Countries List Carries Covers And Photos Links",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const row = pm.response.json().find(c => c.id === Number(pm.environment.get('place_other_country_id')));",
+       "pm.test('Row has cover and photos link', () => { pm.expect(row.has_cover).to.eql(true); pm.expect(row.photos_url).to.include('photos.google.com/search/'); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18m - Remove The Country Cover",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Gone', () => pm.expect(pm.response.json().has_cover).to.eql(false));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{place_other_country_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{place_other_country_id}}",
+      "cover"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18n - No Country Cover Is 404",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{place_other_country_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{place_other_country_id}}",
+      "cover"
+     ]
+    }
+   }
+  },
+  {
    "name": "19 - Delete The Other City",
    "event": [
     {

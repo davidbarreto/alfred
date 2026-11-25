@@ -1,0 +1,17 @@
+{# Photos card of a city or country: the Google Photos search and the albums of the trips that went there.
+   Needs photos_name, photos_url, albums, albums_total, albums_url. #}
+<div class="card bg-white" id="place-photos">
+  <div class="card-body p-5 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-sm font-semibold text-gray-900">Photos</h2>
+      <a class="btn btn-xs btn-outline" href="{{ photos_url }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-search"></i> {{ photos_name }} in Google Photos</a>
+    </div>
+    {% for t in albums %}
+    <a href="{{ t.photo_album_url }}" target="_blank" rel="noopener noreferrer" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+      <span class="text-gray-900 min-w-0 truncate"><i class="ti ti-photo text-gray-400"></i> {{ t.name }}</span>
+      <span class="text-xs text-gray-400 whitespace-nowrap">{{ t.photo_album_label }} · {{ t.start_date | month_year }}</span>
+    </a>
+    {% else %}<p class="text-xs text-gray-400">No trip here has a photo album link yet (set one in the trip's Edit form).</p>{% endfor %}
+    {% if albums_total > albums | length %}<a href="{{ albums_url }}" class="text-xs text-[#378ADD] hover:underline">See all {{ albums_total }} albums</a>{% endif %}
+  </div>
+</div>

@@ -44,10 +44,13 @@ Every volume is a **bind mount** whose host path comes from `infra/.env`. Nothin
 | `N8N_DATA_DIR` | `/home/node/.n8n` | `n8n` | n8n's local state (encryption config, settings). Workflows and executions are in the `n8n` database | Re-run `setup_n8n.sh`; credentials are re-imported from templates |
 | `STATEMENT_DATA_DIR` | `/data/statements` | `api` | The original bank statement files you uploaded, one per import batch | Imported transactions stay in the database; you lose the ability to re-download the source file |
 | `AUDIO_DATA_DIR` | `/data/audio` | `api` | Language audio: shadowing recordings and the pronunciation TTS cache (see below) | Cache regenerates; shadowing recordings are lost |
+| `MEDIA_DATA_DIR` | `/data/media` | `api` | City and country cover photos (see below) | The pages show the placeholder; *Find photo* (or the backfill) fetches Wikipedia covers again, uploads are lost |
 | `HF_CACHE_DIR` | `/root/.cache/huggingface` | `api` | Downloaded sentence-transformers model | Re-downloaded on next start |
 | `MCP_DATA_DIR` | `/data` | `mcp` | SQLite store of registered OAuth clients and tokens | Every connected Claude client must re-authorise |
 
-The `.env` also has `STATEMENT_STORAGE_DIR` and `AUDIO_STORAGE_DIR`: those are the **container-side** paths the app writes to (`/data/statements`, `/data/audio`) and must match the mount targets above. Leave them at the defaults.
+The `.env` also has `STATEMENT_STORAGE_DIR`, `AUDIO_STORAGE_DIR` and `MEDIA_STORAGE_DIR`: those are the **container-side** paths the app writes to (`/data/statements`, `/data/audio`, `/data/media`) and must match the mount targets above. Leave them at the defaults.
+
+**Adding a volume to a running install** (as `MEDIA_DATA_DIR` was in phase 6 of the location domain): add the variable to `infra/.env` on the host **before** deploying the change that mounts it, or Compose refuses to start the service. Docker creates the folder on first start (owned by root, like `audio` and `statements`); nothing needs creating by hand.
 
 ### Statement files (`STATEMENT_DATA_DIR`)
 
@@ -73,6 +76,16 @@ audio/
 - Recordings arrive as uploads from the portal or Telegram voice messages (via n8n) and are converted to Ogg with ffmpeg (installed in the API image).
 - The pronunciation cache is safe to delete; files are re-fetched from the TTS service on demand.
 - Conversation audio is **not stored by default** (`PERSIST_CONVERSATION_AUDIO=false`): replies are LLM free text that is practically never repeated, so caching would only grow the disk. Turn it on only if you want to replay old turns.
+
+### Media files (`MEDIA_DATA_DIR`)
+
+```text
+media/
+  covers/cities/<city_id>.<jpg|png|webp|gif>      # a city's cover (Wikipedia lead photo, an upload or a fetched image URL)
+  covers/countries/<country_id>.<ext>              # a country's uploaded cover
+```
+
+The row's `cover_path` points at the file; replacing a cover of another type deletes the old file, removing a cover or deleting the city or country deletes it too. The credit a Wikimedia Commons licence asks for is stored on the row (`cover_credit`, `cover_source_url`), not next to the file. See [modules/places.md](modules/places.md#cities-and-countries).
 
 ## Everyday commands
 

@@ -1,12 +1,31 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
 from app.dependencies import TravelCityServiceDep
-from app.features.travel.cities.schemas import CityDetail, CountryDetail
+from app.features.travel.cities.schemas import (
+    CityDetail,
+    CountryDetail,
+    TravelCityRow,
+    TravelCountryRow,
+    TravelLocationFilters,
+)
 from app.features.travel.transaction_links.schemas import ChargePart, LinkedTransactions
 
 # Travel's read-only view of a city or country; they are created, edited and deleted under /location.
 router = APIRouter(prefix="/travel", tags=["travel"], dependencies=[Depends(require_auth)])
+
+
+@router.get("/cities", response_model=list[TravelCityRow])
+async def list_cities(service: TravelCityServiceDep, filters: Annotated[TravelLocationFilters, Depends()]) -> list[TravelCityRow]:
+    """Cities with travel data (a stay, a visit, a leg end or a link): trips, days so far, spend, last visit."""
+    return await service.list_cities(filters)
+
+
+@router.get("/countries", response_model=list[TravelCountryRow])
+async def list_countries(service: TravelCityServiceDep, filters: Annotated[TravelLocationFilters, Depends()]) -> list[TravelCountryRow]:
+    return await service.list_countries(filters)
 
 
 @router.get("/cities/{city_id}", response_model=CityDetail)

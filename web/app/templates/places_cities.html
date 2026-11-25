@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% set places_tab = "cities" %}
+{% block title %}Cities{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Cities</h1>
+      <p class="text-xs text-gray-400">Every city Alfred knows: the home city and the ones your trips and places are in.</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" id="new-city"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+        <i class="ti ti-plus text-sm"></i>Add city
+      </button>
+    </div>
+  </div>
+
+  {% include "_places_tabs.html" %}
+
+  <form id="city-filters" class="filter-bar"
+        hx-get="/places/cities/list" hx-target="#city-cards" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#city-q">
+    <label class="space-y-1 filter-wide sm:w-48"><span class="block text-xs text-gray-500">Search</span>
+      <input id="city-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-full" placeholder="City name"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
+      <select name="country_id" class="select select-sm select-bordered w-full">
+        <option value="">Any</option>
+        {% for c in countries %}<option value="{{ c.id }}" {{ 'selected' if filters.country_id == c.id | string }}>{{ c | country_flag_of }} {{ c.name }}</option>{% endfor %}
+      </select></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Sort</span>
+      <select name="sort" class="select select-sm select-bordered w-full">
+        {% for key, label in sorts.items() %}<option value="{{ key }}" {{ 'selected' if filters.sort == key }}>{{ label }}</option>{% endfor %}
+      </select></label>
+  </form>
+
+  <div id="city-cards">{% include "_places_city_cards.html" %}</div>
+
+  {% include "_city_dialog.html" %}
+</div>
+
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+<script>
+async function send(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+// The dialog posts to /travel/cities (the shared picker's proxy); a new or existing city opens its page.
+const openNewCity = initNewCityDialog({ dialog: document.getElementById('city-dialog'), send });
+document.getElementById('new-city').addEventListener('click', () => openNewCity('', (city) => { location.href = `/places/cities/${city.id}`; }));
+</script>
+{% endblock %}

@@ -136,7 +136,14 @@ from app.assistant.commands.handlers.place import PlaceServices
 from app.assistant.commands.handlers.travel import TravelServices
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import TripDefaultTagService
+from app.features.location.cities.enrichment import CityEnricher
 from app.features.location.cities.service import CityService
+from app.features.location.covers import CoverService
+from app.integrations.http.images import HttpImageFetcher
+from app.integrations.null.media_provider import NullCityGeocoder, NullCoverPhotoProvider, NullImageFetcher
+from app.integrations.open_meteo.geocoder import OpenMeteoCityGeocoder
+from app.shared.protocols.media import CoverPhotoProvider, ImageFetcher
+from app.integrations.wikipedia.client import USER_AGENT as WIKIPEDIA_USER_AGENT, WikipediaClient
 from app.features.location.countries.service import CountryService
 from app.features.travel.cities.hooks import TravelLocationHooks
 from app.features.travel.cities.service import TravelCityService
@@ -163,7 +170,7 @@ from app.shared.protocols.pronunciation import PronunciationProvider
 from app.shared.protocols.conversation import ConversationProvider
 from app.shared.protocols.audio import AudioAnalysisProvider, TranscriptionProvider
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import get_session
+from app.db.session import async_session, get_session
 from app.features.cs.platforms.service import PlatformService
 from app.features.cs.platforms.codeforces_sync_service import CodeforcesSyncService
 from app.features.cs.platforms.leetcode_sync_service import LeetCodeSyncService
@@ -748,17 +755,44 @@ def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayServic
     return StayService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_travel_place_service(session: AsyncSession = Depends(get_session)) -> TravelPlaceService:
-    return TravelPlaceService(session, get_place_service(session), EmbeddingService(session, get_embedding_provider()))
+    return TravelPlaceService(
+        session, get_place_service(session), EmbeddingService(session, get_embedding_provider()), get_city_enricher()
+    )
 
 def get_location_hooks(session: AsyncSession) -> TravelLocationHooks:
     """What travel does when a city or country is created or deleted; `location` never imports travel."""
     return TravelLocationHooks(session, EmbeddingService(session, get_embedding_provider()))
 
+def get_media_storage() -> LocalFileStorage:
+    """City and country cover photos (MEDIA_STORAGE_DIR)."""
+    return LocalFileStorage(get_settings().media_storage_dir)
+
+def get_image_fetcher() -> ImageFetcher:
+    if get_settings().disable_integrations:
+        return NullImageFetcher()
+    return HttpImageFetcher(WIKIPEDIA_USER_AGENT)
+
+def get_cover_photo_provider() -> CoverPhotoProvider:
+    if get_settings().disable_integrations:
+        return NullCoverPhotoProvider()
+    return WikipediaClient(get_image_fetcher())
+
+def get_city_enricher() -> CityEnricher:
+    """Fills a new city's coordinates, its country's code and its cover in the background, on its own session.
+
+    With integrations disabled nothing is scheduled (no session factory) and the providers are null."""
+    if get_settings().disable_integrations:
+        return CityEnricher(NullCityGeocoder(), NullCoverPhotoProvider(), NullImageFetcher(), get_media_storage())
+    return CityEnricher(OpenMeteoCityGeocoder(), get_cover_photo_provider(), get_image_fetcher(), get_media_storage(), async_session)
+
 def get_city_service(session: AsyncSession = Depends(get_session)) -> CityService:
-    return CityService(session, get_location_hooks(session))
+    return CityService(session, get_location_hooks(session), get_city_enricher(), get_media_storage())
 
 def get_country_service(session: AsyncSession = Depends(get_session)) -> CountryService:
-    return CountryService(session, get_location_hooks(session))
+    return CountryService(session, get_location_hooks(session), get_media_storage())
+
+def get_cover_service(session: AsyncSession = Depends(get_session)) -> CoverService:
+    return CoverService(session, get_media_storage(), get_cover_photo_provider(), get_image_fetcher())
 
 def get_travel_city_service(session: AsyncSession = Depends(get_session)) -> TravelCityService:
     return TravelCityService(session)
@@ -964,6 +998,7 @@ PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
 TravelPlaceServiceDep = Annotated[TravelPlaceService, Depends(get_travel_place_service)]
 CityServiceDep = Annotated[CityService, Depends(get_city_service)]
 CountryServiceDep = Annotated[CountryService, Depends(get_country_service)]
+CoverServiceDep = Annotated[CoverService, Depends(get_cover_service)]
 TravelCityServiceDep = Annotated[TravelCityService, Depends(get_travel_city_service)]
 TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
 VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]

@@ -774,6 +774,123 @@
       }
     },
     {
+      "name": "19a - Set The Trip's Photo Album",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Saved with its label', () => { pm.expect(j.photo_album_url).to.eql('https://photos.app.goo.gl/postmanAlbum'); pm.expect(j.photo_album_label).to.eql('Google Photos'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"photo_album_url\": \"https://photos.app.goo.gl/postmanAlbum\"\n}"
+        }
+      }
+    },
+    {
+      "name": "19b - A Photo Album That Is Not http (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"photo_album_url\": \"photos.app.goo.gl/postmanAlbum\"\n}"
+        }
+      }
+    },
+    {
+      "name": "19c - Clear The Photo Album",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cleared', () => { pm.expect(pm.response.json().photo_album_url).to.eql(null); pm.expect(pm.response.json().photo_album_label).to.eql(null); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"photo_album_url\": \"\"\n}"
+        }
+      }
+    },
+    {
       "name": "20 - List Tags",
       "event": [
         {
@@ -6011,6 +6128,153 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"destination_city_id\": {{travel_city_b_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "137a - Travel Cities Lists The Leg Ends",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const rows = pm.response.json();",
+              "const row = rows.find(r => r.id === Number(pm.environment.get('travel_city_b_id')));",
+              "pm.test('The destination city is listed with its trip', () => { pm.expect(row).to.be.an('object'); pm.expect(row.trips).to.be.at.least(1); pm.expect(row).to.have.property('days'); pm.expect(row).to.have.property('spend_eur'); pm.expect(row).to.have.property('last_visit'); pm.expect(row.photos_url).to.include('photos.google.com'); });",
+              "pm.test('Sorted by trips, most first', () => { for (let i = 1; i < rows.length; i++) pm.expect(rows[i - 1].trips).to.be.at.least(rows[i].trips); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?sort=trips&desc=true&limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "sort",
+              "value": "trips"
+            },
+            {
+              "key": "desc",
+              "value": "true"
+            },
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137b - Travel Countries",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const row = pm.response.json().find(r => r.id === Number(pm.environment.get('travel_country_id')));",
+              "pm.test('The country is listed', () => { pm.expect(row).to.be.an('object'); pm.expect(row.cities).to.be.at.least(1); pm.expect(row.trips).to.be.at.least(1); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/countries?limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137c - Travel Cities With A Bad Sort (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?sort=grade",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "sort",
+              "value": "grade"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137d - City Detail Has Days And Last Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Fields', () => { pm.expect(j).to.have.property('days'); pm.expect(j).to.have.property('last_visit'); pm.expect(j.trips[0]).to.have.property('photo_album_url'); pm.expect(j).to.have.property('has_cover'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_b_id}}"
+          ]
         }
       }
     },

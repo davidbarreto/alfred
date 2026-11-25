@@ -120,6 +120,7 @@ from app.api.routes.travel.cities import router as travel_cities_router
 from app.api.routes.location.cities import router as location_cities_router
 from app.api.routes.location.places import router as location_places_router
 from app.api.routes.location.countries import router as location_countries_router
+from app.api.routes.location.covers import router as location_covers_router
 from app.api.routes.travel.legs import router as travel_legs_router
 from app.api.routes.travel.places import router as travel_places_router
 from app.api.routes.travel.settings import router as travel_settings_router
@@ -279,6 +280,7 @@ app.include_router(travel_cities_router)
 app.include_router(location_cities_router)
 app.include_router(location_places_router)
 app.include_router(location_countries_router)
+app.include_router(location_covers_router)
 app.include_router(travel_links_router)
 app.include_router(travel_tags_router)
 app.include_router(travel_calendar_import_router)

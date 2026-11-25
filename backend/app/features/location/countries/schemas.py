@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
+
+from app.shared.utils.links import photos_search_url
 
 
 class CountryRef(BaseModel):
@@ -11,10 +13,29 @@ class CountryRef(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CountryRead(CountryRef):
+class CoverFields(BaseModel):
+    """A city's or country's cover photo: whether there is one (served by `GET .../cover`) and its credit."""
+
+    cover_path: str | None = Field(default=None, exclude=True)
+    cover_credit: str | None = None
+    cover_source_url: str | None = None
+
+    @computed_field
+    @property
+    def has_cover(self) -> bool:
+        return self.cover_path is not None
+
+
+class CountryRead(CoverFields, CountryRef):
     default_tag_names: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def photos_url(self) -> str:
+        """The user's Google Photos library searched by the country's name."""
+        return photos_search_url(self.name)
 
 
 class CountryUpdate(BaseModel):

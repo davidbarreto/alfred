@@ -35,6 +35,7 @@
           <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
           <button class="btn btn-xs btn-outline" id="generate-checklist" title="Create the template's tasks for this trip">Generate checklist</button>
           {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply default tags</button>{% endif %}
+          {% if trip.photo_album_url %}<a class="btn btn-xs btn-outline" id="trip-photos" href="{{ trip.photo_album_url }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-photo"></i> {{ trip.photo_album_label }}</a>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>
         </div>
@@ -81,6 +82,8 @@
             {% endif %}
             {% for note in notes %}<option value="{{ note.id }}" {% if note.id == trip.checklist_note_id %}selected{% endif %}>{{ note.title }}</option>{% endfor %}
           </select></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Photo album link (Google Photos, iCloud, Flickr...)</span>
+          <input name="photo_album_url" type="url" value="{{ trip.photo_album_url or '' }}" placeholder="https://" class="input input-sm input-bordered w-72"></label>
         <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes</span>
           <textarea name="notes" rows="3" class="textarea textarea-bordered w-full text-sm">{{ trip.notes or '' }}</textarea></label>
         <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Preferences</span>
@@ -151,16 +154,16 @@
       <h2 class="text-sm font-semibold text-gray-900">Cities</h2>
       {% if home_cities or stayed %}
       <div class="flex flex-wrap gap-2">
-        {% for c in home_cities %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100" title="Where this trip starts from{{ ' (set for this trip)' if trip.home and trip.home.from_trip }}"><i class="ti ti-home"></i> {{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
-        {% for c in stayed %}<a href="/travel/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">{{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
+        {% for c in home_cities %}<a href="/places/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-blue-50 text-blue-700 hover:bg-blue-100" title="Where this trip starts from{{ ' (set for this trip)' if trip.home and trip.home.from_trip }}"><i class="ti ti-home"></i> {{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
+        {% for c in stayed %}<a href="/places/cities/{{ c.city.id }}" class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">{{ c.city.country | country_flag_of }} {{ c.city.name }}</a>{% endfor %}
       </div>
       {% endif %}
       {% if passed %}
       <p class="text-xs text-gray-500">Passed through:
-        {% for c in passed %}<a href="/travel/cities/{{ c.city.id }}" class="hover:underline text-[#378ADD]">{{ c.city.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+        {% for c in passed %}<a href="/places/cities/{{ c.city.id }}" class="hover:underline text-[#378ADD]">{{ c.city.name }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
       {% endif %}
       {% if trip.unmatched_leg_ends %}
-      <p class="text-xs text-amber-700" id="unmatched-leg-ends"><i class="ti ti-alert-triangle"></i> {{ trip.unmatched_leg_ends }} leg end{{ '' if trip.unmatched_leg_ends == 1 else 's' }} {{ 'has' if trip.unmatched_leg_ends == 1 else 'have' }} no city: edit the leg to pick one, or create the city under <a class="underline" href="/travel/cities">Cities</a>.</p>
+      <p class="text-xs text-amber-700" id="unmatched-leg-ends"><i class="ti ti-alert-triangle"></i> {{ trip.unmatched_leg_ends }} leg end{{ '' if trip.unmatched_leg_ends == 1 else 's' }} {{ 'has' if trip.unmatched_leg_ends == 1 else 'have' }} no city: edit the leg to pick one, or create the city under <a class="underline" href="/places/cities">Places, Cities</a>.</p>
       {% endif %}
     </div>
   </div>
@@ -299,7 +302,7 @@
       <div class="detail-row action-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ stay.place.name }}<a href="/travel/cities/{{ stay.place.city.id }}" class="ml-1 text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id), 'stay', stay.id, stay.place.name, request.url.path) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
+          <p class="text-gray-900">{{ stay.place.name }}<a href="/places/cities/{{ stay.place.city.id }}" class="ml-1 text-xs text-gray-400 hover:underline">{{ stay.place.city.name }}</a> {{ cost_chip(entity_costs.stays.get(stay.id), 'stay', stay.id, stay.place.name, request.url.path) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
           {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
           <p class="text-xs space-x-3">
@@ -508,7 +511,7 @@ tripHomePicker.reset({{ (trip.home.city if trip.home_city_id and trip.home else 
 document.getElementById('edit-trip').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;
-  const body = collect(form, ['travelers', 'default_tag_names', 'notes', 'preferences'], { editing: true });
+  const body = collect(form, ['travelers', 'default_tag_names', 'notes', 'preferences', 'photo_album_url'], { editing: true });
   body.name = form.elements.name.value; body.start_date = form.elements.start_date.value; body.end_date = form.elements.end_date.value;
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
   body.checklist_note_id = form.elements.checklist_note_id.value ? Number(form.elements.checklist_note_id.value) : null;

@@ -1,5 +1,7 @@
-{# The Places section's tabs. Cities and countries still live under travel until they get their Places pages. #}
+{# The Places section's tabs. Needs `places_tab` ('places', 'cities' or 'countries'); the map tab comes with the map page. #}
+{% set tab = places_tab | default('places') %}
 <nav class="scroll-row gap-4 border-b border-gray-100 pb-2" aria-label="Places section">
-  <a href="/places" class="text-sm font-semibold text-gray-900" aria-current="page">Places</a>
-  <a href="/travel/cities" class="text-sm text-gray-500 hover:text-gray-800">Cities and countries</a>
+  {% for key, label, url in [('places', 'Places', '/places'), ('cities', 'Cities', '/places/cities'), ('countries', 'Countries', '/places/countries')] %}
+  <a href="{{ url }}" class="text-sm {{ 'font-semibold text-gray-900' if tab == key else 'text-gray-500 hover:text-gray-800' }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
 </nav>

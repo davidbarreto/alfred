@@ -13,6 +13,7 @@ class Trip(Base):
     __tablename__ = "trips"
     __table_args__ = (
         CheckConstraint("end_date >= start_date", name="ck_travel_trips_dates"),
+        CheckConstraint("photo_album_url ~* '^https?://'", name="ck_travel_trips_photo_album_url"),
         Index("ix_travel_trips_start_date", "start_date"),
         {"schema": "travel"},
     )
@@ -27,6 +28,8 @@ class Trip(Base):
         Integer, ForeignKey("organizer.notes.id", ondelete="SET NULL"), nullable=True
     )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # The trip's shared photo album (Google Photos, iCloud, Flickr, ...): only linked, never fetched.
+    photo_album_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Comma-separated *finance* tag names stamped on transactions dated within the trip.
     default_tag_names: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # This trip's own home and airport times. NULL = follow the travel settings (see `effective_home`).

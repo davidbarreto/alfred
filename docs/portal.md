@@ -36,6 +36,7 @@ Build pages from these classes instead of ad-hoc grids, so every page lines up t
 | `action-row` | A list row with text left and its buttons right; the buttons move to their own line when both do not fit. The text is the first child, the buttons the last |
 | `chart-box` | Fixed-height box for a Chart.js canvas (`chart-box-lg` for 14rem); the chart needs `maintainAspectRatio: false` |
 | `table-scroll` | Wrapper for a table that may be wider than its card; give the table a `min-w-[..]` |
+| `cover-box` (+ `cover-hero`, `cover-shade`, `cover-badge`, `cover-credit`, `cover-mosaic`) | A cover photo at a fixed ratio (16:9 cards; `cover-hero` is a full-width banner with a capped height), cropped with `object-fit: cover`, a gradient placeholder without an image, the title over a dark gradient (`cover-shade`), a corner badge and photo credit, or a 2x2 mosaic of covers. Load card images with `loading="lazy"` and a `?v=<updated_at>` cache key (city and country pages) |
 
 Rules that follow from it:
 
@@ -115,4 +116,4 @@ Feature pages keep a one-line summary and a link to `/settings#<namespace>`: `/p
 
 ## Pages
 
-dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities, places (`/places`, `/places/{id}`), settings (`/settings`). Feature-specific portal behaviour is documented in the module docs.
+dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities, places (`/places`, `/places/{id}`, `/places/cities`, `/places/countries` and their pages), settings (`/settings`). Feature-specific portal behaviour is documented in the module docs.

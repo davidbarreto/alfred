@@ -48,6 +48,7 @@
         <div class="card-body p-5 gap-0">
           <h2 class="text-sm font-semibold text-gray-900">{{ section.title }}</h2>
           <p class="text-xs text-gray-400">{{ section.description }}</p>
+          {% if section.note %}<p class="text-xs text-gray-600 mt-1">{{ section.note }}</p>{% endif %}
           <p data-section-error class="text-xs text-red-600 mt-2 {{ '' if section.load_error else 'hidden' }}">
             {%- if section.load_error %}Some of these settings could not be loaded right now.{% endif %}</p>
 

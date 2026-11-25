@@ -40,33 +40,17 @@
   </div>
 
   {% if settings %}
-  <details class="card bg-white">
-    <summary class="px-5 py-3 text-xs font-medium text-gray-600 cursor-pointer">Reminder settings</summary>
-    <div class="card-body p-5 pt-2">
-      <form id="travel-settings-form" class="flex flex-wrap items-end gap-3">
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Be at the airport this many minutes before departure</span>
-          <input name="airport_buffer_min" type="number" min="0" max="600" value="{{ settings.airport_buffer_min }}" class="input input-sm input-bordered w-28"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Minutes from home to the airport</span>
-          <input name="home_to_airport_min" type="number" min="0" max="600" value="{{ settings.home_to_airport_min }}" class="input input-sm input-bordered w-28"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Visits per day before a warning</span>
-          <input name="max_visits_per_day" type="number" min="1" max="20" value="{{ settings.max_visits_per_day }}" class="input input-sm input-bordered w-28"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Event length when a visit gets a calendar event (min)</span>
-          <input name="visit_duration_min" type="number" min="5" max="720" value="{{ settings.visit_duration_min }}" class="input input-sm input-bordered w-28"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Warn about unpaid legs and stays and missing booking references this many days before the trip (0 = never)</span>
-          <input name="unpaid_leg_days" type="number" min="0" max="365" value="{{ settings.unpaid_leg_days }}" class="input input-sm input-bordered w-28"></label>
-        <label class="flex items-center gap-2 pb-1 text-xs text-gray-600"><input type="checkbox" name="snooze_other_events" class="toggle toggle-sm" {{ 'checked' if settings.snooze_other_events }}>
-          Snooze reminders of other calendar events during a trip</label>
-        <div class="space-y-1"><span class="block text-xs text-gray-500">Home city (trips already started keep the one they had)</span>
-          <div class="flex items-center gap-1"><input name="home_city_text" placeholder="Pick a city" class="input input-sm input-bordered w-56"><input type="hidden" name="home_city_id"><button type="button" class="btn btn-xs btn-ghost" id="clear-home-city" title="No home city">clear</button></div></div>
-        <div class="space-y-1" id="travel-home-address"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
-          <p class="text-sm text-gray-700">{{ settings.home_address or 'Not set' }}
-            <a href="{{ '/locations/' ~ home.id if home else '/locations' }}" class="ml-1 text-xs text-[#378ADD] hover:underline">Edit on Locations</a></p></div>
-        <button type="submit" class="btn btn-sm btn-outline">Save</button>
-        <span id="travel-settings-msg" class="text-xs text-gray-500"></span>
-      </form>
-      <p class="text-xs text-gray-400 mt-3">Used for the "time to leave" reminder and the leave-home time on a trip whose first leg is a flight.</p>
+  <div class="card bg-white" id="travel-settings">
+    <div class="card-body p-4 action-row flex flex-row items-center gap-3">
+      <p class="text-xs text-gray-500">
+        <span class="font-medium text-gray-700">Travel settings:</span>
+        at the airport {{ settings.airport_buffer_min }} min before, {{ settings.home_to_airport_min }} min ride
+        · home city {{ settings.home_city.name if settings.home_city else 'not set' }}
+        {% if settings.snooze_other_events %}· other events snoozed during trips{% endif %}
+      </p>
+      <a href="/settings#travel" class="btn btn-xs btn-ghost gap-1 text-gray-600"><i class="ti ti-settings"></i>Settings</a>
     </div>
-  </details>
+  </div>
   {% endif %}
 
   <details class="card bg-white" id="checklist-card">
@@ -138,54 +122,7 @@
   </div>
 </div>
 
-<dialog id="city-dialog" class="modal">
-  <form method="dialog" class="modal-box max-w-sm space-y-3">
-    <h3 class="text-sm font-semibold">New city</h3>
-    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span><input name="name" required maxlength="100" class="input input-sm input-bordered w-full"></label>
-    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span><input name="country" required maxlength="100" class="input input-sm input-bordered w-full"><input type="hidden" name="country_code"></label>
-    <div class="flex items-center gap-3">
-      <button type="submit" class="btn btn-sm btn-outline">Create</button>
-      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
-      <span class="text-xs text-red-600 form-error"></span>
-    </div>
-  </form>
-</dialog>
-
-<script src="/static/js/airport-input.js"></script>
-<script src="/static/js/travel-city-picker.js"></script>
 <script>
-async function send(method, url, body) {
-  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, data };
-}
-const settingsForm = document.getElementById('travel-settings-form');
-let homePicker = null;
-if (settingsForm) {
-  homePicker = initCityPicker({
-    input: settingsForm.elements.home_city_text, idInput: settingsForm.elements.home_city_id,
-    clearButton: document.getElementById('clear-home-city'), terminalInput: settingsForm.elements.home_city_text,
-    newCity: initNewCityDialog({ dialog: document.getElementById('city-dialog'), send }),
-  });
-  homePicker.reset({{ (settings.home_city or none) | tojson }});
-}
-document.getElementById('travel-settings-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.target);
-  const message = document.getElementById('travel-settings-msg');
-  const res = await fetch('/travel/settings', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
-      max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), unpaid_leg_days: Number(form.get('unpaid_leg_days')), snooze_other_events: form.get('snooze_other_events') === 'on',
-      // Only a picked or cleared city is sent; the trips that have started keep the old one.
-      ...(homePicker.touched() ? { home_city_id: homePicker.value() } : {}),
-    }),
-  });
-  const data = await res.json().catch(() => ({}));
-  message.textContent = res.ok ? 'Saved.' : (data.error || 'Something went wrong.');
-});
-
 async function saveChecklistItem(anchor, name, offset) {
   const res = await fetch(`/travel/checklist-template/${anchor}/${name}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offset_days: offset }),

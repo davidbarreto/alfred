@@ -106,44 +106,15 @@
 
   {% if settings %}
   <div class="card bg-white" id="planning-settings">
-    <div class="card-body p-5 space-y-4">
-      <div>
-        <p class="text-sm font-semibold text-gray-900">Planning settings</p>
-        <p class="text-xs text-gray-400">What Claude is told when it plans. Leave a field empty to switch it off or use the default.</p>
-      </div>
-      <form id="settings-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Wake time</span>
-          <input name="wake_time" type="time" value="{{ settings.wake_time or '' }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Sleep time</span>
-          <input name="sleep_time" type="time" value="{{ settings.sleep_time or '' }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Work target per day (minutes)</span>
-          <input name="work_target_minutes" type="number" min="0" max="1440" value="{{ settings.work_target_minutes }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Workdays (comma-separated, e.g. mon, tue, wed, thu, fri)</span>
-          <input name="workdays" value="{{ settings.workdays | join(', ') }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Preferred work windows (comma-separated, e.g. 10:00-14:00)</span>
-          <input name="preferred_work_windows" value="{{ settings.preferred_work_windows | join(', ') }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Tag that counts as work time</span>
-          <input name="work_tag" value="{{ settings.work_tag }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Tag that marks an office day</span>
-          <input name="office_tag" value="{{ settings.office_tag }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Office days per week (empty = off)</span>
-          <input name="office_days_per_week" type="number" min="1" max="7" value="{{ settings.office_days_per_week or '' }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum minutes for an office day</span>
-          <input name="office_min_minutes" type="number" min="0" value="{{ '' if settings.office_min_minutes is none else settings.office_min_minutes }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Assumed travel, minutes one way, when nothing is saved (0 = off)</span>
-          <input name="default_travel_minutes" type="number" min="0" max="600" value="{{ settings.default_travel_minutes }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Walk instead of public transport if at most this many minutes longer</span>
-          <input name="walk_tolerance_minutes" type="number" min="0" max="120" value="{{ settings.walk_tolerance_minutes }}" class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1 md:col-span-2"><span class="block text-xs text-gray-500">Travel times, one per line: place, mode, minutes from home (office, metro, 50) or origin, place, mode, minutes (office, school, car, 20). Places are <a href="/locations" class="text-[#378ADD] hover:underline">locations</a>: a new name becomes one</span>
-          <textarea name="travel_times" rows="3" class="textarea textarea-bordered textarea-sm w-full">{% for t in settings.travel_times or [] %}{% if t.origin != "home" %}{{ t.origin }}, {% endif %}{{ t.place }}, {{ t.mode }}, {{ t.minutes }}
-{% endfor %}</textarea></label>
-        <label class="space-y-1 md:col-span-2"><span class="block text-xs text-gray-500">Conventions: standing rules every plan should follow (free text, max 2000 characters)</span>
-          <textarea name="conventions" rows="4" maxlength="2000" class="textarea textarea-bordered textarea-sm w-full">{{ settings.conventions or '' }}</textarea></label>
-        <div class="md:col-span-2 flex items-center gap-3">
-          <button type="submit" class="btn btn-sm btn-outline">Save</button>
-          <span id="settings-status" class="text-xs"></span>
-        </div>
-      </form>
+    <div class="card-body p-4 action-row flex flex-row items-center gap-3">
+      <p class="text-xs text-gray-500">
+        <span class="font-medium text-gray-700">Planning settings:</span>
+        {% if settings.wake_time or settings.sleep_time %}day {{ settings.wake_time or '?' }}–{{ settings.sleep_time or '?' }} · {% endif %}
+        work {{ settings.work_target_minutes }} min on {{ settings.workdays | join(', ') or 'no days' }}
+        {% if settings.office_days_per_week %}· office {{ settings.office_days_per_week }} day{{ '' if settings.office_days_per_week == 1 else 's' }}/week{% endif %}
+        {% if settings.conventions %}· conventions set{% endif %}
+      </p>
+      <a href="/settings#planning" class="btn btn-xs btn-ghost gap-1 text-gray-600"><i class="ti ti-settings"></i>Settings</a>
     </div>
   </div>
   {% endif %}
@@ -183,42 +154,6 @@ document.querySelectorAll('[data-plan-action]').forEach((button) => {
     }
     location.href = `/plan?date={{ day.isoformat() }}`;
   });
-});
-
-document.getElementById('settings-form')?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.target);
-  const text = (key) => (form.get(key) || '').trim() || null;
-  const number = (key) => (form.get(key) === '' ? null : Number(form.get(key)));
-  const windows = (form.get('preferred_work_windows') || '').split(',').map(w => w.trim()).filter(Boolean);
-  const workdays = (form.get('workdays') || '').split(',').map(d => d.trim()).filter(Boolean);
-  const body = {
-    wake_time: text('wake_time'), sleep_time: text('sleep_time'),
-    work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows, workdays,
-    work_tag: text('work_tag'), office_tag: text('office_tag'),
-    office_days_per_week: number('office_days_per_week'), office_min_minutes: number('office_min_minutes'),
-    default_travel_minutes: number('default_travel_minutes'), walk_tolerance_minutes: number('walk_tolerance_minutes'),
-    conventions: text('conventions'),
-    travel_times: (form.get('travel_times') || '').split('\n').map(l => l.trim()).filter(Boolean).map((line) => {
-      const parts = line.split(',').map(part => part.trim());
-      const [origin, place, mode, minutes] = parts.length === 4 ? parts : [null, ...parts];
-      return { ...(origin ? { origin } : {}), place, mode, minutes: Number(minutes) };
-    }),
-  };
-  const status = document.getElementById('settings-status');
-  status.className = 'text-xs text-gray-400';
-  status.textContent = 'Saving…';
-  const res = await fetch('/plan/settings', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    status.className = 'text-xs text-red-600';
-    status.textContent = data.error || 'Something went wrong.';
-    return;
-  }
-  status.className = 'text-xs text-[#639922]';
-  status.textContent = 'Saved';
 });
 </script>
 {% endblock %}

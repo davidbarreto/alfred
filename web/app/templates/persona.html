@@ -18,10 +18,8 @@
   <div class="card bg-white">
     <div class="card-body p-5">
       <form id="persona-form" class="space-y-4">
-        <label class="space-y-1 block">
-          <span class="block text-xs text-gray-500">Your name <span class="text-gray-400">(used in the chat and in the briefings; empty = "the user")</span></span>
-          <input name="user_name" maxlength="50" value="{{ settings.user_name or '' }}" class="input input-sm input-bordered w-full sm:w-72">
-        </label>
+        <p class="text-xs text-gray-500">Your name: <span class="text-gray-700">{{ settings.user_name or 'not set ("the user")' }}</span>
+          <a href="/settings#assistant" class="ml-1 text-[#378ADD] hover:underline">Change in Settings</a></p>
         <label class="space-y-1 block">
           <span class="block text-xs text-gray-500">Persona additions <span class="text-gray-400">(markdown, added after the basic persona below; where they disagree, these win)</span></span>
           <textarea name="persona_additions" rows="18" maxlength="20000"
@@ -56,7 +54,7 @@ document.getElementById('persona-form').addEventListener('submit', async (event)
   status.textContent = 'Saving…';
   const res = await fetch('/persona', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_name: data.get('user_name') || null, persona_additions: data.get('persona_additions') || null }),
+    body: JSON.stringify({ persona_additions: data.get('persona_additions') || null }),
   });
   const body = await res.json().catch(() => ({}));
   if (res.ok) { status.className = 'text-xs text-green-700'; status.textContent = 'Saved.'; }

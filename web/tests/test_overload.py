@@ -8,21 +8,6 @@ def _status(level="overloaded", overdue=7, urgent=5, streak_days=3):
     }
 
 
-_SETTINGS = {
-    "overload_overdue_threshold": 5, "overload_urgent_threshold": 4, "overload_max_listed": 5,
-    "overload_urgent_interval_hours": 4, "overdue_grace_hours_high": 0, "overdue_grace_hours_medium": 48,
-    "overdue_grace_hours_low": 168, "undated_escalation_days_high": 7, "undated_escalation_days_medium": 21,
-    "undated_escalation_days_low": 45, "urgency_reset_days": 7,
-    "catchup_tasks_per_day": 3, "catchup_stale_days": 30, "catchup_missed_habit_threshold": 3,
-}
-
-
-def _http_error(status_code, detail=None):
-    request = httpx.Request("PUT", "http://api/core/reminder-settings")
-    response = httpx.Response(status_code, request=request, json={"detail": detail} if detail else {})
-    return httpx.HTTPStatusError("error", request=request, response=response)
-
-
 class TestBanner:
     def test_overloaded_banner_shows_counts_and_streak(self, client, mock_api):
         mock_api["get"].return_value = _status()
@@ -102,66 +87,6 @@ class TestReset:
 
         assert resp.status_code == 422
         assert "HX-Refresh" not in resp.headers
-
-
-class TestSettingsForm:
-    def test_renders_current_values(self, client, mock_api):
-        mock_api["get"].return_value = _SETTINGS
-
-        resp = client.get("/overload/settings")
-
-        assert resp.status_code == 200
-        assert 'name="overload_max_listed" value="5"' in resp.text
-        assert 'name="overdue_grace_hours_low" value="168"' in resp.text
-        assert 'name="undated_escalation_days_medium" value="21"' in resp.text
-        assert 'name="catchup_tasks_per_day" value="3"' in resp.text
-        mock_api["get"].assert_awaited_once_with("/core/reminder-settings")
-
-    def test_load_failure_shows_a_message(self, client, mock_api):
-        mock_api["get"].side_effect = httpx.ConnectError("down")
-
-        resp = client.get("/overload/settings")
-
-        assert "Could not load reminder settings" in resp.text
-
-    def test_save_sends_integers_and_confirms(self, client, mock_api):
-        mock_api["put"].return_value = {**_SETTINGS, "overload_max_listed": 8}
-
-        resp = client.post("/overload/settings", data={**{k: str(v) for k, v in _SETTINGS.items()}, "overload_max_listed": "8"})
-
-        assert resp.status_code == 200
-        assert "Saved." in resp.text
-        assert 'name="overload_max_listed" value="8"' in resp.text
-        path = mock_api["put"].await_args.args[0]
-        payload = mock_api["put"].await_args.kwargs["json"]
-        assert path == "/core/reminder-settings"
-        assert payload["overload_max_listed"] == 8
-        assert all(isinstance(v, int) for v in payload.values())
-
-    def test_blank_fields_are_not_sent(self, client, mock_api):
-        mock_api["put"].return_value = _SETTINGS
-
-        client.post("/overload/settings", data={"overload_max_listed": "6", "overload_urgent_threshold": ""})
-
-        assert mock_api["put"].await_args.kwargs["json"] == {"overload_max_listed": 6}
-
-    def test_non_numeric_value_is_rejected_without_calling_the_backend(self, client, mock_api):
-        mock_api["get"].return_value = _SETTINGS
-
-        resp = client.post("/overload/settings", data={"overload_max_listed": "lots"})
-
-        assert "must be a whole number" in resp.text
-        mock_api["put"].assert_not_awaited()
-
-    def test_backend_validation_error_is_shown(self, client, mock_api):
-        mock_api["put"].side_effect = _http_error(422)
-        mock_api["get"].return_value = _SETTINGS
-
-        resp = client.post("/overload/settings", data={"overload_max_listed": "0"})
-
-        assert resp.status_code == 200
-        assert "Invalid value" in resp.text
-        assert "Saved." not in resp.text
 
 
 def _plan(spread=True, drop=True, habits=True):

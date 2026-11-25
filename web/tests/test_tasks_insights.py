@@ -269,9 +269,10 @@ class TestOverloadSection:
         assert resp.status_code == 200
         assert "Overload" in resp.text
 
-    def test_loads_the_settings_form_lazily(self, client, mock_api):
+    def test_links_to_the_reminder_settings(self, client, mock_api):
         mock_api["get"].side_effect = _fake_get()
 
         resp = client.get("/tasks/insights")
 
-        assert 'hx-get="/overload/settings"' in resp.text
+        assert 'href="/settings#reminders"' in resp.text
+        assert "/overload/settings" not in resp.text

@@ -59,8 +59,13 @@ def _groups(rows: list[dict]) -> list[dict]:
     return groups
 
 
-def build_sections(catalog: dict, values_by_path: dict[str, dict | None]) -> list[dict]:
-    """One section per namespace. Rows whose GET failed are left out and the section says so."""
+def build_sections(
+    catalog: dict, values_by_path: dict[str, dict | None], notes: dict[str, str] | None = None
+) -> list[dict]:
+    """One section per namespace. Rows whose GET failed are left out and the section says so.
+
+    `notes` adds a line of context under a section's description (finance: the current cycle).
+    """
     sections = []
     for namespace in catalog["namespaces"]:
         rows, failed = [], False
@@ -74,12 +79,21 @@ def build_sections(catalog: dict, values_by_path: dict[str, dict | None]) -> lis
             "namespace": namespace["namespace"],
             "title": namespace["title"],
             "description": namespace["description"],
+            "note": (notes or {}).get(namespace["namespace"]),
             "links": namespace.get("links", []),
             "groups": _groups(rows),
             "count": len(rows),
             "load_error": failed,
         })
     return sections
+
+
+def section_notes(current_period: dict | None) -> dict[str, str]:
+    """Context lines for sections, from data the route fetched next to the values."""
+    notes = {}
+    if current_period and current_period.get("year_month"):
+        notes["finance"] = f"Current cycle: {current_period['year_month']}"
+    return notes
 
 
 def unregistered_preview(catalog: dict) -> tuple[list[dict], int]:

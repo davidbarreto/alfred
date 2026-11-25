@@ -10,7 +10,8 @@ class TestPersonaPage:
         resp = client.get("/persona")
 
         assert resp.status_code == 200
-        assert 'value="Sam"' in resp.text
+        assert "Your name: <span" in resp.text and 'href="/settings#assistant"' in resp.text
+        assert 'name="user_name"' not in resp.text
         assert "Sam plays the cello.</textarea>" in resp.text
         assert "Basic persona." in resp.text
         mock_api["get"].assert_awaited_once_with("/core/assistant-settings", params=None)

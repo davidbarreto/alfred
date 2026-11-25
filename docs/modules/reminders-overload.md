@@ -34,7 +34,7 @@ Escalation depends on priority.
 
 ## Settings
 
-Live in `core.settings` as `reminders.<field>` (`ReminderSettingsService`, `GET/PUT /core/reminder-settings`, form under Overload in `/tasks/insights`). Defaults are `DEFAULTS` in `settings_service.py`; `urgency_reset_days` and `undated_task_snooze_days` (how long a snooze without a number of days lasts: `POST /organizer/tasks/{id}/snooze`, `/tasksnooze`) fall back to their env vars `URGENCY_RESET_DAYS` and `UNDATED_TASK_SNOOZE_DAYS`.
+Live in `core.settings` as `reminders.<field>` (`ReminderSettingsService`, `GET/PUT /core/reminder-settings`, edited on `/settings#reminders`; the Overload section of `/tasks/insights` links there). Defaults are `DEFAULTS` in `settings_service.py`; `urgency_reset_days` and `undated_task_snooze_days` (how long a snooze without a number of days lasts: `POST /organizer/tasks/{id}/snooze`, `/tasksnooze`) fall back to their env vars `URGENCY_RESET_DAYS` and `UNDATED_TASK_SNOOZE_DAYS`.
 
 ## Travel reminders
 

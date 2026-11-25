@@ -368,33 +368,25 @@ class TestWrites:
 
 
 class TestSettings:
-    def test_page_shows_the_reminder_settings(self, client, mock_api):
+    def test_page_summarises_the_settings_with_a_link(self, client, mock_api):
+        settings = {"airport_buffer_min": 150, "home_to_airport_min": 40, "snooze_other_events": True,
+                    "home_city": {"id": 4, "name": "Alpha", "country": _country()}}
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": settings})
+        html = client.get("/travel").text
+        card = html.split('id="travel-settings"')[1]
+        assert "at the airport 150 min before, 40 min ride" in card and "home city Alpha" in card
+        assert "other events snoozed" in card and 'href="/settings#travel"' in card
+
+    def test_settings_form_moved_to_the_settings_page(self, client, mock_api):
         _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40}})
         html = client.get("/travel").text
-        assert 'name="airport_buffer_min"' in html and 'value="150"' in html and 'value="40"' in html
-
-    def test_home_address_is_read_only_and_links_to_the_home_location(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/organizer/locations": [{"id": 7, "kind": "home"}],
-                          "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40, "home_address": "Rua Exemplo 1"}})
-        html = client.get("/travel").text
-        assert 'name="home_address"' not in html
-        assert "Rua Exemplo 1" in html and 'href="/locations/7"' in html and "Edit on Locations" in html
-
-    def test_home_address_links_to_locations_when_there_is_no_home(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40}})
-        html = client.get("/travel").text
-        assert "Not set" in html and 'href="/locations" class="ml-1' in html
+        assert 'name="airport_buffer_min"' not in html and 'id="travel-settings-form"' not in html
+        assert 'id="city-dialog"' not in html and "home city not set" in html
 
     def test_page_works_when_settings_are_unavailable(self, client, mock_api):
         _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": httpx.ConnectError("down")})
         resp = client.get("/travel")
-        assert resp.status_code == 200 and 'name="airport_buffer_min"' not in resp.text
-
-    def test_put_is_proxied(self, client, mock_api):
-        mock_api["put"].return_value = {"airport_buffer_min": 90, "home_to_airport_min": 40}
-        resp = client.put("/travel/settings", json={"airport_buffer_min": 90})
-        assert resp.status_code == 200
-        mock_api["put"].assert_awaited_once_with("/travel/settings", json={"airport_buffer_min": 90})
+        assert resp.status_code == 200 and 'id="travel-settings"' not in resp.text
 
 
 def test_timeline_shows_the_leave_home_item(client, mock_api):
@@ -1605,15 +1597,6 @@ class TestSpendAndHome:
         html = client.get("/travel/1").text
         assert 'name="home_city_text"' in html and 'name="home_city_id"' in html and 'id="clear-trip-home-city"' in html
         assert 'Home for this trip: address' in html
-
-    def test_settings_form_has_the_home_city_picker(self, client, mock_api):
-        settings = {"airport_buffer_min": 120, "home_to_airport_min": 45, "home_address": None, "max_visits_per_day": 4,
-                    "visit_duration_min": 90, "unpaid_leg_days": 30, "snooze_other_events": False,
-                    "home_city_id": 4, "home_city": {"id": 4, "name": "Alpha", "country": _country()}}
-        _route(mock_api, {"/travel/settings": settings, "/travel/trips": [], "/travel/tags": []})
-        html = client.get("/travel").text
-        assert 'name="home_city_text"' in html and 'id="clear-home-city"' in html and 'id="city-dialog"' in html
-        assert '"name": "Alpha"' in html
 
 
 def _lk(id, url, title=None):

@@ -144,13 +144,21 @@ class TestPlanPage:
         assert "every saved version is archived" in text
         assert 'id="plan-versions"' in text and "version=1" in text
 
-    def test_settings_form_is_prefilled(self, client, mock_api):
-        mock_api["get"].side_effect = _routes([], [], _settings())
+    def test_settings_are_summarised_with_a_link(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([], [], _settings(conventions="Home by 14:00"))
         text = client.get("/plan").text
-        assert 'name="wake_time" type="time" value="07:30"' in text
-        assert 'value="10:00-14:00"' in text
-        assert 'name="workdays" value="mon, tue, wed, thu, fri"' in text
-        assert 'name="office_days_per_week" type="number" min="1" max="7" value="4"' in text
+        card = text.split('id="planning-settings"')[1]
+        assert "day 07:30–?" in card and "work 480 min on mon, tue, wed, thu, fri" in card
+        assert "office 4 days/week" in card and "conventions set" in card
+        assert 'href="/settings#planning"' in card
+
+    def test_settings_form_moved_to_the_settings_page(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([], [], _settings(travel_times=[
+            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
+        ]))
+        text = client.get("/plan").text
+        assert 'id="settings-form"' not in text
+        assert 'name="travel_times"' not in text and 'name="conventions"' not in text
 
     def test_unreachable_backend_still_renders(self, client, mock_api):
         mock_api["get"].side_effect = httpx.ConnectError("down")
@@ -201,25 +209,6 @@ class TestMissedBlocks:
         mock_api["post"].assert_awaited_once_with("/planning/saved/3/blocks/1/done")
         mock_api["delete"].assert_awaited_once_with("/planning/saved/3/blocks/1/done")
 
-    def test_settings_form_has_a_conventions_field(self, client, mock_api):
-        mock_api["get"].side_effect = _routes([], [], _settings(conventions="Home by 14:00"))
-        text = client.get("/plan?date=2026-10-21").text
-        assert 'name="conventions"' in text and "Home by 14:00" in text
-
-    def test_settings_form_lists_travel_times_one_per_line(self, client, mock_api):
-        mock_api["get"].side_effect = _routes([], [], _settings(travel_times=[
-            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
-            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
-        ]))
-        text = client.get("/plan?date=2026-10-21").text
-        assert 'name="travel_times"' in text and "office, metro, 50\noffice, school, car, 20" in text
-
-    def test_settings_form_has_the_travel_defaults(self, client, mock_api):
-        mock_api["get"].side_effect = _routes([], [], _settings(default_travel_minutes=0, walk_tolerance_minutes=15))
-        text = client.get("/plan?date=2026-10-21").text
-        assert 'name="default_travel_minutes" type="number" min="0" max="600" value="0"' in text
-        assert 'name="walk_tolerance_minutes" type="number" min="0" max="120" value="15"' in text
-
     def test_work_and_transport_get_their_own_icons(self, client, mock_api):
         items = [
             {"start": "2026-10-21T08:00:00+01:00", "end": "2026-10-21T08:30:00+01:00", "kind": "transport", "ref_id": None, "title": "Commute", "note": None},
@@ -269,20 +258,3 @@ class TestPlanVersionWrites:
         )
         resp = client.post("/plan/saved/3/archive")
         assert resp.status_code == 409 and resp.json() == {"error": "This version is already archived"}
-
-
-class TestSettingsWrite:
-    def test_put_is_forwarded(self, client, mock_api):
-        mock_api["put"].return_value = _settings()
-        body = {"wake_time": "07:30", "office_days_per_week": None, "preferred_work_windows": []}
-        resp = client.put("/plan/settings", json=body)
-        assert resp.status_code == 200
-        mock_api["put"].assert_awaited_once_with("/planning/settings", json=body)
-
-    def test_validation_message_is_relayed(self, client, mock_api):
-        request = httpx.Request("PUT", "http://api/x")
-        mock_api["put"].side_effect = httpx.HTTPStatusError(
-            "bad", request=request, response=httpx.Response(422, json={"detail": "bad time"}, request=request)
-        )
-        resp = client.put("/plan/settings", json={"wake_time": "7am"})
-        assert resp.status_code == 422 and resp.json() == {"error": "bad time"}

@@ -1342,42 +1342,10 @@ async def set_budget_targets(request: Request):
 
 # --- Settings ---
 
-async def _finance_settings_context(error: Optional[str] = None) -> dict:
-    settings, current_period = {}, {}
-    try:
-        settings = await api.get("/finance/settings")
-    except httpx.HTTPError:
-        pass
-    try:
-        current_period = await api.get("/finance/budgets/current-period")
-    except httpx.HTTPError:
-        pass
-    return {
-        "cycle_start_day": settings.get("cycle_start_day", 1),
-        "current_year_month": current_period.get("year_month"),
-        "error": error,
-    }
-
-
-@router.get("/settings", response_class=HTMLResponse)
-async def finance_settings_page(request: Request):
-    context = await _finance_settings_context()
-    return templates.TemplateResponse(request, "finance_settings.html", context)
-
-
-@router.post("/settings", response_class=HTMLResponse)
-async def update_finance_settings(
-    request: Request,
-    cycle_start_day: Annotated[str, Form()],
-):
-    try:
-        await api.put("/finance/settings", json={"cycle_start_day": int(cycle_start_day)})
-    except (httpx.HTTPError, ValueError):
-        context = await _finance_settings_context(error="Failed to save settings.")
-        return templates.TemplateResponse(request, "finance_settings.html", context)
-
-    context = await _finance_settings_context()
-    return templates.TemplateResponse(request, "finance_settings.html", context)
+@router.get("/settings")
+async def finance_settings_page():
+    """The cycle start day moved to the settings page."""
+    return RedirectResponse("/settings#finance", status_code=302)
 
 
 # --- Recurring transactions ---

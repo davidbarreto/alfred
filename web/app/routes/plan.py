@@ -115,6 +115,3 @@ async def delete_plan(plan_id: int):
     return await forward(api.delete(f"/planning/saved/{plan_id}"), "Could not delete this version.")
 
 
-@router.put("/settings")
-async def update_settings(request: Request):
-    return await forward(api.put("/planning/settings", json=await request.json()), "Could not save the planning settings.")

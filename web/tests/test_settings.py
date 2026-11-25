@@ -59,6 +59,8 @@ def _get(values=None, catalog=CATALOG):
     values = VALUES if values is None else values
 
     async def get(path, params=None):
+        if path == "/finance/budgets/current-period":
+            return {"year_month": "2026-11"}
         if path == "/core/settings/catalog":
             if catalog is None:
                 raise httpx.ConnectError("down")
@@ -149,6 +151,10 @@ class TestSettingsPage:
         assert "hidden" not in row.group(1)
         row = re.search(r'data-key="travel.home_to_airport_min".*?data-modified class="([^"]*)"', page.text, re.S)
         assert "hidden" in row.group(1)
+
+    def test_finance_shows_the_current_cycle(self, page):
+        finance = page.text[page.text.index('id="finance"'):page.text.index('id="study"')]
+        assert "Current cycle: 2026-11" in finance
 
     def test_personal_persona_text_is_never_rendered(self, page):
         assert "SECRET-PERSONA-TEXT" not in page.text

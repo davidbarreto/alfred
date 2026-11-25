@@ -17,7 +17,7 @@ Todo items with status, priority, deadline, tags and recurrence, stored in Notio
 - Priority and **urgency**: overdue or long-undated tasks escalate to URGENT automatically; **snooze** silences the no-deadline reminder for one task.
 - Recurring tasks (RRULE-style): completing one advances the deadline to the next cycle; completion history is kept (`/organizer/tasks/{id}/completions`). A misclicked completion can be undone: `DELETE /organizer/tasks/{id}/completions/{completion_id}` removes it and, when it was the latest one, moves the deadline back a cycle (urgency is not restored). The portal offers an **Undo** link on a row that is done for the cycle and a remove button per entry in the History modal.
 - Planning fields: `estimate_minutes`, `context`, `available_from` (Alfred-only, never sent to Notion).
-- **Portal:** `/tasks` (list with history), `/tasks/insights` (charts, overload section and settings).
+- **Portal:** `/tasks` (list with history), `/tasks/insights` (charts and overload section; its settings are on `/settings#reminders`).
 - **Commands:** `task` add / list / search / pending / update / complete / cancel / snooze / delete.
 - **API:** `/organizer/tasks`.
 - See [modules/reminders-overload.md](modules/reminders-overload.md) for reminders, escalation, overload and the catch-up plan.
@@ -37,7 +37,7 @@ Events mirrored from and written through to Google Calendar (OAuth, one-time con
 - Create, list (default next 14 days), update, delete; all-day and timed events, locations, recurrence.
 - **Recurring events:** skip or restore one occurrence, move one occurrence to another time, end a series. Skips are Alfred-only; moves and ends are written to Google ([modules/planning.md](modules/planning.md#skipping-moving-and-ending-recurring-events)).
 - Planning fields per event: `availability`, `presence`, `travel_minutes`, attached routine, and the location it happens at (one of the user's [locations](modules/locations.md#events-at-a-location): the day plan returns the travel times between them and the client plans the trips).
-- **Notifications:** events notify at configurable offsets per profile (`/organizer/calendar-notification-settings`); the n8n workflow polls `/organizer/calendar-notifications/due`.
+- **Notifications:** events notify at configurable offsets per profile (`/organizer/calendar-notification-settings`, edited on `/settings#organizer`); the n8n workflow polls `/organizer/calendar-notifications/due`.
 - **Sync:** `POST /integration/google-calendar/sync` pulls changes from Google, including moved instances.
 - **Portal:** `/calendar` and `/calendar/day/{date}` (day view with skip/move/end actions). Public holidays of the first `HOLIDAY_CALENDARS` calendar get an amber day cell with the holiday's name, and a banner in the day view.
 - **Commands:** `event` add / list / update / skip / unskip / reschedule / unreschedule / endseries / delete. **API:** `/organizer/calendar-events`; `/organizer/holidays?from=&to=` (the first calendar's holidays, at most 366 days).
@@ -47,7 +47,7 @@ Events mirrored from and written through to Google Calendar (OAuth, one-time con
 Write-through cache of Google Contacts with full CRUD.
 
 - List, search, get, create, update, delete; relationship filter (family, relative, friend, other).
-- **Birthdays:** notifications and the morning briefing use contact birthdays; timing is set in `/organizer/contact-birthday-settings`.
+- **Birthdays:** notifications and the morning briefing use contact birthdays; timing is set in `/organizer/contact-birthday-settings` (edited on `/settings#organizer`).
 - **Portal:** `/contacts`. **Commands:** `contact` list / search / get. **API:** `/organizer/contacts`; sync with `POST /integration/google-contacts/sync`.
 
 ## Shopping and wishlist
@@ -83,7 +83,7 @@ Alfred's long-term knowledge about you and the short-term context it carries.
 ## Chat and assistant
 
 - **Chat:** `/chat` in the portal, or Telegram. Messages are classified into a command (embedding match, LLM fallback) and executed; anything else is a normal conversation with the LLM.
-- **Persona:** the chat prompt is the committed basic persona (`backend/app/assistant/persona.md`, nothing personal), then the user's name and persona additions from `/persona` (`assistant.*` in `core.settings`). The briefings use the name too.
+- **Persona:** the chat prompt is the committed basic persona (`backend/app/assistant/persona.md`, nothing personal), then the user's name (`/settings#assistant`) and persona additions (`/persona`), both `assistant.*` in `core.settings`. The briefings use the name too.
 - **Voice:** Telegram voice messages are transcribed (`POST /core/transcription`) and handled like text.
 - **Commands:** `assistant focus` ("what should I focus on now"), `reminder set`, `weather current`, `recall search`, `help`.
 - **Sessions and messages:** every conversation is logged (`/core/sessions`, `/core/messages`, `/core/command-executions`); browse them in the portal under `/insights`.
@@ -92,6 +92,7 @@ Alfred's long-term knowledge about you and the short-term context it carries.
 
 - **Morning briefing:** weather, today's tasks and events, upcoming birthdays and holidays, language review due, formatted by the LLM. Evening digest is the counterpart. Both run from n8n crons; `/briefing` in the portal shows today's and the history (`/briefing/history`).
 - **Watchers:** monitors of type static HTML page, JavaScript-rendered HTML page, or API, checked on a schedule by an n8n workflow; results are stored as executions and alerts. Manage them in the portal at `/watcher`; commands `watcher` list / get and `alert` list; API `/watcher/configs`, `/watcher/alerts`, `/watcher/executions`.
+- **Settings:** every runtime setting on one portal page, `/settings`: a section per area (planning, reminders, travel, finance, study, organizer notifications, assistant), search, a "modified" badge against the default, and one Save with a review of the changes ([portal.md](portal.md#settings-page)). Built from `GET /core/settings/catalog`.
 - **Pause:** a global switch that stops reminders and briefings and freezes urgency escalation; resuming restores it ([configuration.md](configuration.md#2-settings-you-change-at-runtime)).
 
 ## Finance
@@ -105,7 +106,7 @@ Multi-account, multi-currency ledger with budgets, reports and statement imports
 - **Reports:** spending by category, over time, income vs expense, net worth, averages, top categories, balance forecast, coverage of days with data.
 - **Statement import:** upload a file, preview, review, commit. Each supported bank or card format has its own parser (CSV and PDF; list in `app/features/finance/imports/registry.py`). Rules (auto/suggest, amount match) and an embedding + LLM ladder categorise rows; dedup uses the statement's running balance where it has one. The account balance follows the statement too: the latest running balance (checking accounts; the last row of a day wins) or, for the ActivoBank card, the PDF's own "Saldo em Dívida" (stored as the batch's `closing_balance`) plus everything posted after that statement's period end; accounts with neither fall back to summing imported rows dated on/after `opening_balance_date`. Tags can be set for the whole import (`tag_names`) and per row (`tag_names` on each commit row, merged with the batch tags). The original file is kept ([docker.md](docker.md#statement-files-statement_data_dir)).
 - **Spending by tag:** the analytics endpoints `report`, `income-report`, `average`, `by-category`, `over-time` and `top` under `/finance/transactions` accept `tags` (repeatable) and `tags_mode=all|any` (default AND). `by-account`, `income-vs-expense-over-time`, `net-worth` and `forecast` ignore them. The insights page has a "By tag" section (tag picker + match all/any) showing the total, a category breakdown, spend over time and the biggest expenses for the chosen tags; the category charts above it stay unscoped.
-- **Portal:** `/finance` and sub-pages for transactions, accounts, budgets, import (with rules and batches), installments, coverage, insights and settings.
+- **Portal:** `/finance` and sub-pages for transactions, accounts, budgets, import (with rules and batches), installments, coverage and insights. The cycle start day is on `/settings#finance`.
 - **Commands:** `finance` (transaction add / list / update / delete, budget set, spending report / average / top, budget status, balance forecast), `account`, `category`, `recurring` (read-only). **API:** `/finance/*`.
 
 ## Language learning

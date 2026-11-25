@@ -293,14 +293,13 @@
       </div>
     </div>
 
-    <details class="card bg-white">
-      <summary class="card-body p-4 cursor-pointer text-sm text-gray-700 flex flex-row items-center gap-2">
-        <i class="ti ti-adjustments"></i>Reminder settings
-      </summary>
-      <div class="px-4 pb-4">
-        <div id="overload-settings" hx-get="/overload/settings" hx-trigger="load" hx-swap="innerHTML"></div>
+    <div class="card bg-white" id="overload-settings">
+      <div class="card-body p-4 action-row flex flex-row items-center gap-3">
+        <p class="text-sm text-gray-700 flex items-center gap-2"><i class="ti ti-adjustments"></i>Reminder settings
+          <span class="text-xs text-gray-400">thresholds, escalation, catch-up and urgency reset</span></p>
+        <a href="/settings#reminders" class="btn btn-xs btn-ghost gap-1 text-gray-600"><i class="ti ti-settings"></i>Settings</a>
       </div>
-    </details>
+    </div>
   </section>
 
   <!-- ── Pauses ("Take a breath") ─────────────────────────────── -->

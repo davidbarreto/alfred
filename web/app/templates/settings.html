@@ -105,6 +105,53 @@
 </div>
 
 {% if sections %}
+<div id="save-bar" class="save-bar hidden" role="region" aria-label="Unsaved changes">
+  <span class="text-xs text-gray-600 mr-auto"><span id="change-count">0</span> unsaved <span id="change-noun">changes</span></span>
+  <span id="save-bar-error" class="text-xs text-red-600"></span>
+  <button type="button" id="discard-changes" class="btn btn-sm btn-ghost">Discard</button>
+  <button type="button" id="review-changes" class="btn btn-sm btn-primary">Review and save</button>
+</div>
+
+<dialog id="review-dialog" class="modal">
+  <div class="modal-box max-w-lg space-y-3">
+    <h3 class="text-sm font-semibold">Save these changes?</h3>
+    <div id="review-list" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
+    <p id="review-error" class="text-xs text-red-600"></p>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <button type="button" id="confirm-save" class="btn btn-sm btn-primary">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="json-dialog" class="modal">
+  <div class="modal-box max-w-lg space-y-3">
+    <h3 class="text-sm font-semibold" id="json-title">Edit JSON</h3>
+    <p class="text-xs text-gray-500">An object whose values are lists of offsets, like <code>"normal": ["1h", "10m", "0"]</code>.</p>
+    <textarea id="json-text" rows="12" spellcheck="false" class="textarea textarea-bordered textarea-sm w-full font-mono text-xs" aria-label="JSON value"></textarea>
+    <p id="json-error" class="text-xs text-red-600"></p>
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <button type="button" id="json-apply" class="btn btn-sm btn-outline">Apply</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="city-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-sm space-y-3">
+    <h3 class="text-sm font-semibold">New city</h3>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Name</span><input name="name" required maxlength="100" class="input input-sm input-bordered w-full"></label>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Country</span><input name="country" required maxlength="100" class="input input-sm input-bordered w-full"><input type="hidden" name="country_code"></label>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Create</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+</dialog>
+
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
 <script src="/static/js/settings-page.js"></script>
 {% endif %}
 {% endblock %}

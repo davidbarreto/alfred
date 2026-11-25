@@ -304,6 +304,29 @@ html[data-theme="dark"] {
   }
 }
 
+/* A settings row edited but not saved yet. */
+[data-setting-row][data-changed] { box-shadow: inset 3px 0 0 #378ADD; padding-left: 0.75rem; }
+
+/* Bar pinned to the bottom of the viewport while a page has unsaved changes (settings). */
+.save-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.625rem var(--page-pad) calc(0.625rem + env(safe-area-inset-bottom));
+  background: var(--surface-card);
+  border-top: 1px solid var(--surface-border);
+}
+@media (min-width: 768px) {
+  .save-bar { left: 208px; /* the sidebar width in base.html */ }
+}
+
 /* ── Calendar ────────────────────────────────────────────────────────── */
 
 /* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */

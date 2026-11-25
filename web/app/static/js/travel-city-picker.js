@@ -2,13 +2,14 @@
  * City picker for the leg form: one input per leg end, backed by the saved cities (/travel/cities/search).
  * The hidden id is only sent when the user picked or cleared a city (`touched`); otherwise the backend matches the
  * terminal text on its own. The last option, "New city…", opens the new-city dialog (initNewCityDialog).
+ * `onChange(city)`, when given, runs after the user picks or clears a city.
  */
 (function () {
   const NEW = { isNew: true };
 
   const labelOf = (city) => (city ? `${city.name}, ${city.country.name}` : "");
 
-  function initCityPicker({ input, idInput, clearButton, terminalInput, newCity }) {
+  function initCityPicker({ input, idInput, clearButton, terminalInput, newCity, onChange }) {
     let label = "";
     let touched = false;
 
@@ -17,6 +18,7 @@
       label = labelOf(city);
       input.value = label;
       touched = byUser;
+      if (byUser && onChange) onChange(city);
     }
 
     window.attachDropdown({

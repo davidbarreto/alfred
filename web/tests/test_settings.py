@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.shared.settings_page import build_sections, read_paths, unregistered_preview
+from app.shared.settings_page import SaveError, build_sections, plan_writes, read_paths, unregistered_preview
 
 # Generated from the backend's build_catalog (defaults only, no stored values but two unregistered keys).
 CATALOG = json.loads((Path(__file__).parent / "fixtures" / "settings_catalog.json").read_text())
@@ -198,3 +198,122 @@ class TestStoredPage:
 
         assert "See all 8" in html and 'href="/settings/stored"' in html
         assert "travel.checklist.k5" not in html
+
+
+class TestPlanWrites:
+    def test_fields_sharing_a_path_go_in_one_body(self):
+        plan = plan_writes(CATALOG, {"travel": {"airport_buffer_min": 90, "snooze_other_events": False}})
+        assert plan == {"travel": [("/travel/settings", {"airport_buffer_min": 90, "snooze_other_events": False})]}
+
+    def test_cascades_split_into_one_put_per_entry(self):
+        plan = plan_writes(CATALOG, {"organizer": {
+            "profiles": {"light": ["10m", "0"], "aware": ["2d"]},
+            "relationships": {"friend": ["3d"]},
+        }})
+        assert sorted(plan["organizer"]) == sorted([
+            ("/organizer/calendar-notification-settings/light", {"offsets": ["10m", "0"]}),
+            ("/organizer/calendar-notification-settings/aware", {"offsets": ["2d"]}),
+            ("/organizer/contact-birthday-settings/friend", {"offsets": ["3d"]}),
+        ])
+
+    @pytest.mark.parametrize("changes", [
+        {"planning": {"travel_times": []}},
+        {"travel": {"home_address": "x"}},
+        {"assistant": {"persona_additions": "x"}},
+        {"nope": {"x": 1}},
+        {"organizer": {"profiles": {"nromal": ["1h"]}}},
+        {"organizer": {"profiles": ["1h"]}},
+    ])
+    def test_refuses_what_the_page_never_sends(self, changes):
+        with pytest.raises(SaveError):
+            plan_writes(CATALOG, changes)
+
+
+class TestSave:
+    def _put(self, fail=None):
+        async def put(path, json=None):
+            if fail and path.startswith(fail):
+                response = httpx.Response(422, json={"detail": "airport_buffer_min: at most 600"})
+                raise httpx.HTTPStatusError("422", request=httpx.Request("PUT", path), response=response)
+            if path.startswith("/organizer/calendar-notification-settings/"):
+                return {"profiles": {**VALUES["/organizer/calendar-notification-settings"]["profiles"],
+                                     path.rsplit("/", 1)[1]: json["offsets"]}}
+            return {**VALUES[path], **json}
+        return put
+
+    def test_sends_only_changed_fields_and_returns_saved_values(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        resp = client.post("/settings/save", json={"planning": {"wake_time": "06:30"}, "study": {"max_active_plans": 4}})
+
+        assert resp.status_code == 200
+        assert {c.args[0]: c.kwargs["json"] for c in mock_api["put"].await_args_list} == {
+            "/planning/settings": {"wake_time": "06:30"}, "/study/settings": {"max_active_plans": 4},
+        }
+        body = resp.json()
+        assert body["planning"]["ok"] is True and body["planning"]["values"]["wake_time"] == "06:30"
+        assert body["study"]["values"] == {"max_active_plans": 4}
+
+    def test_planning_never_sends_travel_times(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        client.post("/settings/save", json={"planning": {"work_tag": "job"}})
+
+        assert "travel_times" not in mock_api["put"].await_args.kwargs["json"]
+
+    def test_cascades_become_per_profile_puts(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        resp = client.post("/settings/save", json={"organizer": {"profiles": {"light": ["5m"], "aware": ["2d"]}}})
+
+        assert sorted(c.args[0] for c in mock_api["put"].await_args_list) == [
+            "/organizer/calendar-notification-settings/aware", "/organizer/calendar-notification-settings/light",
+        ]
+        assert resp.json()["organizer"]["values"]["profiles"]["aware"] == ["2d"]
+
+    def test_a_failing_namespace_leaves_the_others_saved(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put(fail="/travel")
+
+        body = client.post("/settings/save", json={
+            "travel": {"airport_buffer_min": 999}, "finance": {"cycle_start_day": 25},
+        }).json()
+
+        assert body["travel"] == {"ok": False, "error": "airport_buffer_min: at most 600"}
+        assert body["finance"] == {"ok": True, "values": {"cycle_start_day": 25}}
+
+    def test_city_change_returns_the_city(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        body = client.post("/settings/save", json={"travel": {"home_city_id": None}}).json()
+
+        assert body["travel"]["values"]["home_city_id"] is None
+        assert "home_city" in body["travel"]["values"]
+        assert "home_address" in body["travel"]["values"]
+
+    def test_never_returns_persona_additions(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+        mock_api["put"].side_effect = self._put()
+
+        body = client.post("/settings/save", json={"assistant": {"user_name": "Alex"}}).json()
+
+        assert body["assistant"]["values"] == {"user_name": "Alex"}
+
+    def test_refused_change_is_a_422(self, client, mock_api):
+        mock_api["get"].side_effect = _get()
+
+        resp = client.post("/settings/save", json={"planning": {"travel_times": []}})
+
+        assert resp.status_code == 422
+        mock_api["put"].assert_not_awaited()
+
+    def test_malformed_body_is_a_422(self, client, mock_api):
+        assert client.post("/settings/save", json={"planning": 3}).status_code == 422
+
+    def test_catalog_down_is_a_502(self, client, mock_api):
+        mock_api["get"].side_effect = _get(catalog=None)
+        assert client.post("/settings/save", json={"study": {"max_active_plans": 2}}).status_code == 502

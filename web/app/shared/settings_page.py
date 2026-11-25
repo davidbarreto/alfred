@@ -10,6 +10,8 @@ UNREGISTERED_PREVIEW = 5
 
 # Rows that show no value: the value is edited, and may be personal, on another page.
 _VALUELESS_WIDGETS = {"link"}
+# Rows the page never sends.
+READ_ONLY_WIDGETS = {"readonly", "link"}
 
 
 def read_paths(catalog: dict) -> list[str]:
@@ -83,3 +85,53 @@ def build_sections(catalog: dict, values_by_path: dict[str, dict | None]) -> lis
 def unregistered_preview(catalog: dict) -> tuple[list[dict], int]:
     rows = catalog.get("unregistered", [])
     return rows[:UNREGISTERED_PREVIEW], len(rows)
+
+
+class SaveError(ValueError):
+    """A change the page should never send (unknown or read-only field)."""
+
+
+def plan_writes(catalog: dict, changes: dict[str, dict[str, Any]]) -> dict[str, list[tuple[str, dict]]]:
+    """The PUTs for a save, per namespace: `[(path, body), ...]`.
+
+    Fields that share a write path go in one body. A field whose write path has an `{entry}` placeholder (the
+    cascades) is a JSON object of changed entries, each written with its own PUT as `{entry_field: value}`.
+    """
+    by_key = {(ns["namespace"], f["field"]): f for ns in catalog["namespaces"] for f in ns["fields"]}
+    plan: dict[str, list[tuple[str, dict]]] = {}
+    for namespace, fields in changes.items():
+        bodies: dict[str, dict] = {}
+        writes: list[tuple[str, dict]] = []
+        for name, value in fields.items():
+            field = by_key.get((namespace, name))
+            if field is None or field["widget"] in READ_ONLY_WIDGETS:
+                raise SaveError(f"{namespace}.{name} cannot be saved here")
+            path = field["write_path"]
+            if "{entry}" in path:
+                if not isinstance(value, dict):
+                    raise SaveError(f"{field['key']} must be a JSON object")
+                options = field.get("options")
+                for entry, entry_value in value.items():
+                    if options and entry not in options:
+                        raise SaveError(f"{field['key']}: unknown entry {entry!r}")
+                    writes.append((path.replace("{entry}", entry), {field["entry_field"]: entry_value}))
+            else:
+                bodies.setdefault(path, {})[name] = value
+        plan[namespace] = [*bodies.items(), *writes]
+    return plan
+
+
+def saved_values(catalog: dict, namespace: str, responses: list[dict]) -> dict[str, Any]:
+    """The namespace's fields as the PUT responses returned them (each response is the full read model)."""
+    fields = next((ns["fields"] for ns in catalog["namespaces"] if ns["namespace"] == namespace), [])
+    merged: dict[str, Any] = {}
+    for response in responses:
+        merged.update(response or {})
+    values: dict[str, Any] = {}
+    for field in fields:
+        if field["field"] not in merged or field["widget"] in _VALUELESS_WIDGETS:
+            continue
+        values[field["field"]] = merged[field["field"]]
+        if field["widget"] == "city":
+            values[field["field"].removesuffix("_id")] = merged.get(field["field"].removesuffix("_id"))
+    return values

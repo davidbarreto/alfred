@@ -92,7 +92,7 @@ $COMPOSE exec -T api python scripts/backfill_task_planning_fields.py            
 $COMPOSE exec -T api python scripts/backfill_task_planning_fields.py --apply    # writes (confirm first)
 ```
 
-Each script's docstring lists its arguments. Example write-up: [modules/planning.md](modules/planning.md#backfill).
+The API image sets `PYTHONPATH=/app`, so `import app` works from `scripts/` (the smoke test checks it). Outside the image, run them from `backend/` with `PYTHONPATH=. python scripts/<name>.py`. Each script's docstring lists its arguments. Example write-up: [modules/planning.md](modules/planning.md#backfill).
 
 `backfill_city_covers.py` (once, after the deploy that adds `MEDIA_DATA_DIR`): coordinates for the cities, ISO codes for the countries that lack one, and a Wikipedia cover per city, only where missing. The dry run lists what each city lacks without calling anything; `--apply` fetches and writes (`--no-covers` skips the photos). Then check a few city pages: a wrong photo (homonyms) is fixed there with *Find photo*, an upload or *Remove cover*. Details: [modules/places.md](modules/places.md#cities-and-countries).
 

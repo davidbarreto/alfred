@@ -116,6 +116,13 @@ jobs:
             echo '--- after:'; alembic current
           "
 
+      - name: One-off scripts run as documented
+        working-directory: infra
+        run: |
+          # docs/operations.md runs scripts as `python scripts/<name>.py`: `app` must import from there (PYTHONPATH in
+          # the image). --help stops before any database or network call.
+          docker compose -f docker-compose.ci.yml exec -T api python scripts/backfill_city_covers.py --help
+
       - name: Real-database tests (pytest -m db)
         working-directory: infra
         run: |

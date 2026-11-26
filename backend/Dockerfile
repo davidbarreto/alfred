@@ -4,6 +4,8 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+# `python scripts/<name>.py` puts scripts/ on the path, not /app: without this, `import app` fails in every script.
+ENV PYTHONPATH=/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \

@@ -34,11 +34,11 @@ def _trips(n, album_every=0):
 
 def _travel_city(**kw):
     return {**_city(), "home": False, "grade": 4.5, "grade_count": 2, "place_count": 7, "places": [], "trips": _trips(7),
-            "days": 12, "last_visit": "2026-03-01", "costs": _costs(), **kw}
+            "nights": 12, "stay_count": 6, "leg_count": 0, "last_visit": "2026-03-01", "costs": _costs(), **kw}
 
 
 def _travel_country(**kw):
-    return {**_country(), "grade": 3.5, "grade_count": 2, "costs": _costs(), "days": 20, "last_visit": "2026-03-01",
+    return {**_country(), "grade": 3.5, "grade_count": 2, "costs": _costs(), "nights": 20, "stay_count": 9, "last_visit": "2026-03-01",
             "cities": [{"id": i, "name": f"City {i}", "place_count": i, "grade": None} for i in range(1, 8)],
             "trips": _trips(1), **kw}
 
@@ -83,6 +83,12 @@ class TestHelpers:
                   [(1, "e", True), (2, "a", True), (3, "b", False), (4, "c", True), (5, "d", True), (6, "f", True)]]
         assert mosaic(cities) == [2, 4, 5, 1]
 
+    def test_sort_cards_by_nights(self):
+        cards = [{"item": {"name": "Alpha"}, "travel": {"nights": 2}}, {"item": {"name": "Beta"}, "travel": {"nights": 5}},
+                 {"item": {"name": "Gamma"}, "travel": None}]
+        assert [c["item"]["name"] for c in sort_cards(cards, "nights")] == ["Beta", "Alpha", "Gamma"]
+        assert cities_filters({"sort": "nights"})["sort"] == "nights"
+
     def test_sort_cards_by_spend(self):
         cards = [{"item": {"name": "Alpha"}, "travel": {"spend_eur": "20.00"}},
                  {"item": {"name": "Beta"}, "travel": None},
@@ -94,24 +100,24 @@ class TestCitiesList:
     def test_cards_with_cover_home_badge_and_travel_line(self, client, mock_api):
         _route(mock_api, {
             "/location/cities": [_city(4, "Alpha", has_cover=True), _city(5, "Home Town")],
-            "/travel/cities": [{"id": 4, "name": "Alpha", "trips": 3, "days": 12, "last_visit": "2026-03-01"}],
+            "/travel/cities": [{"id": 4, "name": "Alpha", "trips": 3, "nights": 12, "last_visit": "2026-03-01"}],
             "/location/places": _home(5), "/location/countries": [_country()],
         })
         html = client.get("/places/cities").text
         assert 'href="/places/cities/4"' in html and 'src="/places/cities/4/cover?v=' in html
-        assert "3 trips · 12 days · last Mar 2026" in html
+        assert "3 trips · 12 nights · last Mar 2026" in html
         assert html.count("ti-home") >= 1 and "8 places" in html
         assert 'aria-current="page">Cities' in html and "Add city" in html
 
     def test_card_line_shows_spend_and_leaves_out_zero_figures(self, client, mock_api):
         _route(mock_api, {
             "/location/cities": [_city(4, "Alpha"), _city(6, "Beta")],
-            "/travel/cities": [{"id": 4, "trips": 3, "days": 8, "spend_eur": "1240.40", "last_visit": "2026-08-01"},
-                               {"id": 6, "trips": 1, "days": 0, "spend_eur": "0.00", "last_visit": "2026-08-01"}],
+            "/travel/cities": [{"id": 4, "trips": 3, "nights": 8, "spend_eur": "1240.40", "last_visit": "2026-08-01"},
+                               {"id": 6, "trips": 1, "nights": 0, "spend_eur": "0.00", "last_visit": "2026-08-01"}],
             "/location/places": _home(99), "/location/countries": [_country()],
         })
         html = client.get("/places/cities?sort=spend").text
-        assert "3 trips · 8 days · 1,240 € · last Aug 2026" in html and "1 trip · last Aug 2026" in html
+        assert "3 trips · 8 nights · 1,240 € · last Aug 2026" in html and "1 trip · last Aug 2026" in html
         assert html.index('id="city-4"') < html.index('id="city-6"') and '<option value="spend" selected>' in html
 
     def test_cards_are_a_grid(self, client, mock_api):
@@ -147,7 +153,7 @@ class TestCityPage:
             "/location/cities/4": _city(has_cover=True, cover_credit="Photo: A. Author, CC BY-SA 4.0, via Wikimedia Commons",
                                         cover_source_url="https://commons.wikimedia.org/wiki/File:A.jpg", latitude=38.7, longitude=-9.1,
                                         default_tag_names="alpha"),
-            "/travel/cities/4/links": [], "/travel/cities/4": _travel_city(trips=_trips(7, album_every=1)),
+            "/travel/cities/4/links": [], "/travel/cities/4/legs": [], "/travel/cities/4": _travel_city(trips=_trips(7, album_every=1)),
             "/location/countries": [_country()], "/location/places": _home(99),
         }
         routes.update(kw)
@@ -163,8 +169,14 @@ class TestCityPage:
         # the Map card: fitted to the city, its CSV, place rows that pulse their pin
         assert 'data-map-data="/places/map/data?city_id=4" data-fit="city"' in html
         assert 'href="/places/cities/4/map.csv"' in html and 'data-map-place="1"' in html and "Food and drink" in html
-        # stat-row: trips, days, places, grade, spend
+        # stat-row: trips, nights, places, grade, spend, each linking to its source
         assert ">7<" in html and ">12<" in html and ">8<" in html and "4.5" in html and "100.00 €" in html
+        assert '<a href="/places/cities/4/trips" class="card bg-white hover:shadow-md transition-shadow" id="stat-trips">' in html
+        assert '<a href="/places/cities/4/stays" class="card bg-white hover:shadow-md transition-shadow" id="stat-nights">' in html
+        assert '<a href="/places?view=all&city_id=4" class="card' in html
+        assert '<a href="/places?view=visited&city_id=4&min_grade=1" class="card' in html
+        assert '<a href="/travel/charges?scope=city&id=4&part=overall&name=Alpha" class="card' in html
+        assert 'id="city-legs"' not in html
         # every list card is capped at 5
         assert html.count('href="/places/') >= 5 and 'href="/places?view=all&city_id=4"' in html and "See all 8 places" in html
         assert 'href="/places/cities/4/trips"' in html and "See all 7 trips" in html
@@ -172,8 +184,28 @@ class TestCityPage:
         assert 'data-owner-kind="city" data-owner-id="4"' in html and "38.7, -9.1" in html
         assert "scope=city&id=4&part=tagged" in html
 
+    def test_zero_nights_still_shows_a_tile_on_a_travel_city(self, client, mock_api):
+        self._routes(mock_api, **{"/travel/cities/4": _travel_city(nights=0, stay_count=0)})
+        html = client.get("/places/cities/4").text
+        assert 'id="stat-nights"><div class="card-body p-4"><p class="text-xs text-gray-400">Nights</p><p class="text-2xl font-semibold text-gray-900 mt-1">0<' in html
+
+    def test_legs_card_caps_at_five_and_links_to_trip_and_page(self, client, mock_api):
+        legs = [{"id": i, "trip_id": 2, "trip_name": "Road trip", "mode": "car", "origin": "Hometown", "destination": "Alpha",
+                 "origin_city": None, "destination_city": None, "departs_local": "2026-08-21T09:00:00",
+                 "arrives_local": "2026-08-21T15:00:00"} for i in range(1, 6)]
+        seen = {}
+
+        def leg_rows(params):
+            seen.update(params)
+            return legs
+        self._routes(mock_api, **{"/travel/cities/4/legs": leg_rows, "/travel/cities/4": _travel_city(leg_count=9)})
+        html = client.get("/places/cities/4").text
+        assert seen == {"limit": 5} and 'id="city-legs"' in html and html.count('id="leg-') == 5
+        assert "Hometown → Alpha" in html and "car · 21 Aug 2026" in html and 'href="/travel/2">Road trip' in html
+        assert 'href="/places/cities/4/legs"' in html and "See all 9 legs" in html
+
     def test_home_city_puts_places_first_and_hides_an_empty_trips_card(self, client, mock_api):
-        self._routes(mock_api, **{"/location/places": _home(4), "/travel/cities/4": _travel_city(trips=[], days=0)})
+        self._routes(mock_api, **{"/location/places": _home(4), "/travel/cities/4": _travel_city(trips=[], nights=0, stay_count=0)})
         html = client.get("/places/cities/4").text
         assert 'id="city-home"' in html and 'id="city-trips"' not in html and 'id="city-places"' in html
 
@@ -199,24 +231,76 @@ class TestCityPage:
         assert response.status_code == 302 and response.headers["location"] == "/travel?status=all&city=Alpha"
 
 
+def _stay_row(id, city_id=4, trip_id=2):
+    return {"id": id, "trip_id": trip_id, "trip_name": "Road trip" if trip_id else None, "place_id": 30 + id,
+            "place_name": f"Hotel {id}", "place_kind": "hotel", "city": {"id": city_id, "name": "Alpha", "country": {"id": 2, "name": "Examplia", "code": "EX"}},
+            "check_in_local": "2026-08-23T15:00:00", "check_out_local": "2026-08-26T10:00:00", "nights": 3}
+
+
+class TestStaysAndLegsPages:
+    def test_city_stays_page_links_to_hotel_and_trip_and_pages(self, client, mock_api):
+        seen = {}
+
+        def stays(params):
+            seen.update(params)
+            return [_stay_row(i) for i in range(1, 22)] if params["offset"] == 0 else []
+        _route(mock_api, {"/location/cities/4": _city(), "/travel/cities/4/stays": stays, "/travel/cities/4": _travel_city(stay_count=30)})
+        html = client.get("/places/cities/4/stays").text
+        assert seen == {"limit": 21, "offset": 0} and html.count('id="stay-') == 20 and "Stays in Alpha" in html and ">30<" in html
+        assert 'href="/places/31"' in html and 'href="/travel/2">Road trip' in html and "23 Aug 2026 → 26 Aug 2026 · 3 nights" in html
+        assert 'hx-get="/places/cities/4/stays/list?offset=20"' in html and 'href="/places/cities/4"' in html
+        assert 'href="/places/cities/4">Alpha' not in html  # one city: no city column
+
+    def test_country_stays_show_the_city_and_a_stay_without_trip(self, client, mock_api):
+        _route(mock_api, {"/location/countries/2": _country(), "/travel/countries/2/stays": [_stay_row(1, trip_id=None)],
+                          "/travel/countries/2": _travel_country()})
+        html = client.get("/places/countries/2/stays").text
+        assert "Stays in Examplia" in html and 'href="/places/cities/4">Alpha' in html and "No trip" in html
+
+    def test_legs_page_and_partial(self, client, mock_api):
+        legs = [{"id": 1, "trip_id": 2, "trip_name": "Road trip", "mode": "flight", "origin": "Hometown", "destination": "Alpha",
+                 "origin_city": None, "destination_city": None, "departs_local": "2026-08-21T09:00:00", "arrives_local": "2026-08-21T11:00:00"}]
+        _route(mock_api, {"/location/cities/4": _city(), "/travel/cities/4/legs": legs, "/travel/cities/4": _travel_city(leg_count=1)})
+        html = client.get("/places/cities/4/legs").text
+        assert "Legs to and from Alpha" in html and "flight · 21 Aug 2026" in html
+        partial = client.get("/places/cities/4/legs/list?offset=20").text
+        assert "<html" not in partial and "Previous" in partial and 'hx-get="/places/cities/4/legs/list?offset=0"' in partial
+
+    def test_unknown_owner_is_404_and_travel_down_says_so(self, client, mock_api):
+        _route(mock_api, {"/location/cities/9": httpx.HTTPStatusError("404", request=httpx.Request("GET", "x"), response=httpx.Response(404)),
+                          "/travel/cities/9": None, "/travel/cities/9/stays": None})
+        assert client.get("/places/cities/9/stays").status_code == 404
+        _route(mock_api, {"/location/cities/4": _city(), "/travel/cities/4/stays": httpx.ConnectError("down"),
+                          "/travel/cities/4": httpx.ConnectError("down")})
+        assert "Travel is unavailable" in client.get("/places/cities/4/stays").text
+
+
 class TestCountries:
     def test_list_with_mosaic_and_flag_placeholder(self, client, mock_api):
         _route(mock_api, {
             "/location/countries": [_country(), _country(3, "Otherland", "OL"), _country(5, "Coverland", None, has_cover=True)],
             "/location/cities": [_city(4, "Alpha", has_cover=True), _city(6, "Beta")],
-            "/travel/countries": [{"id": 2, "trips": 3, "days": 20}],
+            "/travel/countries": [{"id": 2, "trips": 3, "nights": 20}],
         })
         html = client.get("/places/countries").text
-        assert "2 cities · 3 trips · 20 days" in html and "cover-mosaic-1" in html and 'src="/places/cities/4/cover"' in html
+        assert "2 cities · 3 trips · 20 nights" in html and "cover-mosaic-1" in html and 'src="/places/cities/4/cover"' in html
         assert 'src="/places/countries/5/cover?v=' in html and "🇴🇱" in html
         assert 'aria-current="page">Countries' in html
+
+    def test_country_page_numbers_link_to_their_lists(self, client, mock_api):
+        _route(mock_api, {"/location/countries/2": _country(), "/travel/countries/2/links": [], "/travel/countries/2": _travel_country(),
+                          "/location/cities": [_city()]})
+        html = client.get("/places/countries/2").text
+        assert '<a href="/places/cities?country_id=2" class="card' in html and '<a href="/places/countries/2/trips" class="card' in html
+        assert '<a href="/places/countries/2/stays" class="card' in html and ">20<" in html
+        assert '<a href="/travel/charges?scope=country&id=2&part=overall&name=Examplia" class="card' in html
 
     def test_sort_by_spend_keeps_the_sort_when_paging(self, client, mock_api):
         countries = [_country(i, f"Country {i:02d}", None) for i in range(1, 27)]
         _route(mock_api, {"/location/countries": countries, "/location/cities": [],
-                          "/travel/countries": [{"id": 26, "trips": 1, "days": 2, "spend_eur": "50.00", "last_visit": None}]})
+                          "/travel/countries": [{"id": 26, "trips": 1, "nights": 2, "spend_eur": "50.00", "last_visit": None}]})
         html = client.get("/places/countries?sort=spend").text
-        assert html.index('id="country-26"') < html.index('id="country-1"') and "1 trip · 2 days · 50 €" in html
+        assert html.index('id="country-26"') < html.index('id="country-1"') and "1 trip · 2 nights · 50 €" in html
         assert 'href="/places/countries?sort=spend&offset=24"' in html and '<div class="card-grid"' in html
 
     def test_search(self, client, mock_api):

@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,12 +7,15 @@ from app.features.location.cities.repository import CityRepository
 from app.features.location.countries.repository import CountryRepository
 from app.features.location.places.repository import PlaceRepository
 from app.features.travel.cities.repository import TravelCityRepository
-from app.features.location.cities.schemas import CityFilters
+from app.features.location.cities.schemas import CityFilters, CityRef
 from app.features.travel.cities.schemas import (
     CityDetail,
     CityPlace,
     CountryCity,
     CountryDetail,
+    LocationLeg,
+    LocationPage,
+    LocationStay,
     LocationTrip,
     TravelCityRow,
     TravelCountryRow,
@@ -20,6 +23,7 @@ from app.features.travel.cities.schemas import (
     TravelLocationRow,
 )
 from app.features.travel.trips.tables import Trip
+from app.features.travel.zones import to_local
 from app.shared.utils.timezone import local_today
 from app.features.travel.default_tags import parse_default_tag_names
 from app.features.travel.places.repository import TravelPlaceRepository
@@ -40,9 +44,24 @@ def _mean(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 2) if values else None
 
 
-def days_so_far(trips: list, today: date) -> int:
-    """Days of the trips that have started, each counted up to today."""
-    return sum((min(t.end_date, today) - t.start_date).days + 1 for t in trips if t.start_date <= today)
+def stay_nights(check_in_at: datetime, check_out_at: datetime, zone: str, today: date) -> set[date]:
+    """The local dates a stay has covered so far: from its check-in date up to, not including, its check-out date,
+    none after today (a stay that has not begun has none)."""
+    start = to_local(check_in_at, zone).date()
+    end = min(to_local(check_out_at, zone).date(), today + timedelta(days=1))
+    return {start + timedelta(days=i) for i in range((end - start).days)}
+
+
+def nights_by_city(spans: list[tuple[int, datetime, datetime, str]], today: date) -> dict[int, set[date]]:
+    """City id -> the distinct dates of its stays so far (overlapping stays count once)."""
+    found: dict[int, set[date]] = {}
+    for city_id, check_in_at, check_out_at, zone in spans:
+        found.setdefault(city_id, set()).update(stay_nights(check_in_at, check_out_at, zone, today))
+    return found
+
+
+def _union(nights: dict[int, set[date]], city_ids: list[int]) -> int:
+    return len(set().union(*(nights.get(i, set()) for i in city_ids)))
 
 
 def last_visit(trips: list, local: date | None, today: date) -> date | None:
@@ -152,10 +171,12 @@ class TravelCityService:
         trip_rows = await self._repo.get_trips_of_cities([city_id])
         today = local_today()
         local = (await self._repo.get_last_local_visits([city_id], today)).get(city_id)
+        nights = nights_by_city(await self._repo.get_stay_spans([city_id]), today)
         return CityDetail.model_validate(city).model_copy(update=dict(
             grade=means.get(city_id), grade_count=len([p for p in ids if p in grades]), place_count=len(ids),
             places=places, trips=[LocationTrip.model_validate(t) for t in trip_rows],
-            days=days_so_far(trip_rows, today), last_visit=last_visit(trip_rows, local, today),
+            nights=_union(nights, [city_id]), last_visit=last_visit(trip_rows, local, today),
+            stay_count=await self._repo.count_stays([city_id]), leg_count=await self._repo.count_leg_ends(city_id),
             home=await is_home_city(self._places, city_id),
             costs=await self._costs(ids, [parse_default_tag_names(city.default_tag_names)]),
         ))
@@ -169,13 +190,14 @@ class TravelCityService:
         trip_rows = await self._repo.get_trips_of_cities([c.id for c in cities])
         today = local_today()
         locals_ = (await self._repo.get_last_local_visits([c.id for c in cities], today)).values()
+        nights = nights_by_city(await self._repo.get_stay_spans([c.id for c in cities]), today)
         trips = [LocationTrip.model_validate(t) for t in trip_rows]
         tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
         costs = await self._costs([p for ids in place_ids.values() for p in ids], tag_groups)
         return CountryDetail.model_validate(country).model_copy(update=dict(
             costs=costs, grade=_mean(list(means.values())), grade_count=len(means),
             cities=[CountryCity(id=c.id, name=c.name, place_count=len(place_ids[c.id]), grade=means.get(c.id)) for c in cities],
-            trips=trips, days=days_so_far(trip_rows, today),
+            trips=trips, nights=_union(nights, [c.id for c in cities]), stay_count=await self._repo.count_stays([c.id for c in cities]),
             last_visit=last_visit(trip_rows, max(locals_, default=None), today),
         ))
 
@@ -190,19 +212,20 @@ class TravelCityService:
         return found
 
     async def list_cities(self, filters: TravelLocationFilters) -> list[TravelCityRow]:
-        """Cities with travel data (a stay, a visit, a leg end or a link), with their trips, days and spend."""
+        """Cities with travel data (a stay, a visit, a leg end or a link), with their trips, nights and spend."""
         ids = await self._repo.get_travel_city_ids()
         cities = [c for c in await self._cities.get_cities(CityFilters(country_id=filters.country_id)) if c.id in ids]
         city_ids = [c.id for c in cities]
         today = local_today()
         trips, locals_ = await self._trips_by_city(city_ids), await self._repo.get_last_local_visits(city_ids, today)
+        nights = nights_by_city(await self._repo.get_stay_spans(city_ids), today)
         place_ids = await self._repo.get_place_ids_by_city(city_ids)
         rows = []
         for city in cities:
             costs = await self._costs(place_ids[city.id], [parse_default_tag_names(city.default_tag_names)])
             rows.append(TravelCityRow(
                 id=city.id, name=city.name, country=city.country, trips=len(trips[city.id]),
-                days=days_so_far(trips[city.id], today), spend_eur=costs.overall.total_eur,
+                nights=_union(nights, [city.id]), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(trips[city.id], locals_.get(city.id), today),
             ))
         logger.debug("Travel cities listed: count=%d", len(rows))
@@ -218,6 +241,7 @@ class TravelCityService:
         today = local_today()
         ids = [c.id for c in travel_cities]
         trips, locals_ = await self._trips_by_city(ids), await self._repo.get_last_local_visits(ids, today)
+        nights = nights_by_city(await self._repo.get_stay_spans(ids), today)
         place_ids = await self._repo.get_place_ids_by_city([c.id for c in all_cities])
         rows = []
         for country in countries:
@@ -228,8 +252,52 @@ class TravelCityService:
             local = max((locals_[c.id] for c in cities if c.id in locals_), default=None)
             rows.append(TravelCountryRow(
                 id=country.id, name=country.name, code=country.code, cities=len([c for c in cities if c.id in city_ids]),
-                trips=len(country_trips), days=days_so_far(country_trips, today), spend_eur=costs.overall.total_eur,
+                trips=len(country_trips), nights=_union(nights, [c.id for c in cities]), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(country_trips, local, today),
             ))
         logger.debug("Travel countries listed: count=%d", len(rows))
         return sort_rows(rows, filters)
+
+    # ---- stays and legs pages -------------------------------------------------
+
+    async def list_city_stays(self, city_id: int, page: LocationPage) -> list[LocationStay] | None:
+        if await self._cities.get_city(city_id) is None:
+            return None
+        return await self._stays([city_id], page)
+
+    async def list_country_stays(self, country_id: int, page: LocationPage) -> list[LocationStay] | None:
+        if await self._countries.get_country(country_id) is None:
+            return None
+        return await self._stays([c.id for c in await self._cities.get_country_cities(country_id)], page)
+
+    async def _stays(self, city_ids: list[int], page: LocationPage) -> list[LocationStay]:
+        stays = await self._repo.get_stays(city_ids, page.limit, page.offset)
+        names = await self._repo.get_trip_names({s.trip_id for s in stays if s.trip_id is not None})
+        rows = []
+        for stay in stays:
+            check_in, check_out = to_local(stay.check_in_at, stay.timezone), to_local(stay.check_out_at, stay.timezone)
+            rows.append(LocationStay(
+                id=stay.id, trip_id=stay.trip_id, trip_name=names.get(stay.trip_id), place_id=stay.place_id,
+                place_name=stay.place.name, place_kind=stay.place.kind, city=CityRef.model_validate(stay.place.city),
+                check_in_local=check_in, check_out_local=check_out, nights=max((check_out.date() - check_in.date()).days, 0),
+            ))
+        logger.debug("Location stays listed: count=%d", len(rows))
+        return rows
+
+    async def list_city_legs(self, city_id: int, page: LocationPage) -> list[LocationLeg] | None:
+        """Legs that start or end in the city, newest first."""
+        if await self._cities.get_city(city_id) is None:
+            return None
+        legs = await self._repo.get_legs(city_id, page.limit, page.offset)
+        names = await self._repo.get_trip_names({leg.trip_id for leg in legs})
+        logger.debug("City legs listed: city_id=%d count=%d", city_id, len(legs))
+        return [
+            LocationLeg(
+                id=leg.id, trip_id=leg.trip_id, trip_name=names.get(leg.trip_id), mode=leg.mode, origin=leg.origin,
+                destination=leg.destination,
+                origin_city=CityRef.model_validate(leg.origin_city) if leg.origin_city else None,
+                destination_city=CityRef.model_validate(leg.destination_city) if leg.destination_city else None,
+                departs_local=to_local(leg.departs_at, leg.departs_tz), arrives_local=to_local(leg.arrives_at, leg.arrives_tz),
+            )
+            for leg in legs
+        ]

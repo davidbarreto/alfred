@@ -22,9 +22,9 @@
   <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">The map is unavailable right now.</p></div></div>
   {% else %}
   <div class="stat-row" id="map-stats">
-    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.countries }}</p></div></div>
-    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.cities }}</p></div></div>
-    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Of the world's countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.share }}%</p></div></div>
+    <a href="/places/countries" class="card bg-white hover:shadow-md transition-shadow"><div class="card-body p-4"><p class="text-xs text-gray-400">Countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.countries }}</p></div></a>
+    <a href="/places/cities" class="card bg-white hover:shadow-md transition-shadow"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.cities }}</p></div></a>
+    <a href="/places/countries" class="card bg-white hover:shadow-md transition-shadow"><div class="card-body p-4"><p class="text-xs text-gray-400">Of the world's countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.share }}%</p></div></a>
   </div>
 
   <div class="card bg-white">

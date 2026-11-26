@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_travel_macros.html" import charges_url %}
 {% set active_page = "places" %}
 {% block title %}{{ country.name }}{% endblock %}
 
@@ -29,10 +30,11 @@
   </div>
 
   <div class="stat-row" id="country-stats">
-    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ cities_total }}</p></div></div>
-    {% if travel.trips %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></div>{% endif %}
-    {% if travel.days %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Days</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.days }}</p></div></div>{% endif %}
-    {% if spend is not none %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></div>{% endif %}
+    {# Every number links to the list it was counted from (docs/portal.md, Numbers link to their source). #}
+    <a href="/places/cities?country_id={{ country.id }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-cities"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ cities_total }}</p></div></a>
+    {% if travel.trips %}<a href="/places/countries/{{ country.id }}/trips" class="card bg-white hover:shadow-md transition-shadow" id="stat-trips"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></a>{% endif %}
+    {% if travel.trips or travel.stay_count %}<a href="/places/countries/{{ country.id }}/stays" class="card bg-white hover:shadow-md transition-shadow" id="stat-nights"><div class="card-body p-4"><p class="text-xs text-gray-400">Nights</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.nights }}</p></div></a>{% endif %}
+    {% if spend is not none %}<a href="{{ charges_url('country', country.id, part='overall', name=country.name) | trim }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-spend"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></a>{% endif %}
   </div>
 
   <div class="split split-wide-left">

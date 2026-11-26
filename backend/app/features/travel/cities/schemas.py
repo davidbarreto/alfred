@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import Query
 from pydantic import BaseModel, computed_field
 
-from app.features.location.cities.schemas import CityRead
+from app.features.location.cities.schemas import CityRead, CityRef
 from app.features.location.countries.schemas import CountryRead, CountryRef
 from app.features.travel.transaction_links.schemas import LocationCosts
 from app.shared.utils.links import photo_album_label, photos_search_url
@@ -49,9 +49,12 @@ class CityDetail(CityRead):
     places: list[CityPlace] = []
     # Newest first.
     trips: list[LocationTrip] = []
-    # Days of its trips so far (started trips, up to today) and the latest day something was done there.
-    days: int = 0
+    # Nights spent there so far (decision in docs/modules/travel.md) and the latest day something was done there.
+    nights: int = 0
     last_visit: date | None = None
+    # Stays at its places and legs that start or end there: the counts behind the stays and legs pages.
+    stay_count: int = 0
+    leg_count: int = 0
 
 
 class CountryCity(BaseModel):
@@ -70,11 +73,12 @@ class CountryDetail(CountryRead):
     grade_count: int = 0
     cities: list[CountryCity] = []
     trips: list[LocationTrip] = []
-    days: int = 0
+    nights: int = 0
     last_visit: date | None = None
+    stay_count: int = 0
 
 
-TravelLocationSort = Literal["name", "trips", "days", "spend", "last_visit"]
+TravelLocationSort = Literal["name", "trips", "nights", "spend", "last_visit"]
 
 
 class TravelLocationFilters:
@@ -101,8 +105,8 @@ class TravelLocationRow(BaseModel):
     id: int
     name: str
     trips: int = 0
-    # Days of its trips so far (started trips, up to today).
-    days: int = 0
+    # Nights spent there so far: distinct local dates of its begun stays, up to today.
+    nights: int = 0
     spend_eur: Decimal = Decimal("0.00")
     last_visit: date | None = None
 
@@ -120,3 +124,43 @@ class TravelCountryRow(TravelLocationRow):
     code: str | None = None
     # Its cities that have travel data.
     cities: int = 0
+
+
+class LocationPage:
+    def __init__(
+        self,
+        limit: Annotated[int, Query(ge=1, le=200)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ):
+        self.limit = limit
+        self.offset = offset
+
+
+class LocationStay(BaseModel):
+    """A stay at one of a city's or country's places, for its stays page."""
+
+    id: int
+    trip_id: int | None
+    trip_name: str | None = None
+    place_id: int
+    place_name: str
+    place_kind: str
+    city: CityRef
+    check_in_local: datetime
+    check_out_local: datetime
+    nights: int
+
+
+class LocationLeg(BaseModel):
+    """A leg that starts or ends in a city, for its legs card and page."""
+
+    id: int
+    trip_id: int
+    trip_name: str | None = None
+    mode: str
+    origin: str
+    destination: str
+    origin_city: CityRef | None = None
+    destination_city: CityRef | None = None
+    departs_local: datetime
+    arrives_local: datetime

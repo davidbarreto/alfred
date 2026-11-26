@@ -1,0 +1,21 @@
+{# One page of a city's or country's stays or legs. Needs kind ('stays'|'legs'), rows, available, list_url, offset,
+   has_prev, has_next, page_size, show_city. #}
+{% if not available %}
+<p class="text-sm text-gray-400">Travel is unavailable right now.</p>
+{% elif not rows %}
+<p class="text-sm text-gray-400">{{ 'No stays here yet.' if kind == 'stays' else 'No leg starts or ends here yet.' }}</p>
+{% else %}
+<div class="divide-y divide-gray-100">
+  {% for row in rows %}{% if kind == 'stays' %}{% set s = row %}{% include "_place_geo_stay_row.html" %}{% else %}{% set l = row %}{% include "_place_geo_leg_row.html" %}{% endif %}{% endfor %}
+</div>
+{% if has_prev or has_next %}
+<div class="flex justify-between pt-3">
+  {% if has_prev %}
+  <button class="btn btn-xs btn-outline" hx-get="{{ list_url }}?offset={{ [offset - page_size, 0] | max }}" hx-target="#geo-rows" hx-swap="innerHTML">Previous</button>
+  {% else %}<span></span>{% endif %}
+  {% if has_next %}
+  <button class="btn btn-xs btn-outline" hx-get="{{ list_url }}?offset={{ offset + page_size }}" hx-target="#geo-rows" hx-swap="innerHTML">Next</button>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}

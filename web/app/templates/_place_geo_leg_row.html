@@ -1,0 +1,8 @@
+{# One leg that starts or ends in a city: "Porto → Madrid · car · 21 Aug 2026", the trip linking to it. Needs l. #}
+<div class="flex items-baseline justify-between gap-3 py-1.5" id="leg-{{ l.id }}">
+  <div class="min-w-0 text-sm">
+    <p class="text-gray-900 truncate">{{ l.origin }} → {{ l.destination }}</p>
+    <p class="text-xs text-gray-500">{{ l.mode }} · {{ l.departs_local | short_date }}</p>
+  </div>
+  <a class="text-xs text-[#378ADD] hover:underline truncate max-w-[40%] shrink-0" href="/travel/{{ l.trip_id }}">{{ l.trip_name or 'Trip' }}</a>
+</div>

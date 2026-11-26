@@ -1,0 +1,11 @@
+{# One stay on a city's or country's stays page. Needs s (a /travel/.../stays row) and show_city. #}
+<div class="flex items-baseline justify-between gap-3 py-1.5" id="stay-{{ s.id }}">
+  <div class="min-w-0 text-sm">
+    <a class="text-gray-900 hover:underline" href="/places/{{ s.place_id }}"><i class="ti {{ s.place_kind | location_icon }} text-gray-400"></i> {{ s.place_name }}</a>
+    {%- if show_city %} <span class="text-xs text-gray-500">· <a class="hover:underline" href="/places/cities/{{ s.city.id }}">{{ s.city.name }}</a></span>{% endif %}
+    <p class="text-xs text-gray-500">{{ s.check_in_local | short_date }} → {{ s.check_out_local | short_date }} · {{ s.nights }} night{{ '' if s.nights == 1 else 's' }}</p>
+  </div>
+  <div class="text-xs truncate max-w-[40%] shrink-0">
+    {% if s.trip_id %}<a class="text-[#378ADD] hover:underline" href="/travel/{{ s.trip_id }}">{{ s.trip_name or 'Trip' }}</a>{% else %}<span class="text-gray-400">No trip</span>{% endif %}
+  </div>
+</div>

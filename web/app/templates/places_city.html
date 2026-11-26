@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_travel_macros.html" import charges_url %}
 {% set active_page = "places" %}
 {% block title %}{{ city.name }}{% endblock %}
 
@@ -29,11 +30,12 @@
   </div>
 
   <div class="stat-row" id="city-stats">
-    {% if travel.trips %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></div>{% endif %}
-    {% if travel.days %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Days</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.days }}</p></div></div>{% endif %}
-    {% if places_total %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Places</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ places_total }}</p></div></div>{% endif %}
-    {% if travel.grade %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Average grade</p><p class="text-2xl font-semibold text-amber-600 mt-1" id="city-grade">{{ travel.grade | number }}<span class="text-sm font-normal text-gray-400">/5 · {{ travel.grade_count }}</span></p></div></div>{% endif %}
-    {% if spend is not none %}<div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></div>{% endif %}
+    {# Every number links to the list it was counted from (docs/portal.md, Numbers link to their source). #}
+    {% if travel.trips %}<a href="/places/cities/{{ city.id }}/trips" class="card bg-white hover:shadow-md transition-shadow" id="stat-trips"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></a>{% endif %}
+    {% if travel.trips or travel.stay_count %}<a href="/places/cities/{{ city.id }}/stays" class="card bg-white hover:shadow-md transition-shadow" id="stat-nights"><div class="card-body p-4"><p class="text-xs text-gray-400">Nights</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.nights }}</p></div></a>{% endif %}
+    {% if places_total %}<a href="/places?view=all&city_id={{ city.id }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-places"><div class="card-body p-4"><p class="text-xs text-gray-400">Places</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ places_total }}</p></div></a>{% endif %}
+    {% if travel.grade %}<a href="/places?view=visited&city_id={{ city.id }}&min_grade=1" class="card bg-white hover:shadow-md transition-shadow" id="stat-grade"><div class="card-body p-4"><p class="text-xs text-gray-400">Average grade</p><p class="text-2xl font-semibold text-amber-600 mt-1" id="city-grade">{{ travel.grade | number }}<span class="text-sm font-normal text-gray-400">/5 · {{ travel.grade_count }}</span></p></div></a>{% endif %}
+    {% if spend is not none %}<a href="{{ charges_url('city', city.id, part='overall', name=city.name) | trim }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-spend"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></a>{% endif %}
   </div>
 
   <div class="split split-wide-left">
@@ -69,6 +71,16 @@
       </div>
       {% endset %}
       {% if home %}{{ places_card }}{% if trips %}{{ trips_card }}{% endif %}{% else %}{{ trips_card }}{{ places_card }}{% endif %}
+
+      {% if legs %}
+      <div class="card bg-white" id="city-legs">
+        <div class="card-body p-5 space-y-1">
+          <h2 class="text-sm font-semibold text-gray-900">Legs <span class="text-xs font-normal text-gray-400">{{ legs_total }}</span></h2>
+          <div class="divide-y divide-gray-100">{% for l in legs %}{% include "_place_geo_leg_row.html" %}{% endfor %}</div>
+          {% if legs_total > legs | length %}<a href="/places/cities/{{ city.id }}/legs" class="text-xs text-[#378ADD] hover:underline">See all {{ legs_total }} legs</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
 
       {% if costs %}{% set scope = 'city' %}{% set owner = city %}{% set tags = city.default_tag_names %}{% include "_travel_location_spend.html" %}{% endif %}
 

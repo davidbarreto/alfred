@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import func, or_, select, union, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,6 +58,47 @@ class TravelCityRepository:
         )
         stmt = select(Trip).where(Trip.id.in_(trip_ids)).order_by(Trip.start_date.desc(), Trip.id.desc())
         return list((await self._session.scalars(stmt)).all())
+
+    async def get_stay_spans(self, city_ids: list[int]) -> list[tuple[int, datetime, datetime, str]]:
+        """(city id, check-in, check-out, zone) of every stay at a place in the cities."""
+        if not city_ids:
+            return []
+        stmt = (
+            select(Place.city_id, Stay.check_in_at, Stay.check_out_at, Stay.timezone)
+            .join(Place, Stay.place_id == Place.id).where(Place.city_id.in_(city_ids))
+        )
+        return [tuple(row) for row in (await self._session.execute(stmt)).all()]
+
+    async def get_stays(self, city_ids: list[int], limit: int, offset: int) -> list[Stay]:
+        """Stays at places in the cities, newest check-in first."""
+        if not city_ids:
+            return []
+        in_places = select(Place.id).where(Place.city_id.in_(city_ids))
+        stmt = (
+            select(Stay).where(Stay.place_id.in_(in_places))
+            .order_by(Stay.check_in_at.desc(), Stay.id.desc()).limit(limit).offset(offset)
+        )
+        return list((await self._session.scalars(stmt)).all())
+
+    async def count_stays(self, city_ids: list[int]) -> int:
+        if not city_ids:
+            return 0
+        in_places = select(Place.id).where(Place.city_id.in_(city_ids))
+        return int(await self._session.scalar(select(func.count()).select_from(Stay).where(Stay.place_id.in_(in_places))) or 0)
+
+    async def get_legs(self, city_id: int, limit: int, offset: int) -> list[Leg]:
+        """Legs that start or end in the city, newest departure first."""
+        stmt = (
+            select(Leg).where(or_(Leg.origin_city_id == city_id, Leg.destination_city_id == city_id))
+            .order_by(Leg.departs_at.desc(), Leg.id.desc()).limit(limit).offset(offset)
+        )
+        return list((await self._session.scalars(stmt)).all())
+
+    async def get_trip_names(self, trip_ids: set[int]) -> dict[int, str]:
+        if not trip_ids:
+            return {}
+        stmt = select(Trip.id, Trip.name).where(Trip.id.in_(sorted(trip_ids)))
+        return {trip_id: name for trip_id, name in (await self._session.execute(stmt)).all()}
 
     async def count_leg_ends(self, city_id: int) -> int:
         stmt = select(func.count()).select_from(Leg).where(or_(Leg.origin_city_id == city_id, Leg.destination_city_id == city_id))

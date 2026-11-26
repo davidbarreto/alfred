@@ -6248,7 +6248,7 @@
       }
     },
     {
-      "name": "137d - City Detail Has Days And Last Visit",
+      "name": "137d - City Detail Has Nights, Counts And Last Visit",
       "event": [
         {
           "listen": "test",
@@ -6257,7 +6257,7 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
-              "pm.test('Fields', () => { pm.expect(j).to.have.property('days'); pm.expect(j).to.have.property('last_visit'); pm.expect(j.trips[0]).to.have.property('photo_album_url'); pm.expect(j).to.have.property('has_cover'); });"
+              "pm.test('Fields', () => { pm.expect(j.nights).to.be.a('number'); pm.expect(j).to.not.have.property('days'); pm.expect(j.leg_count).to.be.at.least(1); pm.expect(j.stay_count).to.be.a('number'); pm.expect(j).to.have.property('last_visit'); pm.expect(j.trips[0]).to.have.property('photo_album_url'); pm.expect(j).to.have.property('has_cover'); });"
             ]
           }
         }
@@ -6274,6 +6274,220 @@
             "travel",
             "cities",
             "{{travel_city_b_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "137e - City Legs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const rows = pm.response.json();",
+              "pm.test('The leg ending there is listed with its trip', () => { const leg = rows.find(r => r.id === Number(pm.environment.get('travel_cities_leg_id'))); pm.expect(leg).to.be.an('object'); pm.expect(leg.trip_name).to.be.a('string'); pm.expect(leg).to.have.property('departs_local'); pm.expect(leg.mode).to.be.a('string'); });",
+              "pm.test('Newest first', () => { for (let i = 1; i < rows.length; i++) pm.expect(rows[i - 1].departs_local >= rows[i].departs_local).to.be.true; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}/legs?limit=6",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_b_id}}",
+            "legs"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137f - City Stays",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A list of stays', () => { const rows = pm.response.json(); pm.expect(rows).to.be.an('array'); rows.forEach(r => { pm.expect(r).to.have.property('nights'); pm.expect(r).to.have.property('place_name'); pm.expect(r.city.id).to.eql(Number(pm.environment.get('travel_city_b_id'))); }); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/{{travel_city_b_id}}/stays?limit=21&offset=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "{{travel_city_b_id}}",
+            "stays"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "21"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137g - Country Stays",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/{{travel_country_id}}/stays",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "{{travel_country_id}}",
+            "stays"
+          ]
+        }
+      }
+    },
+    {
+      "name": "137h - Legs Of An Unknown City (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities/999999999/legs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities",
+            "999999999",
+            "legs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "137i - Stays Of An Unknown Country (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/countries/999999999/stays",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries",
+            "999999999",
+            "stays"
+          ]
+        }
+      }
+    },
+    {
+      "name": "137j - Travel Cities Sorted By Nights",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Most nights first', () => { const rows = pm.response.json(); for (let i = 1; i < rows.length; i++) pm.expect(rows[i - 1].nights).to.be.at.least(rows[i].nights); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?sort=nights&desc=true&limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "sort",
+              "value": "nights"
+            },
+            {
+              "key": "desc",
+              "value": "true"
+            },
+            {
+              "key": "limit",
+              "value": "500"
+            }
           ]
         }
       }

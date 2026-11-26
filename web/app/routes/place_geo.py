@@ -23,7 +23,9 @@ router = APIRouter(prefix="/places")
 _PAGE_SIZE = 24
 # Rows of a list card on a detail page; the rest are on their own page.
 _CARD_LIMIT = 5
-CITY_SORTS = {"name": "Name", "last_visit": "Last visit", "trips": "Trips", "spend": "Spend"}
+CITY_SORTS = {"name": "Name", "last_visit": "Last visit", "trips": "Trips", "nights": "Nights", "spend": "Spend"}
+# Rows per page of a city's or country's stays or legs.
+_ROWS_PAGE = 20
 # Enough for every city or travel row in one call: the lists are sorted by travel figures, so they page here.
 _ALL = 500
 _COVER_CACHE = "private, max-age=86400"
@@ -42,13 +44,13 @@ def by_id(rows: list[dict] | None) -> dict[int, dict]:
 
 
 def sort_cards(cards: list[dict], sort: str) -> list[dict]:
-    """By name; by last visit (latest first, never visited last); or by trips or spend (most first), then by name."""
+    """By name; by last visit (latest first, never visited last); or by trips, nights or spend (most first), then by name."""
     cards = sorted(cards, key=lambda c: c["item"]["name"].lower())
     if sort == "last_visit":
         dated = sorted((c for c in cards if c["travel"] and c["travel"]["last_visit"]),
                        key=lambda c: c["travel"]["last_visit"], reverse=True)
         return dated + [c for c in cards if c not in dated]
-    if sort in ("trips", "spend"):
+    if sort in ("trips", "nights", "spend"):
         field = "spend_eur" if sort == "spend" else sort
         return sorted(cards, key=lambda c: float((c["travel"] or {}).get(field) or 0), reverse=True)
     return cards
@@ -132,26 +134,90 @@ def _albums(trips: list[dict]) -> list[dict]:
 
 @router.get("/cities/{city_id}", response_class=HTMLResponse)
 async def city_page(request: Request, city_id: int):
-    (city, travel), places, links, countries, home_city_id = await asyncio.gather(
+    (city, travel), places, links, countries, home_city_id, legs = await asyncio.gather(
         _city(city_id),
         safe_get("/location/places", params={"city_id": city_id, "active": "true", "limit": _ALL}, default=[]),
         safe_get(f"/travel/cities/{city_id}/links", default=[]),
         safe_get("/location/countries", default=[]),
         _home_city_id(),
+        safe_get(f"/travel/cities/{city_id}/legs", params={"limit": _CARD_LIMIT}, default=[]),
     )
     if city is None:
         return _not_found(request, "city")
-    travel = travel or {"trips": [], "days": 0, "grade": None, "grade_count": 0, "place_count": 0, "costs": None}
+    travel = travel or {"trips": [], "nights": 0, "stay_count": 0, "leg_count": 0, "grade": None, "grade_count": 0,
+                        "place_count": 0, "costs": None}
     trips = travel["trips"]
     places = places or []
     return templates.TemplateResponse(request, "places_city.html", {
         "city": city, "travel": travel, "home": city_id == home_city_id,
         "places": places[:_CARD_LIMIT], "places_total": len(places),
         "trips": trips[:_CARD_LIMIT], "trips_total": len(trips),
+        "legs": (legs or [])[:_CARD_LIMIT], "legs_total": travel.get("leg_count", 0),
         "albums": _albums(trips)[:_CARD_LIMIT], "albums_total": len(_albums(trips)),
         "web_links": links or [], "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
         "countries": countries or [], "today": local_today().isoformat(), "groups": MAP_GROUP_LABELS,
     })
+
+
+# ---- stays and legs pages (the rows behind the nights and the legs card) ------------
+
+async def _rows_context(owner: str, owner_id: int, kind: str, offset: int) -> dict:
+    rows = await safe_get(f"/travel/{owner}/{owner_id}/{kind}", params={"limit": _ROWS_PAGE + 1, "offset": offset})
+    items = rows or []
+    return {
+        "kind": kind, "rows": items[:_ROWS_PAGE], "available": rows is not None, "offset": offset,
+        "has_prev": offset > 0, "has_next": len(items) > _ROWS_PAGE, "page_size": _ROWS_PAGE,
+        "list_url": f"/places/{owner}/{owner_id}/{kind}/list", "show_city": owner == "countries",
+    }
+
+
+async def _rows_page(request: Request, owner: str, owner_id: int, kind: str):
+    what = "city" if owner == "cities" else "country"
+    base, travel, context = await asyncio.gather(
+        safe_get(f"/location/{owner}/{owner_id}"), safe_get(f"/travel/{owner}/{owner_id}"),
+        _rows_context(owner, owner_id, kind, 0),
+    )
+    if base is None:
+        return _not_found(request, what)
+    total = (travel or {}).get("stay_count" if kind == "stays" else "leg_count", 0)
+    return templates.TemplateResponse(request, "places_geo_rows.html", {
+        **context, "name": base["name"], "back_url": f"/places/{owner}/{owner_id}", "total": total,
+    })
+
+
+async def _rows_list(request: Request, owner: str, owner_id: int, kind: str):
+    context = await _rows_context(owner, owner_id, kind, _offset(request.query_params.get("offset")))
+    return templates.TemplateResponse(request, "_place_geo_rows.html", context)
+
+
+@router.get("/cities/{city_id}/stays", response_class=HTMLResponse)
+async def city_stays(request: Request, city_id: int):
+    return await _rows_page(request, "cities", city_id, "stays")
+
+
+@router.get("/cities/{city_id}/stays/list", response_class=HTMLResponse)
+async def city_stays_list(request: Request, city_id: int):
+    return await _rows_list(request, "cities", city_id, "stays")
+
+
+@router.get("/cities/{city_id}/legs", response_class=HTMLResponse)
+async def city_legs(request: Request, city_id: int):
+    return await _rows_page(request, "cities", city_id, "legs")
+
+
+@router.get("/cities/{city_id}/legs/list", response_class=HTMLResponse)
+async def city_legs_list(request: Request, city_id: int):
+    return await _rows_list(request, "cities", city_id, "legs")
+
+
+@router.get("/countries/{country_id}/stays", response_class=HTMLResponse)
+async def country_stays(request: Request, country_id: int):
+    return await _rows_page(request, "countries", country_id, "stays")
+
+
+@router.get("/countries/{country_id}/stays/list", response_class=HTMLResponse)
+async def country_stays_list(request: Request, country_id: int):
+    return await _rows_list(request, "countries", country_id, "stays")
 
 
 @router.get("/cities/{city_id}/links", response_class=HTMLResponse)
@@ -226,7 +292,7 @@ async def country_page(request: Request, country_id: int):
     )
     if country is None:
         return _not_found(request, "country")
-    travel = travel or {"trips": [], "days": 0, "cities": [], "grade": None, "grade_count": 0, "costs": None}
+    travel = travel or {"trips": [], "nights": 0, "stay_count": 0, "cities": [], "grade": None, "grade_count": 0, "costs": None}
     trips, cities = travel["trips"], cities or []
     travel_cities = by_id(travel["cities"])
     return templates.TemplateResponse(request, "places_country.html", {

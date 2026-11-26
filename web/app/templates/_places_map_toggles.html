@@ -1,0 +1,4 @@
+{# The map's status toggles (cities and places together); needs `statuses` (MAP_STATUS_LABELS). Visited is on by default. #}
+{% for key, label in statuses.items() %}
+<label class="label cursor-pointer gap-1 py-0"><input type="checkbox" class="checkbox checkbox-xs" data-map-status="{{ key }}"{% if key == 'visited' %} checked{% endif %}><span class="pm-status-key pm-status-{{ key }}" aria-hidden="true"></span><span class="text-xs text-gray-600">{{ label }}</span></label>
+{% endfor %}

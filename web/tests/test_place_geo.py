@@ -218,6 +218,10 @@ class TestCityPage:
         # the Map card: fitted to the city, its CSV, place rows that pulse their pin
         assert 'data-map-data="/places/map/data?city_id=4" data-fit="city"' in html
         assert 'href="/places/cities/4/map.csv"' in html and 'data-map-place="1"' in html and "Food and drink" in html
+        # The card opens on the visited pins; the status toggles sit, hidden, under the Show button.
+        toggles = html[html.index('id="city-map-toggles"'):html.index('data-map-data=')]
+        assert "hidden" in toggles.split(">")[0] and 'data-map-status="visited" checked' in toggles
+        assert 'data-map-status="planned">' in toggles and 'aria-controls="city-map-toggles"' in html
         # stat-row: trips, nights, places, grade, spend, each linking to its source
         assert ">7<" in html and ">12<" in html and ">8<" in html and "4.5" in html and "100.00 €" in html
         assert '<a href="/places/cities/4/trips" class="card bg-white hover:shadow-md transition-shadow" id="stat-trips">' in html
@@ -371,6 +375,7 @@ class TestCountries:
         assert "Find photo" not in html and "Upload cover" in html and 'name="code" value="EX"' in html
         assert 'data-map-data="/places/map/data?country_id=2" data-fit="country"' in html
         assert 'href="/places/countries/2/map.csv"' in html
+        assert 'id="country-map-toggles" hidden' in html
 
     def test_unknown_country_is_404(self, client, mock_api):
         _route(mock_api, {"/location/countries/9": None, "/travel/countries/9": None, "/location/cities": [],

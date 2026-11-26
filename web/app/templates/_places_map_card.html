@@ -1,13 +1,17 @@
-{# The Map card of a city or country page. Needs `map_scope` ('city' or 'country'), `map_owner_id` and `groups`. #}
+{# The Map card of a city or country page. Needs `map_scope` ('city' or 'country'), `map_owner_id`, `groups` and
+   `statuses`. It opens on the visited pins; the status toggles sit under the Show button. #}
 <div class="card bg-white" id="{{ map_scope }}-map">
   <div class="card-body p-5 space-y-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-sm font-semibold text-gray-900">Map</h2>
       <div class="flex gap-1">
+        <button type="button" class="btn btn-xs btn-ghost" aria-expanded="false" aria-controls="{{ map_scope }}-map-toggles" id="{{ map_scope }}-map-show"
+                onclick="var t=document.getElementById('{{ map_scope }}-map-toggles'); t.hidden=!t.hidden; this.setAttribute('aria-expanded', String(!t.hidden))"><i class="ti ti-adjustments-horizontal"></i> Show</button>
         <a class="btn btn-xs btn-ghost" href="/places/map"><i class="ti ti-world"></i> World</a>
         <a class="btn btn-xs btn-outline" href="/places/{{ 'cities' if map_scope == 'city' else 'countries' }}/{{ map_owner_id }}/map.csv" title="A CSV for Google My Maps" id="{{ map_scope }}-map-csv"><i class="ti ti-download"></i> Map pins</a>
       </div>
     </div>
+    <div class="flex flex-wrap gap-x-3 gap-y-1" id="{{ map_scope }}-map-toggles" hidden>{% include "_places_map_toggles.html" %}</div>
     <div class="places-map places-map-card" data-map-data="/places/map/data?{{ map_scope }}_id={{ map_owner_id }}" data-fit="{{ map_scope }}"></div>
     {% include "_places_map_legend.html" %}
   </div>

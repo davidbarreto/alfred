@@ -52,6 +52,9 @@ KIND_GROUPS = {
     "playground": "sight", "sports": "sight",
 }
 MAP_GROUP_LABELS = {"stay": "Stays", "food": "Food and drink", "sight": "Sights and activities", "everyday": "Everyday"}
+# The map's status toggles, in their order: visited (home, lived, visited) solid, passed through small and grey, planned
+# hollow. Only Visited is on when a map opens.
+MAP_STATUS_LABELS = {"visited": "Visited", "passed": "Passed through", "planned": "Planned"}
 
 
 def map_group(kind: str | None) -> str:

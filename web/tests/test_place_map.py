@@ -42,6 +42,27 @@ class TestHelpers:
         place = map_data(_map())["places"][0]
         assert place["icon"] == "ti-coffee" and place["group"] == "food"
 
+    def test_map_data_adds_statuses(self):
+        data = _map(cities=[
+            {"id": 4, "name": "Alpha", "country_id": 2, "latitude": 1, "longitude": 1, "home": True},
+            {"id": 5, "name": "Beta", "country_id": 2, "latitude": 1, "longitude": 1, "home": False},
+            {"id": 6, "name": "Gamma", "country_id": 2, "latitude": 1, "longitude": 1, "home": False},
+            {"id": 7, "name": "Delta", "country_id": 2, "latitude": 1, "longitude": 1, "home": False},
+            {"id": 8, "name": "Epsilon", "country_id": 2, "latitude": 1, "longitude": 1, "home": False},
+            {"id": 10, "name": "Zeta", "country_id": 2, "latitude": 1, "longitude": 1, "home": False},
+        ], places=[*_map()["places"], {**_map()["places"][0], "id": 11}])
+        travel = [{"id": 4, "status": "home"}, {"id": 5, "status": "lived", "born": True},
+                  {"id": 6, "status": "passed"}, {"id": 7, "status": "planned"}, {"id": 8, "status": "none"}]
+        out = map_data(data, travel, [{"id": 11}])
+        assert [(c["id"], c["status"], c["born"]) for c in out["cities"]] == [
+            (4, "visited", False), (5, "visited", True), (6, "passed", False), (7, "planned", False),
+            (8, "planned", False), (10, "planned", False)]
+        assert [(p["id"], p["status"]) for p in out["places"]] == [(9, "visited"), (11, "planned")]
+
+    def test_map_data_without_travel_shows_everything_as_visited(self):
+        out = map_data(_map(cities=[{"id": 5, "name": "Beta", "country_id": 2, "latitude": 1, "longitude": 1}]))
+        assert out["cities"][0]["status"] == "visited" and out["places"][0]["status"] == "visited"
+
     def test_every_kind_has_a_group(self):
         assert {map_group(k) for k in KINDS} == {"home", "stay", "food", "sight", "everyday"}
         assert map_group("supermarket") == "everyday" and map_group(None) == "everyday"
@@ -70,6 +91,9 @@ class TestMapPage:
         assert 'href="/places/countries/2"' in html and "Not on the map" in html
         assert "2 places without coordinates" in html
         assert 'data-map-toggle="cities"' in html and 'data-map-toggle="places"' in html
+        assert 'data-map-status="visited" checked' in html
+        assert 'data-map-status="passed">' in html and 'data-map-status="planned">' in html
+        assert "Passed through" in html and "ti-baby-carriage" in html
         stats = html[html.index('id="map-stats"'):html.index('id="world-map"')]
         assert stats.count('<a href="/places/countries?status=all" class="card') == 2
         assert stats.count('<a href="/places/cities?status=all" class="card') == 1
@@ -85,16 +109,45 @@ class TestMapPage:
 
 
 class TestMapData:
+    def _get(self, calls, travel_cities=(), planned=()):
+        async def get(path, params=None):
+            calls[path] = params
+            if path == "/location/map":
+                return _map()
+            if path == "/travel/cities":
+                return list(travel_cities)
+            assert path == "/travel/places"
+            return list(planned)
+        return get
+
     def test_proxies_one_scope_and_enriches(self, client, mock_api):
-        mock_api["get"].return_value = _map()
+        calls = {}
+        mock_api["get"].side_effect = self._get(calls, [{"id": 4, "status": "home"}], [{"id": 9}])
         resp = client.get("/places/map/data?city_id=4&country_id=2")
-        assert resp.status_code == 200 and resp.json()["places"][0]["group"] == "food"
-        assert mock_api["get"].await_args.kwargs["params"] == {"city_id": "4"}
+        body = resp.json()
+        assert resp.status_code == 200 and body["places"][0]["group"] == "food"
+        assert body["places"][0]["status"] == "planned" and body["cities"][0]["status"] == "visited"
+        assert calls["/location/map"] == {"city_id": "4"}
+        # A city's map reads its country's travel cities and only that city's planned places.
+        assert calls["/travel/cities"] == {"status": "all", "limit": 500, "country_id": "2"}
+        assert calls["/travel/places"] == {"status": "planned", "active": "true", "limit": 500, "city_id": "4"}
 
     def test_world_has_no_params(self, client, mock_api):
-        mock_api["get"].return_value = _map()
+        calls = {}
+        mock_api["get"].side_effect = self._get(calls)
         client.get("/places/map/data?city_id=x")
-        assert mock_api["get"].await_args.kwargs["params"] is None
+        assert calls["/location/map"] is None
+        assert calls["/travel/cities"] == {"status": "all", "limit": 500}
+        assert calls["/travel/places"] == {"status": "planned", "active": "true", "limit": 500}
+
+    def test_travel_down_keeps_every_pin_visited(self, client, mock_api):
+        async def get(path, params=None):
+            if path == "/location/map":
+                return _map()
+            raise httpx.ConnectError("down")
+        mock_api["get"].side_effect = get
+        body = client.get("/places/map/data").json()
+        assert body["cities"][0]["status"] == "visited" and body["places"][0]["status"] == "visited"
 
     def test_backend_down_is_502(self, client, mock_api):
         mock_api["get"].side_effect = httpx.ConnectError("down")

@@ -412,7 +412,9 @@ html[data-theme="dark"] {
  * `places-map` is the Leaflet container: 2:1 on a desktop, taller on a phone;
  * `places-map-card` the smaller one on a city or country page. The basemap
  * (OpenStreetMap) is greyed so colour belongs to Alfred's data; dark mode
- * inverts it. Pins are coloured by kind group (pm-group-*).
+ * inverts it. Pins are coloured by kind group (pm-group-* sets --pm-c); a
+ * planned pin is hollow. Cities: visited solid, planned hollow (dashed),
+ * passed through a small grey dot, the birthplace its own colour.
  */
 .places-map, .pm-legend {
   --pm-known: #378ADD;
@@ -422,6 +424,8 @@ html[data-theme="dark"] {
   --pm-sight: #0CA678;
   --pm-everyday: #378ADD;
   --pm-home: #1F2937;
+  --pm-born: #D6336C;
+  --pm-passed: var(--gray-400);
 }
 .places-map {
   position: relative;
@@ -458,12 +462,14 @@ html[data-theme="dark"] .places-map .leaflet-control-attribution a { color: var(
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   color: #fff;
   font-size: 15px;
-  background: var(--pm-everyday);
+  --pm-c: var(--pm-everyday);
+  background: var(--pm-c);
 }
-.pm-group-stay { background: var(--pm-stay); }
-.pm-group-food { background: var(--pm-food); }
-.pm-group-sight { background: var(--pm-sight); }
-.pm-group-everyday { background: var(--pm-everyday); }
+.pm-group-stay { --pm-c: var(--pm-stay); background: var(--pm-c); }
+.pm-group-food { --pm-c: var(--pm-food); background: var(--pm-c); }
+.pm-group-sight { --pm-c: var(--pm-sight); background: var(--pm-c); }
+.pm-group-everyday { --pm-c: var(--pm-everyday); background: var(--pm-c); }
+.pm-pin.pm-pin-planned { background: var(--surface-card); color: var(--pm-c); border: 2px dashed var(--pm-c); }
 .places-map path.leaflet-interactive:focus { outline: none; }
 .places-map .marker-cluster { background: rgba(55, 138, 221, 0.25); }
 .places-map .marker-cluster div { background: #378ADD; color: #fff; font-weight: 600; }
@@ -491,8 +497,16 @@ html[data-theme="dark"] .places-map .leaflet-control-attribution a { color: var(
   cursor: pointer;
 }
 .pm-city .ti { font-size: 15px; color: var(--pm-known); }
-.pm-city-home { border-color: var(--pm-home); }
-.pm-city-home .ti { color: var(--pm-home); }
+.pm-city-visited { background: var(--pm-known); border-color: var(--pm-known); color: #fff; }
+.pm-city-visited .ti { color: #fff; }
+.pm-city-planned { border-style: dashed; }
+.pm-city-home { background: var(--pm-home); border-color: var(--pm-home); color: var(--surface-card); }
+.pm-city-home .ti { color: var(--surface-card); }
+.pm-city-born:not(.pm-city-home) { border-color: var(--pm-born); }
+.pm-city-born.pm-city-visited:not(.pm-city-home) { background: var(--pm-born); }
+.pm-city-born.pm-city-planned .ti { color: var(--pm-born); }
+.pm-city.pm-city-passed { height: auto; padding: 0; gap: 0.25rem; border: 0; background: none; box-shadow: none; color: var(--gray-500); font-weight: 500; font-size: 11px; }
+.pm-city-dot { width: 12px; height: 12px; border-radius: 9999px; background: var(--pm-passed); border: 2px solid var(--surface-card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
 .pm-city-name { display: none; }
 .places-map.pm-city-names .pm-city-name { display: inline; }
 .places-map .leaflet-tooltip.pm-label { display: none; font-size: 11px; padding: 1px 5px; }
@@ -525,6 +539,15 @@ html[data-theme="dark"] .places-map .leaflet-tooltip { background: var(--gray-80
 .pm-error { top: 45%; padding: 0.375rem 0.875rem; color: var(--tint-red-text); }
 .pm-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 12px; color: var(--gray-500); }
 .pm-legend .pm-dot { display: inline-block; width: 10px; height: 10px; border-radius: 9999px; margin-right: 0.25rem; vertical-align: -1px; }
+.pm-legend .pm-dot-hollow { border: 2px dashed var(--pm-known); background: none; }
+.pm-legend .pm-dot-passed { width: 8px; height: 8px; background: var(--pm-passed); }
+.pm-legend .pm-born-key { color: var(--pm-born); margin-right: 0.25rem; }
+.pm-toggle-sep { width: 1px; align-self: stretch; background: var(--gray-200); margin: 0 0.25rem; }
+.pm-status-key { display: inline-block; width: 10px; height: 10px; border-radius: 9999px; }
+.pm-status-visited { background: var(--pm-known); }
+.pm-status-planned { border: 2px dashed var(--pm-known); }
+.pm-status-passed { width: 8px; height: 8px; background: var(--pm-passed); }
+.pm-status-key { --pm-known: #378ADD; --pm-passed: var(--gray-400); }
 
 /* ── Calendar ────────────────────────────────────────────────────────── */
 

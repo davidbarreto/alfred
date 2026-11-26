@@ -6,10 +6,13 @@
  * Needs Leaflet and Leaflet.markercluster loaded first (_places_map_assets.html).
  *
  * Layers: the vendored country shapes (world.json, keyed by ISO alpha-2), tinted for the countries Alfred knows and
- * faded as you zoom in; city markers (the home city marked); place pins, clustered, coloured by kind group. The
+ * faded as you zoom in; city markers styled by status (visited solid, planned hollow, passed through small and grey;
+ * the home city and the birthplace marked); place pins, clustered, coloured by kind group (planned ones hollow). The
  * basemap is OpenStreetMap's tiles greyed by CSS (inverted in dark mode); the shapes and markers draw without it.
  * Touch: one finger scrolls the page, two fingers pinch and move the map.
- * Page hooks: [data-map-toggle="cities"|"places"] checkboxes; [data-map-place="<id>"] rows pulse and pan to a pin.
+ * Page hooks: [data-map-toggle="cities"|"places"] and [data-map-status="visited"|"passed"|"planned"] checkboxes (a
+ * pin shows when its layer and its status are both on; with no status boxes on the page every status shows);
+ * [data-map-place="<id>"] rows pulse and pan to a pin.
  */
 (function () {
   'use strict';
@@ -46,9 +49,10 @@
 
   function placeIcon(place) {
     var home = place.kind === 'home';
+    var planned = place.status === 'planned' ? ' pm-pin-planned' : '';
     return L.divIcon({
       className: 'pm-pin-wrap',
-      html: '<span class="pm-pin pm-group-' + esc(place.group) + (home ? ' pm-pin-home' : '') + '" data-pin="' + place.id + '"><i class="ti ' + esc(place.icon) + '"></i></span>',
+      html: '<span class="pm-pin pm-group-' + esc(place.group) + (home ? ' pm-pin-home' : '') + planned + '" data-pin="' + place.id + '"><i class="ti ' + esc(place.icon) + '"></i></span>',
       iconSize: home ? [34, 34] : [28, 28],
       iconAnchor: home ? [17, 17] : [14, 14],
       popupAnchor: [0, -14],
@@ -57,9 +61,20 @@
   }
 
   function cityIcon(city) {
+    if (city.status === 'passed' && !city.born) {
+      return L.divIcon({
+        className: 'pm-city-wrap',
+        html: '<span class="pm-city pm-city-passed"><span class="pm-city-dot"></span><span class="pm-city-name">' + esc(city.name) + '</span></span>',
+        iconSize: null,
+        iconAnchor: [6, 6],
+      });
+    }
+    var icon = city.home ? 'ti-home' : city.born ? 'ti-baby-carriage' : 'ti-building-community';
+    var cls = 'pm-city pm-city-' + (city.status === 'planned' ? 'planned' : 'visited') +
+      (city.home ? ' pm-city-home' : '') + (city.born ? ' pm-city-born' : '');
     return L.divIcon({
       className: 'pm-city-wrap',
-      html: '<span class="pm-city' + (city.home ? ' pm-city-home' : '') + '"><i class="ti ' + (city.home ? 'ti-home' : 'ti-building-community') + '"></i><span class="pm-city-name">' + esc(city.name) + '</span></span>',
+      html: '<span class="' + cls + '"><i class="ti ' + icon + '"></i><span class="pm-city-name">' + esc(city.name) + '</span></span>',
       iconSize: null,
       iconAnchor: [14, 14],
     });
@@ -81,6 +96,8 @@
     this.el = el;
     this.fit = el.dataset.fit || 'world';
     this.pins = {};
+    this.layersOn = { cities: true, places: true };
+    this.statusOn = null;  // null: every status shows (no status toggles on the page)
     var touch = coarsePointer();
     this.map = L.map(el, {
       worldCopyJump: true,
@@ -136,23 +153,22 @@
     }).addTo(this.map);
     this.known = known;
 
-    this.cities = L.layerGroup();
-    data.cities.forEach(function (city) {
-      L.marker([city.latitude, city.longitude], { icon: cityIcon(city), zIndexOffset: 500, title: city.name })
-        .on('click', function () { window.location.href = '/places/cities/' + city.id; })
-        .addTo(self.cities);
+    this.cities = L.layerGroup().addTo(this.map);
+    this.cityMarkers = data.cities.map(function (city) {
+      var marker = L.marker([city.latitude, city.longitude], {
+        icon: cityIcon(city), zIndexOffset: city.status === 'passed' ? 200 : 500, title: city.name,
+      }).on('click', function () { window.location.href = '/places/cities/' + city.id; });
+      return { marker: marker, status: city.status || 'visited' };
     });
-    this.cities.addTo(this.map);
 
-    this.places = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, spiderfyOnMaxZoom: true });
-    data.places.forEach(function (place) {
+    this.places = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, spiderfyOnMaxZoom: true }).addTo(this.map);
+    this.placeMarkers = data.places.map(function (place) {
       var marker = L.marker([place.latitude, place.longitude], { icon: placeIcon(place), title: place.name })
         .bindPopup(placePopup(place))
         .bindTooltip(esc(place.name), { permanent: true, direction: 'right', className: 'pm-label' });
       self.pins[place.id] = marker;
-      self.places.addLayer(marker);
+      return { marker: marker, status: place.status || 'visited' };
     });
-    this.places.addTo(this.map);
 
     this.fitView(world);
     this.onZoom();
@@ -221,15 +237,23 @@
     bar.hidden = false;
   };
 
-  PlacesMap.prototype.toggle = function (layer, on) {
-    var group = layer === 'cities' ? this.cities : this.places;
-    if (!group) return;
-    if (on) group.addTo(this.map); else this.map.removeLayer(group);
+  PlacesMap.prototype.shows = function (layer, status) {
+    return this.layersOn[layer] && (!this.statusOn || this.statusOn[status]);
+  };
+
+  // Puts back on the map the pins whose layer and status are both on.
+  PlacesMap.prototype.refresh = function () {
+    var self = this;
+    this.cities.clearLayers();
+    this.cityMarkers.forEach(function (m) { if (self.shows('cities', m.status)) self.cities.addLayer(m.marker); });
+    this.places.clearLayers();
+    this.places.addLayers(this.placeMarkers.filter(function (m) { return self.shows('places', m.status); })
+      .map(function (m) { return m.marker; }));
   };
 
   PlacesMap.prototype.focus = function (placeId) {
     var marker = this.pins[placeId];
-    if (!marker) return;
+    if (!marker || !this.places.hasLayer(marker)) return;
     var self = this;
     this.places.zoomToShowLayer(marker, function () {
       self.map.panTo(marker.getLatLng());
@@ -243,10 +267,19 @@
 
   PlacesMap.prototype.bindPage = function () {
     var self = this;
-    document.querySelectorAll('[data-map-toggle]').forEach(function (box) {
-      box.addEventListener('change', function () { self.toggle(box.dataset.mapToggle, box.checked); });
-      self.toggle(box.dataset.mapToggle, box.checked);
-    });
+    var layerBoxes = document.querySelectorAll('[data-map-toggle]');
+    var statusBoxes = document.querySelectorAll('[data-map-status]');
+    function read() {
+      layerBoxes.forEach(function (box) { self.layersOn[box.dataset.mapToggle] = box.checked; });
+      if (statusBoxes.length) {
+        self.statusOn = {};
+        statusBoxes.forEach(function (box) { self.statusOn[box.dataset.mapStatus] = box.checked; });
+      }
+      self.refresh();
+    }
+    layerBoxes.forEach(function (box) { box.addEventListener('change', read); });
+    statusBoxes.forEach(function (box) { box.addEventListener('change', read); });
+    read();
     document.querySelectorAll('[data-map-place]').forEach(function (row) {
       var id = row.dataset.mapPlace;
       if (!self.pins[id]) return;

@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 import app.client as api
 from app.shared.forward import forward, safe_get
 from app.shared.link_groups import LINK_KINDS, LINKS_PREVIEW
-from app.shared.location_kinds import MAP_GROUP_LABELS
+from app.shared.location_kinds import MAP_GROUP_LABELS, MAP_STATUS_LABELS
 from app.shared.timezone import local_today
 from app.templates_config import templates
 
@@ -182,7 +182,7 @@ async def city_page(request: Request, city_id: int):
         "legs": (legs or [])[:_CARD_LIMIT], "legs_total": travel.get("leg_count", 0),
         "albums": _albums(trips)[:_CARD_LIMIT], "albums_total": len(_albums(trips)),
         "web_links": links or [], "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
-        "countries": countries or [], "today": local_today().isoformat(), "groups": MAP_GROUP_LABELS,
+        "countries": countries or [], "today": local_today().isoformat(), "groups": MAP_GROUP_LABELS, "statuses": MAP_STATUS_LABELS,
     })
 
 
@@ -334,7 +334,7 @@ async def country_page(request: Request, country_id: int):
         "trips": trips[:_CARD_LIMIT], "trips_total": len(trips),
         "albums": _albums(trips)[:_CARD_LIMIT], "albums_total": len(_albums(trips)),
         "web_links": links or [], "link_kinds": LINK_KINDS, "links_preview": LINKS_PREVIEW,
-        "today": local_today().isoformat(), "groups": MAP_GROUP_LABELS,
+        "today": local_today().isoformat(), "groups": MAP_GROUP_LABELS, "statuses": MAP_STATUS_LABELS,
     })
 
 

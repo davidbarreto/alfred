@@ -384,6 +384,7 @@ def stays():
     svc._repo = AsyncMock()
     svc._trip_repo = AsyncMock()
     svc._place_repo = AsyncMock()
+    svc._city_tags = AsyncMock()
     return svc
 
 
@@ -406,6 +407,16 @@ class TestStayService:
         result = await stays.create_stay(self._create(trip_id=None))
         stays._trip_repo.get_trip.assert_not_awaited()
         assert result.trip_id is None
+        stays._city_tags.apply_to_stay.assert_awaited_once_with(stays._repo.create_stay.return_value)
+
+    async def test_update_of_days_or_place_tags_the_new_days_but_notes_do_not(self, stays):
+        stay = _stay()
+        stays._repo.get_stay.return_value = stay
+        stays._repo.update_stay.return_value = stay
+        await stays.update_stay(7, StayUpdate(notes="late check-in"))
+        stays._city_tags.apply_to_stay.assert_not_awaited()
+        await stays.update_stay(7, StayUpdate(check_out_at=datetime(2026, 12, 21, 10)))
+        stays._city_tags.apply_to_stay.assert_awaited_once_with(stay)
 
     async def test_update_converts_with_the_new_zone(self, stays):
         stay = _stay()

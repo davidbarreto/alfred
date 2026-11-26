@@ -534,10 +534,12 @@ class TestDefaultTagsAndCalendarImport:
         assert client.post("/travel/trips/1/apply-default-tags").json() == {"tags": ["Travel"], "added": 3}
         mock_api["post"].assert_awaited_once_with("/travel/trips/1/apply-default-tags")
 
-    def test_apply_button_only_when_the_trip_has_default_tags(self, client, mock_api):
+    def test_apply_button_only_when_the_trip_has_default_tags_or_stays(self, client, mock_api):
         routes = {"/travel/trips/1/costs": None, "/travel/places": []}
-        _route(mock_api, {**routes, "/travel/trips/1": _detail()})
+        _route(mock_api, {**routes, "/travel/trips/1": {**_detail(), "stays": []}})
         assert 'id="apply-tags"' not in client.get("/travel/1").text
+        _route(mock_api, {**routes, "/travel/trips/1": _detail()})
+        assert 'id="apply-tags"' in client.get("/travel/1").text
         _route(mock_api, {**routes, "/travel/trips/1": _detail(default_tag_names="Travel, Hotel")})
         assert 'id="apply-tags"' in client.get("/travel/1").text
 

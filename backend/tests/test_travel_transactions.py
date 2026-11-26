@@ -15,7 +15,10 @@ from app.features.travel.default_tags import (
     TripDefaultTagService,
     TripTagWindow,
     TripTagWindows,
+    city_tag_groups,
+    city_tag_names,
     parse_default_tag_names,
+    stay_window,
 )
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate
@@ -69,9 +72,60 @@ class TestTripTagWindows:
 def tag_service():
     svc = TripDefaultTagService(AsyncMock())
     svc._trip_repo = AsyncMock()
+    svc._stay_repo = AsyncMock()
+    svc._stay_repo.get_stays_between.return_value = []
+    svc._stay_repo.get_stays.return_value = []
     svc._tag_repo = AsyncMock()
     svc._link_repo = AsyncMock()
+    svc._residence_repo = AsyncMock()
+    svc._residence_repo.get_all.return_value = []
+    svc._place_repo = AsyncMock()
+    svc._place_repo.get_home.return_value = SimpleNamespace(city_id=99)
     return svc
+
+
+def _city(id=4, name="Valencia", default_tag_names=None):
+    return SimpleNamespace(id=id, name=name, default_tag_names=default_tag_names)
+
+
+def _stay(id=1, city=None, check_in=datetime(2026, 8, 23, 15, tzinfo=timezone.utc),
+          check_out=datetime(2026, 8, 26, 10, tzinfo=timezone.utc), zone="Europe/Madrid"):
+    city = city or _city()
+    return SimpleNamespace(id=id, check_in_at=check_in, check_out_at=check_out, timezone=zone,
+                           place=SimpleNamespace(city_id=city.id, city=city))
+
+
+def _lived(from_date, to_date=None, city_id=4):
+    return SimpleNamespace(city_id=city_id, from_date=from_date, to_date=to_date, born=False)
+
+
+class TestCityTags:
+    def test_name_lowercase_then_default_tags_without_repeats(self):
+        assert city_tag_names(_city(name=" Valencia ", default_tag_names="Spain, valencia")) == ["valencia", "spain"]
+        assert city_tag_names(_city()) == ["valencia"]
+
+    def test_spend_groups_are_the_name_alone_and_all_default_tags(self):
+        assert city_tag_groups(_city(default_tag_names="Spain, Beach")) == [["valencia"], ["spain", "beach"]]
+        assert city_tag_groups(_city(default_tag_names="valencia")) == [["valencia"]]
+        assert city_tag_groups(_city()) == [["valencia"]]
+
+    def test_stay_window_runs_from_check_in_to_check_out_day_in_the_stay_zone(self):
+        # 23:30 UTC on the 25th is already the 26th in Madrid.
+        window = stay_window(_stay(check_out=datetime(2026, 8, 25, 23, 30, tzinfo=timezone.utc)), [], None)
+        assert (window.start, window.end, window.names) == (date(2026, 8, 23), date(2026, 8, 26), ["valencia"])
+        windows = TripTagWindows([window])
+        assert windows.names_for(date(2026, 8, 26), "expense") == ["valencia"]
+        assert windows.names_for(date(2026, 8, 27), "expense") == []
+        assert windows.names_for(date(2026, 8, 24), "income") == []
+
+    def test_no_window_for_the_home_city(self):
+        assert stay_window(_stay(), [], home_city_id=4) is None
+
+    def test_days_lived_in_the_city_are_left_out(self):
+        window = stay_window(_stay(), [_lived(date(2026, 8, 25))], None)
+        assert window.days() == [date(2026, 8, 23), date(2026, 8, 24)]
+        assert TripTagWindows([window]).names_for(date(2026, 8, 25), "expense") == []
+        assert stay_window(_stay(), [_lived(None, date(2027, 1, 1))], None) is None
 
 
 def _trip(**kw):
@@ -99,6 +153,39 @@ class TestTripDefaultTagService:
         assert (names, added) == (["travel", "hotel"], 7)
         start, end, tag_ids = tag_service._link_repo.tag_expenses_between.await_args.args
         assert start == datetime(2026, 12, 17) and end == datetime(2026, 12, 25) and tag_ids == [5, 6]
+
+    async def test_windows_add_the_city_tags_of_stays_but_not_the_home_city(self, tag_service):
+        tag_service._trip_repo.get_trips_in_window.return_value = [_trip(start_date=date(2026, 8, 20), end_date=date(2026, 8, 30))]
+        tag_service._stay_repo.get_stays_between.return_value = [_stay(), _stay(2, city=_city(99, "Hometown"))]
+        windows = await tag_service.windows_for(date(2026, 8, 1), date(2026, 8, 31))
+        assert windows.names_for(date(2026, 8, 24), "expense") == ["travel", "hotel", "valencia"]
+        start, end = tag_service._stay_repo.get_stays_between.await_args.args
+        assert (start, end) == (datetime(2026, 7, 31, tzinfo=timezone.utc), datetime(2026, 9, 2, tzinfo=timezone.utc))
+
+    async def test_lived_days_of_another_city_do_not_stop_the_stay_tags(self, tag_service):
+        tag_service._stay_repo.get_stays_between.return_value = [_stay()]
+        tag_service._residence_repo.get_all.return_value = [_lived(None, None, city_id=7)]
+        assert await tag_service.names_for(date(2026, 8, 24), "expense") == ["valencia"]
+
+    async def test_apply_to_existing_also_tags_the_stay_days_with_the_city(self, tag_service):
+        tag_service._trip_repo.get_trip.return_value = _trip(default_tag_names=None)
+        tag_service._stay_repo.get_stays.return_value = [_stay()]
+        tag_service._residence_repo.get_all.return_value = [_lived(date(2026, 8, 25), date(2026, 8, 26))]
+        tag_service._tag_repo.resolve_tags.return_value = [SimpleNamespace(id=8)]
+        tag_service._link_repo.tag_expenses_between.return_value = 2
+        assert await tag_service.apply_to_existing(1) == (["valencia"], 4)
+        # 25 Aug was lived there: two runs, 23-24 and 26.
+        assert [c.args for c in tag_service._link_repo.tag_expenses_between.await_args_list] == [
+            (datetime(2026, 8, 23), datetime(2026, 8, 25), [8]), (datetime(2026, 8, 26), datetime(2026, 8, 27), [8])]
+
+    async def test_apply_to_stay(self, tag_service):
+        tag_service._tag_repo.resolve_tags.return_value = [SimpleNamespace(id=8)]
+        tag_service._link_repo.tag_expenses_between.return_value = 3
+        assert await tag_service.apply_to_stay(_stay()) == 3
+        assert tag_service._link_repo.tag_expenses_between.await_args.args == (datetime(2026, 8, 23), datetime(2026, 8, 27), [8])
+        tag_service._link_repo.tag_expenses_between.reset_mock()
+        assert await tag_service.apply_to_stay(_stay(city=_city(99, "Hometown"))) == 0
+        tag_service._link_repo.tag_expenses_between.assert_not_awaited()
 
     async def test_apply_without_default_tags_does_nothing(self, tag_service):
         tag_service._trip_repo.get_trip.return_value = _trip(default_tag_names="")

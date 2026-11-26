@@ -3,6 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import STAY_NOTE, TravelNoteIndex
@@ -15,6 +16,8 @@ from app.features.travel.zones import to_utc
 logger = logging.getLogger(__name__)
 
 _NOT_NULL = ("place_id", "check_in_at", "check_out_at", "timezone")
+# A change to one of these moves the stay's days or city: its city tags go on the expenses of the new days.
+_TAGGED_BY = {"place_id", "check_in_at", "check_out_at", "timezone"}
 
 
 class StayService:
@@ -24,6 +27,7 @@ class StayService:
         self._trip_repo = TripRepository(session)
         self._place_repo = TravelPlaceRepository(session)
         self._event_links = EventLinkChecker(session)
+        self._city_tags = TripDefaultTagService(session)
 
     async def get_stays(self, trip_id: int) -> list[StayRead]:
         stays = await self._repo.get_stays(trip_id)
@@ -46,6 +50,7 @@ class StayService:
             await self._event_links.ensure_free(data.calendar_event_id)
         stay = await self._repo.create_stay(data.model_dump())
         logger.info("Stay created: id=%d trip_id=%s place_id=%d", stay.id, stay.trip_id, stay.place_id)
+        await self._city_tags.apply_to_stay(stay)
         await self._notes.sync(STAY_NOTE, stay.id, f"Stay at {stay.place.name}", stay.notes)
         return StayRead.model_validate(stay)
 
@@ -69,6 +74,8 @@ class StayService:
             raise ValueError("check_out_at cannot be before check_in_at")
         stay = await self._repo.update_stay(stay, changes)
         logger.info("Stay updated: id=%d fields=%s", stay_id, list(changes.keys()))
+        if changes.keys() & _TAGGED_BY:
+            await self._city_tags.apply_to_stay(stay)
         if changes.keys() & {"notes", "place_id"}:
             await self._notes.sync(STAY_NOTE, stay.id, f"Stay at {stay.place.name}", stay.notes)
         return StayRead.model_validate(stay)

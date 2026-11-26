@@ -69,6 +69,7 @@ class TestUpdatingLinks:
     async def test_a_stay_update_checks_the_event_against_all_items(self):
         svc = StayService(AsyncMock())
         svc._repo, svc._trip_repo, svc._place_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+        svc._city_tags = AsyncMock()
         svc._repo.get_stay.return_value = SimpleNamespace(id=4, timezone="UTC", check_in_at=datetime(2026, 12, 18),
                                                           check_out_at=datetime(2026, 12, 20))
         svc._event_links.ensure_free.side_effect = TravelConflictError("taken")

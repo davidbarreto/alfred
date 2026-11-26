@@ -28,7 +28,7 @@ from app.features.travel.constants import CITY_STATUS_GROUPS, CITY_STATUSES, Cit
 from app.features.travel.trips.tables import Trip
 from app.features.travel.zones import to_local
 from app.shared.utils.timezone import local_today
-from app.features.travel.default_tags import parse_default_tag_names
+from app.features.travel.default_tags import city_tag_groups, parse_default_tag_names
 from app.features.travel.places.repository import TravelPlaceRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.transaction_links.schemas import ChargePart, Cost, LinkedTransaction, LinkedTransactions, LocationCosts
@@ -176,7 +176,7 @@ class TravelCityService:
         if city is None:
             return None
         place_ids, _ = await self._city_grades([city_id])
-        return await self._charges(place_ids[city_id], [parse_default_tag_names(city.default_tag_names)], part)
+        return await self._charges(place_ids[city_id], city_tag_groups(city), part)
 
     async def get_country_charges(self, country_id: int, part: ChargePart) -> LinkedTransactions | None:
         country = await self._countries.get_country(country_id)
@@ -184,7 +184,7 @@ class TravelCityService:
             return None
         cities = await self._cities.get_country_cities(country_id)
         place_ids, _ = await self._city_grades([c.id for c in cities])
-        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
+        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [g for c in cities for g in city_tag_groups(c)]
         return await self._charges([p for ids in place_ids.values() for p in ids], tag_groups, part)
 
     async def _charges(self, place_ids: list[int], tag_groups: list[list[str]], part: ChargePart) -> LinkedTransactions:
@@ -219,7 +219,7 @@ class TravelCityService:
             nights=_union(nights, [city_id], lived), last_visit=last_visit(trip_rows, local, today),
             stay_count=await self._repo.count_stays([city_id]), leg_count=await self._repo.count_leg_ends(city_id),
             home=await is_home_city(self._places, city_id),
-            costs=await self._costs(ids, [parse_default_tag_names(city.default_tag_names)]),
+            costs=await self._costs(ids, city_tag_groups(city)),
         ))
 
     async def get_country_detail(self, country_id: int) -> CountryDetail | None:
@@ -233,7 +233,7 @@ class TravelCityService:
         locals_ = (await self._repo.get_last_local_visits([c.id for c in cities], today)).values()
         nights = nights_by_city(await self._repo.get_stay_spans([c.id for c in cities]), today)
         trips = [LocationTrip.model_validate(t) for t in trip_rows]
-        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
+        tag_groups = [parse_default_tag_names(country.default_tag_names)] + [g for c in cities for g in city_tag_groups(c)]
         costs = await self._costs([p for ids in place_ids.values() for p in ids], tag_groups)
         lived = (await self._lived())[1].get(country_id, [])
         return CountryDetail.model_validate(country).model_copy(update=dict(
@@ -274,7 +274,7 @@ class TravelCityService:
         place_ids = await self._repo.get_place_ids_by_city(city_ids)
         rows = []
         for city in cities:
-            costs = await self._costs(place_ids[city.id], [parse_default_tag_names(city.default_tag_names)])
+            costs = await self._costs(place_ids[city.id], city_tag_groups(city))
             summary = lived_summary(lived.get(city.id, []))
             rows.append(TravelCityRow(
                 id=city.id, name=city.name, country=city.country, status=statuses[city.id], trips=len(trips[city.id]),
@@ -303,7 +303,7 @@ class TravelCityService:
         for country in countries:
             cities = [c for c in all_cities if c.country_id == country.id]
             country_trips = list({t.id: t for c in cities for t in trips.get(c.id, [])}.values())
-            tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
+            tag_groups = [parse_default_tag_names(country.default_tag_names)] + [g for c in cities for g in city_tag_groups(c)]
             costs = await self._costs([p for c in cities for p in place_ids[c.id]], tag_groups)
             local = max((locals_[c.id] for c in cities if c.id in locals_), default=None)
             summary = lived_summary(lived.get(country.id, []))

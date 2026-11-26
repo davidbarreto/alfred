@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -25,6 +26,11 @@ class StayRepository:
 
     async def get_stays(self, trip_id: int) -> list[Stay]:
         stmt = select(Stay).where(Stay.trip_id == trip_id).order_by(Stay.check_in_at, Stay.id)
+        return list((await self._session.scalars(stmt)).all())
+
+    async def get_stays_between(self, start: datetime, end: datetime) -> list[Stay]:
+        """Stays overlapping [start, end), any trip or none."""
+        stmt = select(Stay).where(Stay.check_in_at < end, Stay.check_out_at >= start).order_by(Stay.check_in_at, Stay.id)
         return list((await self._session.scalars(stmt)).all())
 
     async def get_place_stays(self, place_id: int) -> list[Stay]:

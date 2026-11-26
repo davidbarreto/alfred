@@ -157,6 +157,7 @@ class TestStays:
     def svc(self, embeddings):
         svc = StayService(AsyncMock(), embeddings)
         svc._repo, svc._trip_repo, svc._place_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+        svc._city_tags = AsyncMock()
         return svc
 
     async def test_create_update_delete(self, svc, embeddings):

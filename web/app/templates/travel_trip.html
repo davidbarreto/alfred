@@ -34,7 +34,7 @@
           </div>
           <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
           <button class="btn btn-xs btn-outline" id="generate-checklist" title="Create the template's tasks for this trip">Generate checklist</button>
-          {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply default tags</button>{% endif %}
+          {% if trip.default_tag_names or trip.stays %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip with its default tags, and those of each stay's days with the stay's city">Apply default tags</button>{% endif %}
           {% if trip.photo_album_url %}<a class="btn btn-xs btn-outline" id="trip-photos" href="{{ trip.photo_album_url }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-photo"></i> {{ trip.photo_album_label }}</a>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>

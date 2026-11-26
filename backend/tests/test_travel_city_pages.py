@@ -276,19 +276,19 @@ class TestSpendAndTags:
         service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(sums[frozenset(ids)]), len(ids), 0)
         detail = await service.get_city_detail(1)
         service._cost_repo.get_place_linked_ids.assert_awaited_once_with([10, 11])
-        service._cost_repo.get_unlinked_tagged_ids.assert_awaited_once_with(["lisbon", "trip"])
+        assert [c.args for c in service._cost_repo.get_unlinked_tagged_ids.await_args_list] == [(["alpha"],), (["lisbon", "trip"],)]
         assert (detail.costs.linked.total_eur, detail.costs.tagged.total_eur, detail.costs.overall.total_eur) == (
             Decimal("50.00"), Decimal("20.00"), Decimal("70.00"))
         assert detail.costs.tagged.transaction_count == 1 and detail.default_tag_names == "Lisbon, Trip"
 
-    async def test_a_city_without_tags_asks_for_no_tagged_charges_beyond_an_empty_set(self, service):
+    async def test_a_city_without_default_tags_counts_the_charges_tagged_with_its_name(self, service):
         service._cities.get_city.return_value = _city_row()
         service._repo.get_place_ids_by_city.return_value = {1: []}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_places.return_value = []
         service._repo.get_trips_of_cities.return_value = []
         await service.get_city_detail(1)
-        service._cost_repo.get_unlinked_tagged_ids.assert_awaited_once_with([])
+        service._cost_repo.get_unlinked_tagged_ids.assert_awaited_once_with(["alpha"])
 
     async def test_a_country_counts_each_transaction_once_across_its_cities_and_its_own_tags(self, service):
         country = SimpleNamespace(id=2, name="Examplia", code=None, created_at=NOW, updated_at=NOW, default_tag_names="spain")
@@ -299,12 +299,14 @@ class TestSpendAndTags:
         service._repo.get_place_ids_by_city.return_value = {1: [10], 3: [11]}
         service._place_repo.get_grades.return_value = {}
         service._repo.get_trips_of_cities.return_value = []
-        by_tags = {("spain",): {5, 6}, ("alpha",): {6, 7}, (): set()}
+        by_tags = {("spain",): {5, 6}, ("alpha",): {6, 7}, ("beta",): {7}}
         service._cost_repo.get_unlinked_tagged_ids.side_effect = lambda names: by_tags[tuple(names)]
         service._cost_repo.get_cost.side_effect = lambda ids: (Decimal(len(ids)), len(ids), 0)
         detail = await service.get_country_detail(2)
         service._cost_repo.get_place_linked_ids.assert_awaited_once_with([10, 11])
-        assert detail.costs.tagged.transaction_count == 3  # 5, 6 and 7, with 6 counted once
+        assert detail.costs.tagged.transaction_count == 3  # 5, 6 and 7, with 6 and 7 counted once
+        # Alpha's name and default tags are the same group, asked once; Beta has only its name.
+        assert sorted(c.args[0] for c in service._cost_repo.get_unlinked_tagged_ids.await_args_list) == [["alpha"], ["beta"], ["spain"]]
         assert detail.costs.overall.transaction_count == 3
 
     async def test_city_charges_are_the_ids_behind_each_spend_part(self, service):
@@ -326,7 +328,7 @@ class TestSpendAndTags:
 
     async def test_country_charges_merge_every_tag_group_once_and_unknowns_are_none(self, service):
         service._countries.get_country.return_value = SimpleNamespace(id=2, default_tag_names="spain")
-        service._cities.get_country_cities.return_value = [SimpleNamespace(id=1, default_tag_names="alpha")]
+        service._cities.get_country_cities.return_value = [SimpleNamespace(id=1, name="Alpha", default_tag_names="alpha")]
         service._repo.get_place_ids_by_city.return_value = {1: [10]}
         service._place_repo.get_grades.return_value = {}
         service._cost_repo.get_place_linked_ids.return_value = set()

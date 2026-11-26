@@ -1,0 +1,3 @@
+{# After "Lived here until 2005": the trips since and the nights (both left out when 0). Needs t. -#}
+{%- if t.trips_since %} · {{ t.trips_since }} trip{{ '' if t.trips_since == 1 else 's' }} since{% endif %}
+{%- if t.nights %} · {{ t.nights }} night{{ '' if t.nights == 1 else 's' }}{% endif %}

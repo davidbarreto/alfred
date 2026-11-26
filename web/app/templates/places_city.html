@@ -15,8 +15,9 @@
     <p class="cover-credit">{% if city.cover_source_url %}<a href="{{ city.cover_source_url }}" target="_blank" rel="noopener noreferrer">{{ city.cover_credit or 'Source' }}</a>{% else %}{{ city.cover_credit }}{% endif %}</p>
     {% endif %}
     <div class="cover-shade">
-      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ city.name }}{% if home %} <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-blue-700 align-middle" id="city-home"><i class="ti ti-home"></i> Home</span>{% endif %}</h1>
-      <p class="text-sm"><a class="hover:underline" href="/places/countries/{{ city.country.id }}">{{ city.country | country_flag_of }} {{ city.country.name }}</a></p>
+      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ city.name }}{% if home %} <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-blue-700 align-middle" id="city-home"><i class="ti ti-home"></i> Home</span>{% endif %}{% if travel.born %} <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-rose-700 align-middle" id="city-born"><i class="ti ti-baby-carriage"></i> Born here</span>{% endif %}</h1>
+      {% set phrase %}{% with t=travel %}{% include "_place_geo_lived_phrase.html" %}{% endwith %}{% endset %}
+      <p class="text-sm"><a class="hover:underline" href="/places/countries/{{ city.country.id }}">{{ city.country | country_flag_of }} {{ city.country.name }}</a>{% if phrase | trim %} · <span id="city-lived">{{ phrase | trim }}</span>{% endif %}</p>
     </div>
   </div>
 

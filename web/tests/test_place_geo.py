@@ -2,7 +2,7 @@
 import httpx
 import pytest
 
-from app.routes.place_geo import cities_filters, mosaic, sort_cards
+from app.routes.place_geo import cities_filters, lived_note, mosaic, sort_cards
 
 NOW = "2026-11-01T00:00:00Z"
 
@@ -64,6 +64,15 @@ def _route(mock_api, routes):
 def _home(city_id):
     return lambda params: [{"id": 29, "kind": "home", "city": _city(id=city_id)}] if params.get("kind") == "home" else [
         _place(i) for i in range(1, 9)]
+
+
+# The Countries tab also asks for Places lived and the Home place.
+_NO_LIVED = {"/location/residences": [], "/location/places": []}
+
+
+def _residence(id, city, from_date="2019-03-01", to_date=None, born=False):
+    return {"id": id, "city": city, "from_date": from_date, "to_date": to_date, "born": born, "notes": None,
+            "current": to_date is None, "created_at": NOW, "updated_at": NOW}
 
 
 class TestHelpers:
@@ -180,7 +189,7 @@ class TestStatusChips:
     def test_countries_follow_the_chip(self, client, mock_api):
         seen = []
         _route(mock_api, {"/location/countries": [_country(4, "Alphaland"), _country(6, "Betaland")], "/location/cities": [],
-                          "/travel/countries": self._travel(seen)})
+                          "/travel/countries": self._travel(seen), **_NO_LIVED})
         html = client.get("/places/countries?status=planned&sort=trips").text
         assert 'id="country-4"' in html and 'id="country-6"' not in html and seen == ["planned"]
         assert 'href="/places/countries?status=passed&amp;sort=trips"' in html and 'href="/places/countries?sort=trips"' in html
@@ -320,7 +329,7 @@ class TestCountries:
         _route(mock_api, {
             "/location/countries": [_country(), _country(3, "Otherland", "OL"), _country(5, "Coverland", None, has_cover=True)],
             "/location/cities": [_city(4, "Alpha", has_cover=True), _city(6, "Beta")],
-            "/travel/countries": [{"id": 2, "trips": 3, "nights": 20}],
+            "/travel/countries": [{"id": 2, "trips": 3, "nights": 20}], **_NO_LIVED,
         })
         html = client.get("/places/countries?status=all").text
         assert "2 cities · 3 trips · 20 nights" in html and "cover-mosaic-1" in html and 'src="/places/cities/4/cover"' in html
@@ -338,13 +347,15 @@ class TestCountries:
     def test_sort_by_spend_keeps_the_sort_when_paging(self, client, mock_api):
         countries = [_country(i, f"Country {i:02d}", None) for i in range(1, 27)]
         _route(mock_api, {"/location/countries": countries, "/location/cities": [],
-                          "/travel/countries": [{"id": 26, "trips": 1, "nights": 2, "spend_eur": "50.00", "last_visit": None}]})
+                          "/travel/countries": [{"id": 26, "trips": 1, "nights": 2, "spend_eur": "50.00", "last_visit": None}],
+                          **_NO_LIVED})
         html = client.get("/places/countries?sort=spend&status=all").text
         assert html.index('id="country-26"') < html.index('id="country-1"') and "1 trip · 2 nights · 50 €" in html
         assert 'href="/places/countries?status=all&amp;sort=spend&offset=24"' in html and '<div class="card-grid"' in html
 
     def test_search(self, client, mock_api):
-        _route(mock_api, {"/location/countries": [_country(), _country(3, "Otherland")], "/location/cities": [], "/travel/countries": []})
+        _route(mock_api, {"/location/countries": [_country(), _country(3, "Otherland")], "/location/cities": [], "/travel/countries": [],
+                          **_NO_LIVED})
         html = client.get("/places/countries?q=other&status=all").text
         assert 'href="/places/countries/3"' in html and 'href="/places/countries/2"' not in html
 
@@ -457,3 +468,81 @@ class TestTripAlbum:
         html = client.get("/travel/1").text
         assert 'id="trip-photos" href="https://photos.app.goo.gl/abc"' in html and "Google Photos" in html
         assert 'name="photo_album_url" type="url" value="https://photos.app.goo.gl/abc"' in html
+
+
+class TestPlacesLived:
+    def test_note_only_when_the_open_row_is_not_homes_city(self):
+        alpha, beta = _city(4, "Alpha"), _city(6, "Beta")
+        assert lived_note([], alpha) is None and lived_note([_residence(1, alpha)], None) is None
+        assert lived_note([_residence(1, alpha)], alpha) is None
+        assert lived_note([_residence(1, beta)], alpha) == {"home": alpha, "current": beta}
+        assert lived_note([_residence(1, beta, to_date="2026-01-01")], alpha) == {"home": alpha, "current": None}
+
+    def test_countries_tab_has_the_card_rows_note_and_see_all(self, client, mock_api):
+        alpha, beta = _city(4, "Alpha"), _city(6, "Beta", country={"id": 3, "name": "Testland", "code": "TL"})
+        rows = [_residence(i, alpha, from_date=f"20{20 - i:02d}-01-01", to_date=f"20{21 - i:02d}-01-01") for i in range(1, 6)]
+        rows = [_residence(9, beta, from_date="2021-01-01")] + rows + [_residence(8, beta, None, "2005-03-01", born=True)]
+        _route(mock_api, {"/location/countries": [], "/location/cities": [], "/travel/countries": [],
+                          "/location/residences": rows, "/location/places": [{"id": 1, "kind": "home", "city": alpha}]})
+        html = client.get("/places/countries").text
+        assert 'id="places-lived"' in html and 'id="residence-9"' in html and 'id="residence-4"' in html
+        assert 'id="residence-5"' not in html and 'id="residence-8"' not in html
+        assert 'href="/places/lived"' in html and "See all 7" in html
+        assert "The Home place is in Alpha, but Places lived still has you in Beta" in html and "Moved to Alpha today" in html
+        assert "Jan 2021 – now" in html and 'id="lived-dialog"' in html and "travel-city-picker.js" in html
+
+    def test_lived_page_lists_every_row(self, client, mock_api):
+        alpha = _city(4, "Alpha")
+        _route(mock_api, {"/location/residences": [_residence(1, alpha), _residence(2, alpha, None, "2005-03-01", born=True)]})
+        html = client.get("/places/lived").text
+        assert 'id="residence-1"' in html and 'id="residence-2"' in html and "Birth – Mar 2005" in html and ">Born<" in html
+        assert "data-lived-edit=" in html and "&#34;city&#34;" in html
+
+    def test_country_cards_say_living_or_lived_and_born(self, client, mock_api):
+        _route(mock_api, {
+            "/location/countries": [_country(), _country(3, "Testland", "TL")],
+            "/location/cities": [_city(4, "Alpha"), _city(5, "Beta")],
+            "/travel/countries": [
+                {"id": 2, "status": "home", "trips": 4, "nights": 0, "living": True, "lived_since": "2019-03-01"},
+                {"id": 3, "status": "lived", "trips": 3, "trips_since": 2, "nights": 14, "born": True, "lived_until": "2005-03-01"},
+            ], **_NO_LIVED,
+        })
+        html = client.get("/places/countries").text
+        assert "Living here since Mar 2019 · 2 cities" in html and "4 trips" not in html
+        assert "Lived here until 2005 · 2 trips since · 14 nights" in html and "Born here" in html
+
+    def test_city_card_born_badge_and_lived_line(self, client, mock_api):
+        _route(mock_api, {"/location/cities": [_city(4, "Alpha")], "/location/places": [], "/location/countries": [],
+                          "/travel/cities": [{"id": 4, "status": "lived", "trips": 1, "trips_since": 0, "nights": 0, "born": True,
+                                              "lived_until": "2005-03-01", "last_visit": None}]})
+        html = client.get("/places/cities").text
+        assert "Lived here until 2005" in html and "data-born" in html and "1 trip" not in html
+
+    def test_city_and_country_heroes(self, client, mock_api):
+        TestCityPage()._routes(mock_api, **{"/travel/cities/4": _travel_city(born=True, living=True, lived_since=None)})
+        html = client.get("/places/cities/4").text
+        assert 'id="city-born"' in html and '<span id="city-lived">Living here since birth</span>' in html
+        _route(mock_api, {"/location/countries/2": _country(), "/travel/countries/2/links": [], "/location/cities": [],
+                          "/travel/countries/2": _travel_country(lived_until="2005-03-01")})
+        html = client.get("/places/countries/2").text
+        assert "EX · <span id=\"country-lived\">Lived here until 2005</span>" in html and 'id="country-born"' not in html
+
+    @pytest.mark.parametrize("method, path, backend", [
+        ("post", "/places/residences", ("post", "/location/residences")),
+        ("patch", "/places/residences/3", ("patch", "/location/residences/3")),
+        ("post", "/places/residences/follow-home", ("post", "/location/residences/follow-home")),
+    ])
+    def test_writes_forward(self, client, mock_api, method, path, backend):
+        mock_api[backend[0]].return_value = {"id": 3}
+        kwargs = {} if path.endswith("follow-home") else {"json": {"city_id": 4, "from_date": "2019-03-01"}}
+        response = getattr(client, method)(path, **kwargs)
+        assert response.status_code == 200 and mock_api[backend[0]].await_args.args[0] == backend[1]
+
+    def test_delete_and_conflict(self, client, mock_api):
+        mock_api["delete"].return_value = None
+        assert client.delete("/places/residences/3").status_code == 200
+        request = httpx.Request("POST", "http://api/location/residences")
+        mock_api["post"].side_effect = httpx.HTTPStatusError(
+            "409", request=request, response=httpx.Response(409, json={"detail": "The period overlaps Alpha"}, request=request))
+        response = client.post("/places/residences", json={"city_id": 4})
+        assert response.status_code == 409 and response.json()["error"] == "The period overlaps Alpha"

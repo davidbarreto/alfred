@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% block title %}Places lived{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+  <a href="/places/countries" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Countries</a>
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Places lived <span class="text-xs font-normal text-gray-400">{{ rows | length }}</span></h1>
+      <p class="text-xs text-gray-400">Dates lived in a city leave its nights; dates lived in a country leave the country's.</p>
+    </div>
+    <div class="page-actions"><button type="button" class="btn btn-xs btn-outline" data-lived-add><i class="ti ti-plus"></i> Add</button></div>
+  </div>
+  <div class="card bg-white" id="places-lived">
+    <div class="card-body p-5 space-y-2">
+      {% if not available %}<p class="text-sm text-gray-400">Places lived are unavailable right now.</p>
+      {% else %}{% include "_places_lived_rows.html" %}{% endif %}
+    </div>
+  </div>
+</div>
+{% include "_places_lived_dialog.html" %}
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+{% include "_places_lived_script.html" %}
+{% endblock %}

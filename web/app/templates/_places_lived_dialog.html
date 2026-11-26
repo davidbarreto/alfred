@@ -1,0 +1,24 @@
+{# Add or edit a place lived (_places_lived_script.html). Needs _city_dialog.html, airport-input.js and travel-city-picker.js. -#}
+<dialog id="lived-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-md space-y-3">
+    <h3 class="text-sm font-semibold" data-title>Place lived</h3>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">City</span>
+      <input name="city_text" required autocomplete="off" class="input input-sm input-bordered w-full" placeholder="Search a city">
+      <input type="hidden" name="city_id"></label>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">From</span>
+        <input type="date" name="from_date" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 block"><span class="block text-xs text-gray-500">Until (moving day; empty: still there)</span>
+        <input type="date" name="to_date" class="input input-sm input-bordered w-full"></label>
+    </div>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="born" class="checkbox checkbox-sm"> Born here (then From may be empty: since birth)</label>
+    <label class="space-y-1 block"><span class="block text-xs text-gray-500">Notes</span>
+      <textarea name="notes" rows="2" maxlength="2000" class="textarea textarea-sm textarea-bordered w-full"></textarea></label>
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Save</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <button type="button" class="btn btn-sm btn-ghost text-red-600 hidden" data-delete>Delete</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+</dialog>

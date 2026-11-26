@@ -32,6 +32,8 @@ _ROWS_PAGE = 20
 # Enough for every city or travel row in one call: the lists are sorted by travel figures, so they page here.
 _ALL = 500
 _COVER_CACHE = "private, max-age=86400"
+# Places lived are a lifetime's homes: one call gets them all (the backend's page cap).
+_LIVED_ALL = 200
 
 
 def _digits(value: str | None) -> str:
@@ -87,9 +89,14 @@ def _shown(item_ids: list[int], rows: dict[int, dict], status: str) -> set[int]:
     return set(item_ids) if status == "all" else {i for i in item_ids if i in rows}
 
 
-async def _home_city_id() -> int | None:
+async def _home_city() -> dict | None:
     homes = await safe_get("/location/places", params={"kind": "home"}, default=[])
-    return homes[0]["city"]["id"] if homes else None
+    return homes[0]["city"] if homes else None
+
+
+async def _home_city_id() -> int | None:
+    city = await _home_city()
+    return city["id"] if city else None
 
 
 def _page(cards: list[dict], offset: int) -> dict:
@@ -284,10 +291,12 @@ async def countries_page(request: Request):
     q = (request.query_params.get("q") or "").strip()
     sort = request.query_params.get("sort") if request.query_params.get("sort") in CITY_SORTS else "name"
     status = _status(request.query_params)
-    countries, cities, travel = await asyncio.gather(
+    countries, cities, travel, lived, home_city = await asyncio.gather(
         safe_get("/location/countries"),
         safe_get("/location/cities", default=[]),
         safe_get("/travel/countries", params={"limit": _ALL, "status": status}, default=[]),
+        safe_get("/location/residences", params={"limit": _LIVED_ALL}, default=[]),
+        _home_city(),
     )
     rows = by_id(travel)
     shown = _shown([c["id"] for c in countries or []], rows, status)
@@ -302,6 +311,7 @@ async def countries_page(request: Request):
         **_page(sort_cards(cards, sort), offset), "available": countries is not None, "q": q, "sort": sort, "status": status,
         "sorts": CITY_SORTS, "query": _query({"q": q, "status": status, "sort": sort}),
         "chips": status_chips({"q": q, "status": status, "sort": sort}),
+        "lived": (lived or [])[:_CARD_LIMIT], "lived_total": len(lived or []), "lived_note": lived_note(lived or [], home_city),
     })
 
 
@@ -361,6 +371,46 @@ async def update_country(country_id: int, request: Request):
 @router.delete("/countries/{country_id}")
 async def delete_country(country_id: int):
     return await forward(api.delete(f"/location/countries/{country_id}"), "Could not delete the country.")
+
+
+# ---- places lived (location.residences) ------------------------------------------
+
+def lived_note(rows: list[dict], home_city: dict | None) -> dict | None:
+    """{home, current} when Places lived has rows but its open one (the newest row) is not the Home place's city."""
+    if not rows or home_city is None:
+        return None
+    current = rows[0]["city"] if rows[0]["current"] else None
+    if current is not None and current["id"] == home_city["id"]:
+        return None
+    return {"home": home_city, "current": current}
+
+
+@router.get("/lived", response_class=HTMLResponse)
+async def lived_page(request: Request):
+    rows = await safe_get("/location/residences", params={"limit": _LIVED_ALL})
+    return templates.TemplateResponse(request, "places_lived.html", {"rows": rows or [], "available": rows is not None})
+
+
+@router.post("/residences")
+async def create_residence(request: Request):
+    return await forward(api.post("/location/residences", json=await request.json()), "Could not save the place lived.")
+
+
+@router.post("/residences/follow-home")
+async def follow_home():
+    return await forward(api.post("/location/residences/follow-home"), "Could not update Places lived.")
+
+
+@router.patch("/residences/{residence_id}")
+async def update_residence(residence_id: int, request: Request):
+    return await forward(
+        api.patch(f"/location/residences/{residence_id}", json=await request.json()), "Could not save the place lived.",
+    )
+
+
+@router.delete("/residences/{residence_id}")
+async def delete_residence(residence_id: int):
+    return await forward(api.delete(f"/location/residences/{residence_id}"), "Could not delete the place lived.")
 
 
 # ---- covers (both kinds) --------------------------------------------------------

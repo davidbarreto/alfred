@@ -112,6 +112,8 @@ class TestResolveCity:
 def city_service(cities, countries, hooks):
     svc = CityService(AsyncMock(), hooks)
     svc._repo, svc._country_repo = cities, countries
+    svc._residences = AsyncMock()
+    svc._residences.count_in_city.return_value = 0
     svc._resolver = CityResolver(cities, countries, hooks)
     return svc
 

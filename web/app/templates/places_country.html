@@ -15,8 +15,9 @@
     <p class="cover-credit">{% if country.cover_source_url %}<a href="{{ country.cover_source_url }}" target="_blank" rel="noopener noreferrer">{{ country.cover_credit or 'Source' }}</a>{% else %}{{ country.cover_credit }}{% endif %}</p>
     {% endif %}
     <div class="cover-shade">
-      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ country | country_flag_of }} {{ country.name }}</h1>
-      {% if country.code %}<p class="text-sm opacity-90">{{ country.code }}</p>{% endif %}
+      <h1 class="text-xl sm:text-2xl font-semibold leading-tight">{{ country | country_flag_of }} {{ country.name }}{% if travel.born %} <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-rose-700 align-middle" id="country-born"><i class="ti ti-baby-carriage"></i> Born here</span>{% endif %}</h1>
+      {% set phrase %}{% with t=travel %}{% include "_place_geo_lived_phrase.html" %}{% endwith %}{% endset %}
+      {% if country.code or phrase | trim %}<p class="text-sm opacity-90">{{ country.code or '' }}{% if country.code and phrase | trim %} · {% endif %}{% if phrase | trim %}<span id="country-lived">{{ phrase | trim }}</span>{% endif %}</p>{% endif %}
     </div>
   </div>
 

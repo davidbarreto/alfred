@@ -1,0 +1,948 @@
+{
+ "info": {
+  "name": "Alfred - Places lived API",
+  "_postman_id": "alfred-location-residences-v1",
+  "description": "Places lived (/location/residences): the birth row, an open row, the clash rules (second birth or open row, overlap: 409; bad periods: 422), edit, travel's lived status and born flag, the city delete guard, the follow-Home fix, cleanup. Synthetic cities in a per-run country; assumes no rows exist yet (CI's fresh database).",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "auth": {
+  "type": "bearer",
+  "bearer": [
+   {
+    "key": "token",
+    "value": "{{api_token}}",
+    "type": "string"
+   }
+  ]
+ },
+ "item": [
+  {
+   "name": "01 - Find Home And Its City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.environment.set('lived_run', String(Date.now()));",
+       "const homes = pm.response.json();",
+       "pm.test('One home, with a city', () => { pm.expect(homes).to.have.lengthOf(1); pm.expect(homes[0].city).to.have.property('id'); });",
+       "pm.environment.set('lived_home_city_id', homes[0].city.id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places?kind=home",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ],
+     "query": [
+      {
+       "key": "kind",
+       "value": "home"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "02 - Create The Birth City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.environment.set('lived_birth_city_id', pm.response.json().id);",
+       "pm.environment.set('lived_country_id', pm.response.json().country.id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/cities",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman birth city {{lived_run}}\",\n  \"country\": \"Postman lived land {{lived_run}}\"\n}"
+    }
+   }
+  },
+  {
+   "name": "03 - Create The Second City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.environment.set('lived_second_city_id', pm.response.json().id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/cities",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Postman second city {{lived_run}}\",\n  \"country_id\": {{lived_country_id}}\n}"
+    }
+   }
+  },
+  {
+   "name": "04 - Born There, Since Birth",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "const row = pm.response.json();",
+       "pm.environment.set('lived_birth_id', row.id);",
+       "pm.test('A birth row with no start, closed', () => { pm.expect(row.born).to.eql(true); pm.expect(row.from_date).to.eql(null); pm.expect(row.to_date).to.eql('1990-03-01'); pm.expect(row.current).to.eql(false); pm.expect(row.city.country).to.have.property('name'); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_birth_city_id}},\n  \"born\": true,\n  \"to_date\": \"1990-03-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "05 - Lived In The Second City, Still There",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "const row = pm.response.json();",
+       "pm.environment.set('lived_second_id', row.id);",
+       "pm.test('Open row', () => { pm.expect(row.current).to.eql(true); pm.expect(row.born).to.eql(false); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_second_city_id}},\n  \"from_date\": \"1990-03-01\",\n  \"notes\": \"Synthetic\"\n}"
+    }
+   }
+  },
+  {
+   "name": "06 - A Second Birth Row (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says birthplace', () => pm.expect(pm.response.json().detail).to.include('birthplace'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_second_city_id}},\n  \"born\": true,\n  \"to_date\": \"1980-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "07 - A Second Open Row (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says still open', () => pm.expect(pm.response.json().detail).to.include('still open'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_birth_city_id}},\n  \"from_date\": \"2000-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "08 - An Overlapping Period (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Names the clash', () => pm.expect(pm.response.json().detail).to.include('overlaps'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_birth_city_id}},\n  \"from_date\": \"1985-01-01\",\n  \"to_date\": \"1991-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "09 - No Start Outside The Birth Row (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_birth_city_id}},\n  \"to_date\": \"1985-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "10 - Ends Before It Starts (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": {{lived_birth_city_id}},\n  \"from_date\": \"1985-01-01\",\n  \"to_date\": \"1984-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "11 - Unknown City (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"city_id\": 999999999,\n  \"from_date\": \"1985-01-01\",\n  \"to_date\": \"1986-01-01\"\n}"
+    }
+   }
+  },
+  {
+   "name": "12 - List, Newest First",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const rows = pm.response.json();",
+       "const ids = rows.map(r => r.id);",
+       "pm.test('Open row before the birth row', () => pm.expect(ids.indexOf(Number(pm.environment.get('lived_second_id')))).to.be.below(ids.indexOf(Number(pm.environment.get('lived_birth_id')))));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences?limit=200",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences"
+     ],
+     "query": [
+      {
+       "key": "limit",
+       "value": "200"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "13 - Edit The Notes",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Notes changed, dates kept', () => { const row = pm.response.json(); pm.expect(row.notes).to.eql('Edited'); pm.expect(row.from_date).to.eql('1990-03-01'); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_second_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_second_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"notes\": \"Edited\"\n}"
+    }
+   }
+  },
+  {
+   "name": "14 - Clearing The Start Is Refused (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PATCH",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_second_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_second_id}}"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"from_date\": null\n}"
+    }
+   }
+  },
+  {
+   "name": "15 - Travel Cities: The Birth City Is Lived",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const row = pm.response.json().find(r => r.id === Number(pm.environment.get('lived_birth_city_id')));",
+       "pm.test('Listed as lived, born, until 1990', () => { pm.expect(row.status).to.eql('lived'); pm.expect(row.born).to.eql(true); pm.expect(row.lived_until).to.eql('1990-03-01'); pm.expect(row.living).to.eql(false); pm.expect(row).to.have.property('trips_since'); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/travel/cities?status=visited&limit=500",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "travel",
+      "cities"
+     ],
+     "query": [
+      {
+       "key": "status",
+       "value": "visited"
+      },
+      {
+       "key": "limit",
+       "value": "500"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "16 - Travel Countries: Born There",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('Born flag on the detail', () => pm.expect(pm.response.json().born).to.eql(true));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/travel/countries/{{lived_country_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "travel",
+      "countries",
+      "{{lived_country_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "17 - A City Lived In Can't Be Deleted (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+       "pm.test('Says Places lived', () => pm.expect(pm.response.json().detail).to.include('Places lived'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{lived_birth_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{lived_birth_city_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18 - Follow Home: Close The Open Row Today",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const row = pm.response.json();",
+       "pm.environment.set('lived_home_row_id', row.id);",
+       "pm.test('A new open row in the Home city', () => { pm.expect(row.city.id).to.eql(Number(pm.environment.get('lived_home_city_id'))); pm.expect(row.current).to.eql(true); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/follow-home",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "follow-home"
+     ]
+    }
+   }
+  },
+  {
+   "name": "19 - Follow Home Again (409)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/follow-home",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "follow-home"
+     ]
+    }
+   }
+  },
+  {
+   "name": "20 - The Old Open Row Is Closed",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('It has an end date now', () => pm.expect(pm.response.json().to_date).to.be.a('string'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_second_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_second_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "21 - Delete The Home Row",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_home_row_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_home_row_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "22 - Delete The Second Row",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_second_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_second_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "23 - Delete The Birth Row",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_birth_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_birth_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "24 - Deleted Row (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/residences/{{lived_birth_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "residences",
+      "{{lived_birth_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "25 - Delete The Birth City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{lived_birth_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{lived_birth_city_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "26 - Delete The Second City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{lived_second_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{lived_second_city_id}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "27 - Delete The Country",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{lived_country_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{lived_country_id}}"
+     ]
+    }
+   }
+  }
+ ]
+}

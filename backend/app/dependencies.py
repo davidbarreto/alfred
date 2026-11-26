@@ -147,6 +147,7 @@ from app.integrations.wikipedia.client import USER_AGENT as WIKIPEDIA_USER_AGENT
 from app.features.location.countries.service import CountryService
 from app.features.location.map.repository import MapRepository
 from app.features.location.map.service import MapService
+from app.features.location.residences.service import ResidenceService
 from app.features.travel.cities.hooks import TravelLocationHooks
 from app.features.travel.cities.service import TravelCityService
 from app.features.travel.legs.service import LegService
@@ -793,6 +794,9 @@ def get_city_service(session: AsyncSession = Depends(get_session)) -> CityServic
 def get_country_service(session: AsyncSession = Depends(get_session)) -> CountryService:
     return CountryService(session, get_location_hooks(session), get_media_storage())
 
+def get_residence_service(session: AsyncSession = Depends(get_session)) -> ResidenceService:
+    return ResidenceService(session)
+
 def get_map_service(session: AsyncSession = Depends(get_session)) -> MapService:
     return MapService(MapRepository(session))
 
@@ -1004,6 +1008,7 @@ PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
 TravelPlaceServiceDep = Annotated[TravelPlaceService, Depends(get_travel_place_service)]
 CityServiceDep = Annotated[CityService, Depends(get_city_service)]
 CountryServiceDep = Annotated[CountryService, Depends(get_country_service)]
+ResidenceServiceDep = Annotated[ResidenceService, Depends(get_residence_service)]
 MapServiceDep = Annotated[MapService, Depends(get_map_service)]
 CoverServiceDep = Annotated[CoverService, Depends(get_cover_service)]
 TravelCityServiceDep = Annotated[TravelCityService, Depends(get_travel_city_service)]

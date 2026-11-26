@@ -6215,7 +6215,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const rows = pm.response.json();",
               "const row = rows.find(r => r.id === Number(pm.environment.get('travel_city_b_id')));",
-              "pm.test('The destination city is listed with its trip', () => { pm.expect(row).to.be.an('object'); pm.expect(row.trips).to.be.at.least(1); pm.expect(row).to.have.property('nights'); pm.expect(['home', 'visited', 'planned', 'passed', 'none']).to.include(row.status); pm.expect(row).to.have.property('spend_eur'); pm.expect(row).to.have.property('last_visit'); pm.expect(row.photos_url).to.include('photos.google.com'); });",
+              "pm.test('The destination city is listed with its trip', () => { pm.expect(row).to.be.an('object'); pm.expect(row.trips).to.be.at.least(1); pm.expect(row).to.have.property('nights'); pm.expect(['home', 'lived', 'visited', 'planned', 'passed', 'none']).to.include(row.status); pm.expect(row).to.have.property('spend_eur'); pm.expect(row).to.have.property('last_visit'); pm.expect(row.photos_url).to.include('photos.google.com'); });",
               "pm.test('Sorted by trips, most first', () => { for (let i = 1; i < rows.length; i++) pm.expect(rows[i - 1].trips).to.be.at.least(rows[i].trips); });"
             ]
           }
@@ -6574,7 +6574,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Only the home city and cities been to', () => pm.response.json().forEach(r => pm.expect(['home', 'visited']).to.include(r.status)));"
+              "pm.test('Only the home city, places lived and cities been to', () => pm.response.json().forEach(r => pm.expect(['home', 'lived', 'visited']).to.include(r.status)));"
             ]
           }
         }

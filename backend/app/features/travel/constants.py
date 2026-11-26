@@ -9,12 +9,13 @@ VisitStatus: TypeAlias = Literal["planned", "visited", "missed"]
 
 # A place's travel status (docs/modules/places.md): visited wins over planned.
 PlaceStatus: TypeAlias = Literal["visited", "planned"]
-# A city's, best first: the home city, something visited, something ahead, only a leg end, only links.
-CITY_STATUSES = ("home", "visited", "planned", "passed", "none")
-CityStatus: TypeAlias = Literal["home", "visited", "planned", "passed", "none"]
+# A city's, best first: the home city, a past home (Places lived), something visited, something ahead, only a leg end,
+# only links.
+CITY_STATUSES = ("home", "lived", "visited", "planned", "passed", "none")
+CityStatus: TypeAlias = Literal["home", "lived", "visited", "planned", "passed", "none"]
 # The Cities and Countries filter: each choice and the statuses it shows.
 CITY_STATUS_GROUPS: dict[str, frozenset[str]] = {
-    "visited": frozenset({"home", "visited"}), "planned": frozenset({"planned"}), "passed": frozenset({"passed"}),
+    "visited": frozenset({"home", "lived", "visited"}), "planned": frozenset({"planned"}), "passed": frozenset({"passed"}),
 }
 CityStatusFilter: TypeAlias = Literal["visited", "planned", "passed", "all"]
 

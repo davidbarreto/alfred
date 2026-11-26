@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.location.cities.repository import CityRepository
 from app.features.location.countries.repository import CountryRepository
 from app.features.location.places.repository import PlaceRepository
+from app.features.location.residences.periods import Period, lived_on, lived_summary
+from app.features.location.residences.repository import ResidenceRepository
 from app.features.travel.cities.repository import TravelCityRepository
 from app.features.location.cities.schemas import CityFilters, CityRef
 from app.features.travel.cities.schemas import (
@@ -61,8 +63,15 @@ def nights_by_city(spans: list[tuple[int, datetime, datetime, str]], today: date
     return found
 
 
-def _union(nights: dict[int, set[date]], city_ids: list[int]) -> int:
-    return len(set().union(*(nights.get(i, set()) for i in city_ids)))
+def _union(nights: dict[int, set[date]], city_ids: list[int], lived: list[Period] | None = None) -> int:
+    """The distinct nights over the cities, leaving out the dates lived there (`lived`: the city's or country's rows)."""
+    days = set().union(*(nights.get(i, set()) for i in city_ids))
+    return len([d for d in days if not lived_on(d, lived or [])])
+
+
+def trips_since(trips: list, lived_until: date | None) -> int:
+    """Trips that started on or after the moving-out day of a place lived (0 when it never was one)."""
+    return len([t for t in trips if t.start_date >= lived_until]) if lived_until else 0
 
 
 def last_visit(trips: list, local: date | None, today: date) -> date | None:
@@ -71,11 +80,14 @@ def last_visit(trips: list, local: date | None, today: date) -> date | None:
     return max(days) if days else None
 
 
-def city_status(city_id: int, home_id: int | None, visited: set[int], planned: set[int], legs: set[int]) -> CityStatus:
-    """The city's one travel status, best first: home, visited, planned, passed (only a leg end), none (only links)."""
+def city_status(
+    city_id: int, home_id: int | None, lived: set[int], visited: set[int], planned: set[int], legs: set[int],
+) -> CityStatus:
+    """The city's one travel status, best first: home, lived (Places lived), visited, planned, passed (only a leg end),
+    none (only links)."""
     if city_id == home_id:
         return "home"
-    for status, ids in (("visited", visited), ("planned", planned), ("passed", legs)):
+    for status, ids in (("lived", lived), ("visited", visited), ("planned", planned), ("passed", legs)):
         if city_id in ids:
             return status
     return "none"
@@ -120,6 +132,16 @@ class TravelCityService:
         self._place_repo = TravelPlaceRepository(session)
         self._cost_repo = TransactionLinkRepository(session)
         self._places = PlaceRepository(session)
+        self._residences = ResidenceRepository(session)
+
+    async def _lived(self) -> tuple[dict[int, list[Period]], dict[int, list[Period]]]:
+        """Places lived by city id and by country id."""
+        by_city: dict[int, list[Period]] = {}
+        by_country: dict[int, list[Period]] = {}
+        for row in await self._residences.get_all():
+            by_city.setdefault(row.city_id, []).append(row)
+            by_country.setdefault(row.city.country_id, []).append(row)
+        return by_city, by_country
 
     async def _city_grades(self, city_ids: list[int]) -> tuple[dict[int, list[int]], dict[int, float]]:
         """Each city's place ids and the mean grade of its graded places (cities with no graded place are absent)."""
@@ -190,10 +212,11 @@ class TravelCityService:
         today = local_today()
         local = (await self._repo.get_last_local_visits([city_id], today)).get(city_id)
         nights = nights_by_city(await self._repo.get_stay_spans([city_id]), today)
+        lived = (await self._lived())[0].get(city_id, [])
         return CityDetail.model_validate(city).model_copy(update=dict(
             grade=means.get(city_id), grade_count=len([p for p in ids if p in grades]), place_count=len(ids),
-            places=places, trips=[LocationTrip.model_validate(t) for t in trip_rows],
-            nights=_union(nights, [city_id]), last_visit=last_visit(trip_rows, local, today),
+            places=places, trips=[LocationTrip.model_validate(t) for t in trip_rows], **lived_summary(lived),
+            nights=_union(nights, [city_id], lived), last_visit=last_visit(trip_rows, local, today),
             stay_count=await self._repo.count_stays([city_id]), leg_count=await self._repo.count_leg_ends(city_id),
             home=await is_home_city(self._places, city_id),
             costs=await self._costs(ids, [parse_default_tag_names(city.default_tag_names)]),
@@ -212,10 +235,11 @@ class TravelCityService:
         trips = [LocationTrip.model_validate(t) for t in trip_rows]
         tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
         costs = await self._costs([p for ids in place_ids.values() for p in ids], tag_groups)
+        lived = (await self._lived())[1].get(country_id, [])
         return CountryDetail.model_validate(country).model_copy(update=dict(
-            costs=costs, grade=_mean(list(means.values())), grade_count=len(means),
+            costs=costs, grade=_mean(list(means.values())), grade_count=len(means), **lived_summary(lived),
             cities=[CountryCity(id=c.id, name=c.name, place_count=len(place_ids[c.id]), grade=means.get(c.id)) for c in cities],
-            trips=trips, nights=_union(nights, [c.id for c in cities]), stay_count=await self._repo.count_stays([c.id for c in cities]),
+            trips=trips, nights=_union(nights, [c.id for c in cities], lived), stay_count=await self._repo.count_stays([c.id for c in cities]),
             last_visit=last_visit(trip_rows, max(locals_, default=None), today),
         ))
 
@@ -229,17 +253,19 @@ class TravelCityService:
             found[city_id].append(trips[trip_id])
         return found
 
-    async def _statuses(self) -> tuple[set[int], dict[int, CityStatus]]:
-        """The ids of the cities with travel data plus the home city, and each one's status."""
+    async def _statuses(self, lived: set[int]) -> tuple[set[int], dict[int, CityStatus]]:
+        """The ids of the cities with travel data plus the home city and the places lived, and each one's status."""
         home = await self._places.get_home()
         home_id = home.city_id if home else None
-        ids = await self._repo.get_travel_city_ids() | ({home_id} if home_id else set())
+        ids = await self._repo.get_travel_city_ids() | ({home_id} if home_id else set()) | lived
         visited, planned, legs = await self._repo.get_status_city_ids()
-        return ids, {i: city_status(i, home_id, visited, planned, legs) for i in ids}
+        return ids, {i: city_status(i, home_id, lived, visited, planned, legs) for i in ids}
 
     async def list_cities(self, filters: TravelLocationFilters) -> list[TravelCityRow]:
-        """The home city and cities with travel data (a stay, a visit, a leg end or a link): status, trips, nights, spend."""
-        ids, statuses = await self._statuses()
+        """The home city, the places lived and cities with travel data (a stay, a visit, a leg end or a link): status,
+        trips, nights, spend."""
+        lived, _ = await self._lived()
+        ids, statuses = await self._statuses(set(lived))
         cities = [c for c in await self._cities.get_cities(CityFilters(country_id=filters.country_id)) if c.id in ids]
         city_ids = [c.id for c in cities]
         today = local_today()
@@ -249,17 +275,21 @@ class TravelCityService:
         rows = []
         for city in cities:
             costs = await self._costs(place_ids[city.id], [parse_default_tag_names(city.default_tag_names)])
+            summary = lived_summary(lived.get(city.id, []))
             rows.append(TravelCityRow(
                 id=city.id, name=city.name, country=city.country, status=statuses[city.id], trips=len(trips[city.id]),
-                nights=_union(nights, [city.id]), spend_eur=costs.overall.total_eur,
+                trips_since=trips_since(trips[city.id], summary.get("lived_until")), **summary,
+                nights=_union(nights, [city.id], lived.get(city.id)), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(trips[city.id], locals_.get(city.id), today),
             ))
         logger.debug("Travel cities listed: count=%d", len(rows))
         return sort_rows(rows, filters)
 
     async def list_countries(self, filters: TravelLocationFilters) -> list[TravelCountryRow]:
-        """Countries with travel data (one of their cities has some or is the home city, or a link of their own)."""
-        city_ids, statuses = await self._statuses()
+        """Countries with travel data (one of their cities has some, is the home city or a place lived, or a link of
+        their own)."""
+        lived_cities, lived = await self._lived()
+        city_ids, statuses = await self._statuses(set(lived_cities))
         all_cities = await self._cities.get_cities(CityFilters())
         travel_cities = [c for c in all_cities if c.id in city_ids]
         country_ids = {c.country_id for c in travel_cities} | await self._repo.get_link_country_ids()
@@ -276,10 +306,12 @@ class TravelCityService:
             tag_groups = [parse_default_tag_names(country.default_tag_names)] + [parse_default_tag_names(c.default_tag_names) for c in cities]
             costs = await self._costs([p for c in cities for p in place_ids[c.id]], tag_groups)
             local = max((locals_[c.id] for c in cities if c.id in locals_), default=None)
+            summary = lived_summary(lived.get(country.id, []))
             rows.append(TravelCountryRow(
                 id=country.id, name=country.name, code=country.code, cities=len([c for c in cities if c.id in city_ids]),
                 status=best_status([statuses[c.id] for c in cities if c.id in statuses]),
-                trips=len(country_trips), nights=_union(nights, [c.id for c in cities]), spend_eur=costs.overall.total_eur,
+                trips=len(country_trips), trips_since=trips_since(country_trips, summary.get("lived_until")), **summary,
+                nights=_union(nights, [c.id for c in cities], lived.get(country.id)), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(country_trips, local, today),
             ))
         logger.debug("Travel countries listed: count=%d", len(rows))

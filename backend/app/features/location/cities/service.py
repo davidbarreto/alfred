@@ -13,6 +13,7 @@ from app.features.location.covers import delete_cover_file
 from app.features.location.default_tags import clean_tag_names
 from app.features.location.errors import LocationConflictError, LocationNotFoundError
 from app.features.location.hooks import LocationHooks
+from app.features.location.residences.repository import ResidenceRepository
 from app.shared.protocols.audio import FileStorage
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ class CityService:
         self._repo = CityRepository(session)
         self._country_repo = CountryRepository(session)
         self._resolver = CityResolver(self._repo, self._country_repo, hooks, enricher)
+        self._residences = ResidenceRepository(session)
         self._hooks = hooks
         self._storage = storage
 
@@ -125,6 +127,9 @@ class CityService:
         city = await self._repo.get_city(city_id)
         if city is None:
             return False
+        lived = await self._residences.count_in_city(city_id)
+        if lived:
+            raise LocationConflictError(f"{city.name} is a place you lived ({lived} period(s) in Places lived)")
         reason = await self._hooks.city_in_use(city)
         if reason:
             raise LocationConflictError(reason)

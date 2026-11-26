@@ -1,0 +1,7 @@
+{# The cover badges of a city or country card: Home and Born here. Needs home (bool) and born (bool). -#}
+{% if home or born %}
+<span class="cover-badge flex gap-1">
+  {% if born %}<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-rose-700" data-born><i class="ti ti-baby-carriage"></i> Born here</span>{% endif %}
+  {% if home %}<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-blue-700"><i class="ti ti-home"></i> Home</span>{% endif %}
+</span>
+{% endif %}

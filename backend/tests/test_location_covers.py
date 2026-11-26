@@ -119,6 +119,7 @@ class TestCityServiceCoordinatesAndDelete:
         hooks.before_delete.return_value = AsyncMock()
         service = CityService(AsyncMock(), hooks, storage=storage)
         service._repo = AsyncMock()
+        service._residences = AsyncMock(count_in_city=AsyncMock(return_value=0))
         service._repo.get_city.return_value = _city(cover_path="covers/cities/1.jpg")
         assert await service.delete_city(1) is True
         storage.delete.assert_awaited_once_with("covers/cities/1.jpg")
@@ -129,6 +130,7 @@ class TestCityServiceCoordinatesAndDelete:
         hooks.before_delete.return_value = AsyncMock()
         service = CityService(AsyncMock(), hooks, storage=storage)
         service._repo = AsyncMock()
+        service._residences = AsyncMock(count_in_city=AsyncMock(return_value=0))
         service._repo.get_city.return_value = _city()
         await service.delete_city(1)
         storage.delete.assert_not_awaited()

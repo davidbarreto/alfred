@@ -10,14 +10,15 @@
   <a href="/places/cities/{{ c.id }}" class="card bg-white overflow-hidden hover:shadow-md transition-shadow" id="city-{{ c.id }}">
     <div class="cover-box rounded-b-none">
       {% if c.has_cover %}<img src="/places/cities/{{ c.id }}/cover?v={{ c.updated_at }}" alt="" loading="lazy">{% endif %}
-      {% if card.home %}<span class="cover-badge px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/90 text-blue-700"><i class="ti ti-home"></i> Home</span>{% endif %}
+      {% with home=card.home, born=t and t.born %}{% include "_place_geo_badges.html" %}{% endwith %}
       <div class="cover-shade">
         <p class="text-sm font-semibold leading-tight">{{ c.name }}</p>
         <p class="text-xs opacity-90">{{ c.country | country_flag_of }} {{ c.country.name }}</p>
       </div>
     </div>
     <div class="px-3 py-2 text-xs text-gray-500" data-city-line>
-      {% if t and t.trips %}{% include "_place_geo_travel_line.html" %}
+      {% if t and t.lived_until and not card.home %}{% include "_place_geo_lived_phrase.html" %}{% include "_place_geo_since_line.html" %}
+      {% elif t and t.trips %}{% include "_place_geo_travel_line.html" %}
       {% elif card.home and home_places is not none %}{{ home_places }} place{{ '' if home_places == 1 else 's' }}
       {% elif t and t.last_visit %}Last {{ t.last_visit | month_year }}
       {% else %}<span class="text-gray-400">No trips yet</span>{% endif %}

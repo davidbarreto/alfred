@@ -1,0 +1,18 @@
+{# The Places lived card on the Countries tab: first 5 rows + "See all N", the Home mismatch note, Add.
+   Needs lived (the first rows), lived_total, lived_note ({home, current} or none). -#}
+<div class="card bg-white" id="places-lived">
+  <div class="card-body p-5 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-sm font-semibold text-gray-900">Places lived <span class="text-xs font-normal text-gray-400">{{ lived_total }}</span></h2>
+      <button type="button" class="btn btn-xs btn-outline" data-lived-add><i class="ti ti-plus"></i> Add</button>
+    </div>
+    {% if lived_note %}
+    <div class="rounded-lg bg-amber-50 text-amber-800 text-xs p-3 flex flex-wrap items-center gap-2" id="lived-note">
+      <span class="flex-1 min-w-0">The Home place is in {{ lived_note.home.name }}, but {% if lived_note.current %}Places lived still has you in {{ lived_note.current.name }}{% else %}no row is open (still living there){% endif %}.</span>
+      <button type="button" class="btn btn-xs btn-outline" data-lived-follow>{% if lived_note.current %}Moved to {{ lived_note.home.name }} today{% else %}Living in {{ lived_note.home.name }} from today{% endif %}</button>
+    </div>
+    {% endif %}
+    {% set rows = lived %}{% include "_places_lived_rows.html" %}
+    {% if lived_total > lived | length %}<a href="/places/lived" class="text-xs text-[#378ADD] hover:underline">See all {{ lived_total }}</a>{% endif %}
+  </div>
+</div>

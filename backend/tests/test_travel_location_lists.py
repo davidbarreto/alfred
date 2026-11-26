@@ -116,10 +116,10 @@ class TestHelpers:
         assert [r.id for r in sort_rows(rows, _filters(sort="last_visit"))] == [2, 3, 1]
 
     def test_a_city_has_one_status_best_first(self):
-        visited, planned, legs = {2, 3}, {3, 4}, {1, 2, 3, 4, 5}
-        assert [city_status(i, 1, visited, planned, legs) for i in (1, 2, 3, 4, 5, 6)] == [
-            "home", "visited", "visited", "planned", "passed", "none"]
-        assert city_status(1, None, visited, planned, legs) == "passed"
+        lived, visited, planned, legs = {1, 7}, {2, 3, 7}, {3, 4}, {1, 2, 3, 4, 5}
+        assert [city_status(i, 1, lived, visited, planned, legs) for i in (1, 7, 2, 3, 4, 5, 6)] == [
+            "home", "lived", "visited", "visited", "planned", "passed", "none"]
+        assert city_status(1, None, set(), visited, planned, legs) == "passed"
 
     def test_a_country_takes_its_best_citys_status(self):
         assert best_status(["passed", "planned", "none"]) == "planned"
@@ -128,11 +128,11 @@ class TestHelpers:
 
     def test_the_status_filter_groups_home_with_visited(self):
         rows = [_row(1, "A", status="home"), _row(2, "B", status="visited"), _row(3, "C", status="planned"),
-                _row(4, "D", status="passed"), _row(5, "E")]
-        assert [r.id for r in sort_rows(rows, _filters(status="visited"))] == [1, 2]
+                _row(4, "D", status="passed"), _row(5, "E"), _row(6, "F", status="lived")]
+        assert [r.id for r in sort_rows(rows, _filters(status="visited"))] == [1, 2, 6]
         assert [r.id for r in sort_rows(rows, _filters(status="planned"))] == [3]
         assert [r.id for r in sort_rows(rows, _filters(status="passed"))] == [4]
-        assert len(sort_rows(rows, _filters())) == 5
+        assert len(sort_rows(rows, _filters())) == 6
 
     def test_search_and_pages(self):
         rows = [_row(i, f"City {i}") for i in range(1, 6)] + [_row(9, "Other")]
@@ -145,7 +145,8 @@ def service(monkeypatch):
     monkeypatch.setattr("app.features.travel.cities.service.local_today", lambda: TODAY)
     svc = TravelCityService(AsyncMock())
     svc._repo, svc._cities, svc._countries, svc._place_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
-    svc._cost_repo, svc._places = AsyncMock(), AsyncMock()
+    svc._cost_repo, svc._places, svc._residences = AsyncMock(), AsyncMock(), AsyncMock()
+    svc._residences.get_all.return_value = []
     svc._cost_repo.get_place_linked_ids.return_value = set()
     svc._cost_repo.get_unlinked_tagged_ids.return_value = set()
     svc._cost_repo.get_cost.return_value = (Decimal("12.50"), 1, 0)
@@ -383,3 +384,42 @@ class TestRoutes:
         c, service = client
         getattr(service, method).return_value = None
         assert c.get(path, headers=AUTH).status_code == 404
+
+
+class TestPlacesLived:
+    """Synthetic shape: born in Gamma (Testland) until 2005, living in Alpha (Examplia) since 2019."""
+
+    def _data(self, service):
+        TestLists()._data(service)
+        testland, examplia = _country(2, "Testland", None), _country()
+        service._residences.get_all.return_value = [
+            SimpleNamespace(city_id=1, city=_city(1, "Alpha", examplia), from_date=date(2019, 3, 1), to_date=None, born=False),
+            SimpleNamespace(city_id=3, city=_city(3, "Gamma", testland), from_date=None, to_date=date(2005, 3, 1), born=True),
+        ]
+        # Alpha's March 2026 nights fall while living there; Beta's (same country) too, but Beta itself was not lived in.
+        service._places.get_home.return_value = SimpleNamespace(city_id=1)
+        service._repo.get_trip_city_pairs.return_value = [(10, 1), (10, 2), (11, 1), (12, 3)]
+        service._repo.get_trips.return_value = [
+            _trip(10, date(2026, 3, 1), date(2026, 3, 4)), _trip(11, date(2026, 12, 17), date(2026, 12, 20)),
+            _trip(12, date(2010, 7, 1), date(2010, 7, 9)),
+        ]
+
+    async def test_city_nights_leave_out_dates_lived_in_that_city_only(self, service):
+        self._data(service)
+        rows = {r.name: r for r in await service.list_cities(_filters())}
+        assert (rows["Alpha"].nights, rows["Beta"].nights) == (0, 2)
+        assert (rows["Alpha"].status, rows["Gamma"].status) == ("home", "lived")
+        assert (rows["Alpha"].living, rows["Alpha"].lived_since) == (True, date(2019, 3, 1))
+        assert (rows["Gamma"].born, rows["Gamma"].lived_until, rows["Gamma"].trips_since) == (True, date(2005, 3, 1), 1)
+
+    async def test_country_nights_leave_out_dates_lived_in_the_country(self, service):
+        self._data(service)
+        rows = {r.name: r for r in await service.list_countries(_filters(status="visited"))}
+        assert rows["Examplia"].nights == 0 and rows["Examplia"].living and not rows["Examplia"].born
+        assert (rows["Testland"].status, rows["Testland"].born, rows["Testland"].trips_since) == ("lived", True, 1)
+
+    async def test_a_lived_city_without_travel_data_is_listed_as_visited(self, service):
+        self._data(service)
+        service._repo.get_travel_city_ids.return_value = set()
+        service._repo.get_trip_city_pairs.return_value = [(12, 3)]
+        assert [r.name for r in await service.list_cities(_filters(status="visited"))] == ["Alpha", "Gamma"]

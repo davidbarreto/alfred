@@ -1,0 +1,4 @@
+{# What Places lived says about a city or country: "Living here since Mar 2019" (or "since birth") or "Lived here until
+   2005"; nothing when it never was a home. Needs t (a travel row or detail with living, lived_since, lived_until). -#}
+{% if t and t.living %}Living here since {{ t.lived_since | month_year if t.lived_since else 'birth' }}
+{%- elif t and t.lived_until %}Lived here until {{ t.lived_until[:4] }}{% endif %}

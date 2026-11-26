@@ -21,6 +21,8 @@
 
   {% include "_places_tabs.html" %}
 
+  {% include "_places_lived_card.html" %}
+
   {% with current=status, base="/places/countries" %}{% include "_places_status_chips.html" %}{% endwith %}
 
   {% if not available %}
@@ -33,10 +35,14 @@
     <a href="/places/countries/{{ country.id }}" class="card bg-white overflow-hidden hover:shadow-md transition-shadow" id="country-{{ country.id }}">
       <div class="cover-box rounded-b-none">
         {% include "_place_geo_mosaic.html" %}
+        {% with home=false, born=t and t.born %}{% include "_place_geo_badges.html" %}{% endwith %}
         <div class="cover-shade"><p class="text-sm font-semibold leading-tight">{{ country | country_flag_of }} {{ country.name }}</p></div>
       </div>
-      <div class="px-3 py-2 text-xs text-gray-500">
-        {{ card.city_count }} cit{{ 'y' if card.city_count == 1 else 'ies' }}{% if t and t.trips %} · {% include "_place_geo_travel_line.html" %}{% endif %}
+      <div class="px-3 py-2 text-xs text-gray-500" data-country-line>
+        {% set cities_text %}{{ card.city_count }} cit{{ 'y' if card.city_count == 1 else 'ies' }}{% endset %}
+        {% if t and t.living %}{% include "_place_geo_lived_phrase.html" %} · {{ cities_text }}
+        {% elif t and t.lived_until %}{% include "_place_geo_lived_phrase.html" %}{% include "_place_geo_since_line.html" %}
+        {% else %}{{ cities_text }}{% if t and t.trips %} · {% include "_place_geo_travel_line.html" %}{% endif %}{% endif %}
       </div>
     </a>
     {% endfor %}
@@ -49,4 +55,9 @@
   {% endif %}
   {% endif %}
 </div>
+{% include "_places_lived_dialog.html" %}
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+{% include "_places_lived_script.html" %}
 {% endblock %}

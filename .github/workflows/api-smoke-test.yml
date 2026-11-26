@@ -165,6 +165,7 @@ jobs:
             interviews.collection.json
             everyday_places.collection.json
             location.collection.json
+            location_residences.collection.json
             metrics.collection.json
             travel.collection.json
             notes.collection.json

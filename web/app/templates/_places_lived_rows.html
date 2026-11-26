@@ -1,0 +1,11 @@
+{# Rows of Places lived, newest first. Needs rows (/location/residences). Each row opens the edit dialog. -#}
+{% for r in rows %}
+<div class="flex items-center gap-2 text-sm -mx-2 px-2 py-1 rounded hover:bg-gray-50" id="residence-{{ r.id }}">
+  <a href="/places/cities/{{ r.city.id }}" class="min-w-0 flex-1 truncate text-gray-900 hover:underline">{{ r.city.country | country_flag_of }} {{ r.city.name }}<span class="text-gray-400">, {{ r.city.country.name }}</span></a>
+  {% if r.born %}<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700">Born</span>{% endif %}
+  <span class="text-xs text-gray-500 whitespace-nowrap" data-period>{{ r.from_date | month_year if r.from_date else 'Birth' }} – {{ r.to_date | month_year if r.to_date else 'now' }}</span>
+  <button type="button" class="btn btn-ghost btn-xs" data-lived-edit="{{ r | tojson | forceescape }}" aria-label="Edit {{ r.city.name }}"><i class="ti ti-pencil"></i></button>
+</div>
+{% else %}
+<p class="text-sm text-gray-400">No places lived yet. Add where you were born and where you live now: their dates stop counting as nights away.</p>
+{% endfor %}

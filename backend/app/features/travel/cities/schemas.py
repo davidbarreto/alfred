@@ -12,6 +12,18 @@ from app.features.travel.transaction_links.schemas import LocationCosts
 from app.shared.utils.links import photo_album_label, photos_search_url
 
 
+class LivedFields(BaseModel):
+    """What Places lived (`location.residences`) says about a city or country."""
+
+    born: bool = False
+    # An open row is there (the home city or country, as Places lived has it).
+    living: bool = False
+    # Living there: the start of the unbroken run of rows that ends in the open one (None while living: since birth).
+    lived_since: date | None = None
+    # Lived there and left: the last moving-out day.
+    lived_until: date | None = None
+
+
 class LocationTrip(BaseModel):
     """A trip that touches a city or country (a stay, a visit or a leg end there)."""
 
@@ -36,7 +48,7 @@ class CityPlace(BaseModel):
     grade: float | None = None
 
 
-class CityDetail(CityRead):
+class CityDetail(LivedFields, CityRead):
     """Travel's view of a city: the base city plus its trips, places, grade and spend."""
 
     # It is the travel settings' home city.
@@ -50,7 +62,8 @@ class CityDetail(CityRead):
     places: list[CityPlace] = []
     # Newest first.
     trips: list[LocationTrip] = []
-    # Nights spent there so far (decision in docs/modules/travel.md) and the latest day something was done there.
+    # Nights spent there so far, leaving out the dates lived there (docs/modules/travel.md), and the latest day
+    # something was done there.
     nights: int = 0
     last_visit: date | None = None
     # Stays at its places and legs that start or end there: the counts behind the stays and legs pages.
@@ -65,7 +78,7 @@ class CountryCity(BaseModel):
     grade: float | None = None
 
 
-class CountryDetail(CountryRead):
+class CountryDetail(LivedFields, CountryRead):
     """Travel's view of a country: the base country plus its cities' grades, trips and spend."""
 
     costs: LocationCosts = LocationCosts()
@@ -88,7 +101,7 @@ class TravelLocationFilters:
         q: Annotated[str | None, Query(description="Case-insensitive substring of the name")] = None,
         country_id: Annotated[int | None, Query(description="Cities only: those of this country")] = None,
         status: Annotated[CityStatusFilter, Query(
-            description="visited (the home city and cities been to), planned, passed (only a leg end) or all"
+            description="visited (the home city, places lived and cities been to), planned, passed (only a leg end) or all"
         )] = "all",
         sort: Annotated[TravelLocationSort, Query()] = "name",
         desc: Annotated[bool, Query(description="Largest (or latest) first; name sorts A-Z unless set")] = False,
@@ -104,15 +117,17 @@ class TravelLocationFilters:
         self.offset = offset
 
 
-class TravelLocationRow(BaseModel):
+class TravelLocationRow(LivedFields):
     """One row of travel's city or country list: what was done there."""
 
     id: int
     name: str
-    # home, visited, planned, passed or none (only links); a country takes its best city's.
+    # home, lived, visited, planned, passed or none (only links); a country takes its best city's.
     status: CityStatus = "none"
     trips: int = 0
-    # Nights spent there so far: distinct local dates of its begun stays, up to today.
+    # Lived there and left: the trips that started on or after the moving-out day.
+    trips_since: int = 0
+    # Nights spent there so far: distinct local dates of its begun stays, up to today, not lived there.
     nights: int = 0
     spend_eur: Decimal = Decimal("0.00")
     last_visit: date | None = None

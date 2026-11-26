@@ -1,9 +1,8 @@
-"""Cities and countries in the Places section, their covers, and travel's read-only city and country tables."""
+"""Cities and countries in the Places section, their covers, and the redirects from travel's old city and country tables."""
 import httpx
 import pytest
 
 from app.routes.place_geo import cities_filters, mosaic, sort_cards
-from app.routes.travel import location_list_params
 
 NOW = "2026-11-01T00:00:00Z"
 
@@ -84,9 +83,11 @@ class TestHelpers:
                   [(1, "e", True), (2, "a", True), (3, "b", False), (4, "c", True), (5, "d", True), (6, "f", True)]]
         assert mosaic(cities) == [2, 4, 5, 1]
 
-    def test_location_list_params(self):
-        assert location_list_params({"sort": "spend", "desc": "1", "offset": "25"}) == {"sort": "spend", "desc": True, "offset": 25}
-        assert location_list_params({"sort": "x", "offset": "-3"}) == {"sort": "name", "desc": False, "offset": 0}
+    def test_sort_cards_by_spend(self):
+        cards = [{"item": {"name": "Alpha"}, "travel": {"spend_eur": "20.00"}},
+                 {"item": {"name": "Beta"}, "travel": None},
+                 {"item": {"name": "Gamma"}, "travel": {"spend_eur": "100.50"}}]
+        assert [c["item"]["name"] for c in sort_cards(cards, "spend")] == ["Gamma", "Alpha", "Beta"]
 
 
 class TestCitiesList:
@@ -101,6 +102,21 @@ class TestCitiesList:
         assert "3 trips · 12 days · last Mar 2026" in html
         assert html.count("ti-home") >= 1 and "8 places" in html
         assert 'aria-current="page">Cities' in html and "Add city" in html
+
+    def test_card_line_shows_spend_and_leaves_out_zero_figures(self, client, mock_api):
+        _route(mock_api, {
+            "/location/cities": [_city(4, "Alpha"), _city(6, "Beta")],
+            "/travel/cities": [{"id": 4, "trips": 3, "days": 8, "spend_eur": "1240.40", "last_visit": "2026-08-01"},
+                               {"id": 6, "trips": 1, "days": 0, "spend_eur": "0.00", "last_visit": "2026-08-01"}],
+            "/location/places": _home(99), "/location/countries": [_country()],
+        })
+        html = client.get("/places/cities?sort=spend").text
+        assert "3 trips · 8 days · 1,240 € · last Aug 2026" in html and "1 trip · last Aug 2026" in html
+        assert html.index('id="city-4"') < html.index('id="city-6"') and '<option value="spend" selected>' in html
+
+    def test_cards_are_a_grid(self, client, mock_api):
+        _route(mock_api, {"/location/cities": [_city()], "/travel/cities": [], "/location/places": [], "/location/countries": []})
+        assert '<div class="card-grid" style="--card-min: 14rem">' in client.get("/places/cities").text
 
     def test_partial_pages_and_sorts(self, client, mock_api):
         cities = [_city(i, f"City {i:02d}") for i in range(1, 30)]
@@ -195,6 +211,14 @@ class TestCountries:
         assert 'src="/places/countries/5/cover?v=' in html and "🇴🇱" in html
         assert 'aria-current="page">Countries' in html
 
+    def test_sort_by_spend_keeps_the_sort_when_paging(self, client, mock_api):
+        countries = [_country(i, f"Country {i:02d}", None) for i in range(1, 27)]
+        _route(mock_api, {"/location/countries": countries, "/location/cities": [],
+                          "/travel/countries": [{"id": 26, "trips": 1, "days": 2, "spend_eur": "50.00", "last_visit": None}]})
+        html = client.get("/places/countries?sort=spend").text
+        assert html.index('id="country-26"') < html.index('id="country-1"') and "1 trip · 2 days · 50 €" in html
+        assert 'href="/places/countries?sort=spend&offset=24"' in html and '<div class="card-grid"' in html
+
     def test_search(self, client, mock_api):
         _route(mock_api, {"/location/countries": [_country(), _country(3, "Otherland")], "/location/cities": [], "/travel/countries": []})
         html = client.get("/places/countries?q=other").text
@@ -270,26 +294,16 @@ class TestWritesAndCovers:
 
 
 class TestTravelTables:
-    def test_cities_table_links_to_places_and_sorts(self, client, mock_api):
-        seen = {}
+    @pytest.mark.parametrize("old, new", [("/travel/cities", "/places/cities"), ("/travel/countries", "/places/countries")])
+    def test_old_tables_redirect_to_the_places_tabs(self, client, mock_api, old, new):
+        response = client.get(old, follow_redirects=False)
+        assert response.status_code == 301 and response.headers["location"] == new
+        mock_api["get"].assert_not_awaited()
 
-        def rows(params):
-            seen.update(params)
-            return [{"id": 4, "name": "Alpha", "country": {"id": 2, "name": "Examplia", "code": "EX"}, "trips": 3, "days": 12,
-                     "spend_eur": "100.00", "last_visit": "2026-03-01", "photos_url": "https://photos.google.com/search/Alpha"}]
-        _route(mock_api, {"/travel/cities": rows})
-        html = client.get("/travel/cities?sort=spend&desc=1").text
-        assert seen == {"sort": "spend", "desc": "true", "limit": 26, "offset": 0}
-        assert 'href="/places/cities/4"' in html and "100.00 €" in html and "Mar 2026" in html
-        assert 'href="/travel/cities?sort=spend"' in html and 'href="https://photos.google.com/search/Alpha"' in html
-        assert 'id="new-city"' not in html and 'id="edit-open"' not in html
-
-    def test_countries_table_and_pagination(self, client, mock_api):
-        rows = [{"id": i, "name": f"Country {i}", "code": None, "cities": 2, "trips": 1, "days": 3, "spend_eur": "0.00",
-                 "last_visit": None, "photos_url": "x"} for i in range(26)]
-        _route(mock_api, {"/travel/countries": rows})
-        html = client.get("/travel/countries").text
-        assert 'href="/places/countries/0"' in html and 'href="/places/countries/25"' not in html and "Next" in html
+    def test_travel_header_has_one_places_link(self, client, mock_api):
+        mock_api["get"].return_value = []
+        html = client.get("/travel").text
+        assert 'href="/places"' in html and 'href="/travel/cities"' not in html and 'href="/travel/countries"' not in html
 
     @pytest.mark.parametrize("old, new", [
         ("/travel/cities/4", "/places/cities/4"), ("/travel/cities/4/trips", "/places/cities/4/trips"),

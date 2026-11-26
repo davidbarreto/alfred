@@ -29,6 +29,7 @@ Build pages from these classes instead of ad-hoc grids, so every page lines up t
 | `scroll-row` | A line of tabs or chips that can outgrow the screen: scrolls sideways on a phone, wraps from `sm` |
 | `stat-row` | Number tiles: two per row on a phone, one line on a desktop |
 | `card-row` | Equal cards (charts, previews): as many per row as fit, same height, and a short last row stretches. Narrowest card: `style="--card-min: 16rem"` |
+| `card-grid` | Cards of one width (city, country, everyday place cards): as many columns as fit, and a short last row keeps the same card width; one full-width column on a phone. Same `--card-min` |
 | `card-columns` | Cards of different heights and no popups inside (dashboard): packed in two columns, no holes |
 | `split` + `card-stack` | Two independent stacks of cards (trip page, calendar); one column below `lg`. `split-wide-left` makes it 3:2 |
 | `filter-bar` | Filters above a list: two-column grid on a phone, wrapping row from `sm`; `filter-wide` spans both columns |

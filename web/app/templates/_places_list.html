@@ -14,7 +14,7 @@
   {%- elif filters.view == 'visited' and not (filters.q or filters.kind or filters.city_id or filters.tags or filters.min_grade) %}No visited places yet. Log a visit or a grade on any place's page.
   {%- else %}No places match.{% endif %}</p></div></div>
 {% elif filters.view == 'everyday' %}
-<div class="card-row" style="--card-min: 16rem">
+<div class="card-grid" style="--card-min: 16rem">
   {% for p in places %}
   <div class="card bg-white relative {% if not p.active %}opacity-60{% endif %}" id="place-{{ p.id }}">
     <div class="card-body p-4 space-y-2">

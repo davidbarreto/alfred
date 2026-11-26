@@ -255,6 +255,43 @@ class TestDetailPage:
         mock_api["get"].assert_any_await("/travel/places/3", params=None)
         assert not [c for c in mock_api["get"].await_args_list if c.args[0].endswith("/travel-times")]
 
+    @staticmethod
+    def _columns(text):
+        """The card ids of each column of the page's card layout, in order."""
+        import re
+        layout = text[text.index('id="place-cards"'):text.index('id="visit-dialog"') if 'id="visit-dialog"' in text else None]
+        stacks = layout.split('<div class="card-stack">')[1:] or [layout]
+        return [re.findall(r'<div class="card bg-white[^"]*" id="([a-z-]+)"', stack) for stack in stacks]
+
+    def test_trip_place_has_grade_and_visits_left_the_rest_right(self, client, mock_api):
+        stay = {"id": 4, "trip_id": 2, "check_in_local": "2026-03-10T15:00", "check_out_local": "2026-03-12T11:00",
+                "grade": 5, "notes": None}
+        travel = {"tags": ["view"], "grade": 4.5, "grade_count": 2, "visits": [], "stays": [stay]}
+        mock_api["get"].side_effect = _routes(place=_place(3, "Hotel Example", "hotel", everyday=False, notes="Ask for a high floor"),
+                                              travel=travel)
+
+        text = client.get("/places/3").text
+
+        assert '<div class="split" id="place-cards">' in text
+        assert self._columns(text) == [["place-grade", "visit-history"], ["place-tags", "place-notes", "web-links"]]
+
+    def test_trip_place_with_two_cards_is_one_column(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(place=_place(3, "Sight Example", "attraction", everyday=False))
+
+        text = client.get("/places/3").text
+
+        assert '<div class="card-stack" id="place-cards">' in text and '<div class="split" id="place-cards">' not in text
+        assert self._columns(text) == [["place-grade", "web-links"]]
+
+    def test_everyday_place_keeps_its_two_columns(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(place=_place(notes="Cash only"))
+
+        text = client.get("/places/1").text
+
+        assert 'id="place-cards"' not in text
+        left = text[text.index('<div class="split">'):text.index('id="place-grade"')]
+        assert 'id="place-sells"' in left and 'id="place-notes"' in left
+
     def test_grade_card_on_every_place_logs_a_visit_or_a_want_to_go(self, client, mock_api):
         mock_api["get"].side_effect = _routes(place=_place())
 

@@ -1,0 +1,6 @@
+{# A city or country card's travel figures: "3 trips · 12 days · 1,240 € · last Aug 2026"; zero figures are left out.
+   Needs t (a /travel/cities or /travel/countries row). -#}
+{{ t.trips }} trip{{ '' if t.trips == 1 else 's' }}
+{%- if t.days %} · {{ t.days }} day{{ '' if t.days == 1 else 's' }}{% endif %}
+{%- if t.spend_eur and t.spend_eur | float %} · {{ t.spend_eur | money(0) }} €{% endif %}
+{%- if t.last_visit %} · last {{ t.last_visit | month_year }}{% endif %}

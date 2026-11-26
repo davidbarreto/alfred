@@ -23,7 +23,7 @@ router = APIRouter(prefix="/places")
 _PAGE_SIZE = 24
 # Rows of a list card on a detail page; the rest are on their own page.
 _CARD_LIMIT = 5
-CITY_SORTS = {"name": "Name", "last_visit": "Last visit", "trips": "Trips"}
+CITY_SORTS = {"name": "Name", "last_visit": "Last visit", "trips": "Trips", "spend": "Spend"}
 # Enough for every city or travel row in one call: the lists are sorted by travel figures, so they page here.
 _ALL = 500
 _COVER_CACHE = "private, max-age=86400"
@@ -42,14 +42,15 @@ def by_id(rows: list[dict] | None) -> dict[int, dict]:
 
 
 def sort_cards(cards: list[dict], sort: str) -> list[dict]:
-    """By name; by last visit (latest first, never visited last); or by trips (most first), then by name."""
+    """By name; by last visit (latest first, never visited last); or by trips or spend (most first), then by name."""
     cards = sorted(cards, key=lambda c: c["item"]["name"].lower())
     if sort == "last_visit":
         dated = sorted((c for c in cards if c["travel"] and c["travel"]["last_visit"]),
                        key=lambda c: c["travel"]["last_visit"], reverse=True)
         return dated + [c for c in cards if c not in dated]
-    if sort == "trips":
-        return sorted(cards, key=lambda c: (c["travel"] or {}).get("trips", 0), reverse=True)
+    if sort in ("trips", "spend"):
+        field = "spend_eur" if sort == "spend" else sort
+        return sorted(cards, key=lambda c: float((c["travel"] or {}).get(field) or 0), reverse=True)
     return cards
 
 
@@ -195,6 +196,7 @@ def mosaic(cities: list[dict], limit: int = 4) -> list[int]:
 @router.get("/countries", response_class=HTMLResponse)
 async def countries_page(request: Request):
     q = (request.query_params.get("q") or "").strip()
+    sort = request.query_params.get("sort") if request.query_params.get("sort") in CITY_SORTS else "name"
     countries, cities, travel = await asyncio.gather(
         safe_get("/location/countries"),
         safe_get("/location/cities", default=[]),
@@ -209,7 +211,8 @@ async def countries_page(request: Request):
         cards.append({"item": country, "travel": rows.get(country["id"]), "city_count": len(own), "mosaic": mosaic(own)})
     offset = _offset(request.query_params.get("offset"))
     return templates.TemplateResponse(request, "places_countries.html", {
-        **_page(sort_cards(cards, "name"), offset), "available": countries is not None, "q": q,
+        **_page(sort_cards(cards, sort), offset), "available": countries is not None, "q": q, "sort": sort,
+        "sorts": CITY_SORTS, "query": urlencode([(k, v) for k, v in (("q", q), ("sort", sort)) if v and v != "name"]),
     })
 
 

@@ -221,6 +221,18 @@ html[data-theme="dark"] {
   min-width: 0;
 }
 
+/*
+ * Equal cards of one width (city, country and place cards): a grid of as many
+ * columns as fit, so a short last row keeps the same card width instead of
+ * stretching. min(..., 100%) keeps one full-width column on a phone.
+ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min, 20rem), 100%), 1fr));
+  gap: var(--gap);
+}
+.card-grid > * { min-width: 0; }
+
 /* Small number tiles (counts, totals): two per row on a phone, one line on a desktop. */
 .stat-row {
   display: flex;

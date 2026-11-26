@@ -5,7 +5,7 @@
 {% elif not cards %}
 <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No city matches. <strong>Add city</strong>, or add a place in a new city.</p></div></div>
 {% else %}
-<div class="card-row" style="--card-min: 14rem">
+<div class="card-grid" style="--card-min: 14rem">
   {% for card in cards %}{% set c = card.item %}{% set t = card.travel %}
   <a href="/places/cities/{{ c.id }}" class="card bg-white overflow-hidden hover:shadow-md transition-shadow" id="city-{{ c.id }}">
     <div class="cover-box rounded-b-none">
@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="px-3 py-2 text-xs text-gray-500" data-city-line>
-      {% if t and t.trips %}{{ t.trips }} trip{{ '' if t.trips == 1 else 's' }} · {{ t.days }} day{{ '' if t.days == 1 else 's' }}{% if t.last_visit %} · last {{ t.last_visit | month_year }}{% endif %}
+      {% if t and t.trips %}{% include "_place_geo_travel_line.html" %}
       {% elif card.home and home_places is not none %}{{ home_places }} place{{ '' if home_places == 1 else 's' }}
       {% elif t and t.last_visit %}Last {{ t.last_visit | month_year }}
       {% else %}<span class="text-gray-400">No trips yet</span>{% endif %}

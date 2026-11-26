@@ -267,39 +267,16 @@ async def create_city(request: Request):
 
 
 # "/cities..." and "/countries..." are registered before "/{trip_id}" so they are never read as a trip id.
+# Travel's old city and country tables are the Places tabs now.
 
-_LOCATION_SORTS = {"name": "Name", "trips": "Trips", "days": "Days", "spend": "Spend", "last_visit": "Last visit"}
-_LOCATION_PAGE = 25
-
-
-def location_list_params(params) -> dict:
-    """Sort column, direction and page of a read-only city or country table; unknown values fall back."""
-    sort = params.get("sort") if params.get("sort") in _LOCATION_SORTS else "name"
-    return {"sort": sort, "desc": params.get("desc") in ("1", "true"), "offset": _int_param(params.get("offset"))}
+@router.get("/cities")
+async def cities_redirect():
+    return RedirectResponse("/places/cities", status_code=301)
 
 
-async def _location_table(request: Request, kind: str):
-    """Travel's read-only list of the cities or countries it has data for; rows open their Places page."""
-    state = location_list_params(request.query_params)
-    rows = await safe_get(f"/travel/{kind}", params={
-        "sort": state["sort"], "desc": str(state["desc"]).lower(), "limit": _LOCATION_PAGE + 1, "offset": state["offset"],
-    })
-    items = rows or []
-    return templates.TemplateResponse(request, "travel_locations.html", {
-        "kind": kind, "rows": items[:_LOCATION_PAGE], "available": rows is not None, "state": state,
-        "sorts": _LOCATION_SORTS, "has_next": len(items) > _LOCATION_PAGE, "has_prev": state["offset"] > 0,
-        "page_size": _LOCATION_PAGE,
-    })
-
-
-@router.get("/cities", response_class=HTMLResponse)
-async def cities_page(request: Request):
-    return await _location_table(request, "cities")
-
-
-@router.get("/countries", response_class=HTMLResponse)
-async def countries_page(request: Request):
-    return await _location_table(request, "countries")
+@router.get("/countries")
+async def countries_redirect():
+    return RedirectResponse("/places/countries", status_code=301)
 
 
 @router.post("/cities/{city_id}/links")

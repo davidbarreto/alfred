@@ -65,8 +65,9 @@
     </div>
   </div>
 
-  <div class="split">
-    <div class="card-stack">
+  {# The cards, laid out below: an everyday place has its everyday cards left and the trip cards right; any other place
+     has Grade and Visits and stays left, the rest right, and one full-width column with two cards or fewer. #}
+  {% set hours_card %}
       {% if place.everyday or place.opening_hours %}
       <div class="card bg-white" id="place-hours">
         <div class="card-body p-5 space-y-2">
@@ -92,6 +93,8 @@
       </div>
       {% endif %}
 
+  {% endset %}
+  {% set everyday_cards %}
       {% if place.everyday %}
       <div class="card bg-white" id="place-sells">
         <div class="card-body p-5 space-y-2">
@@ -141,6 +144,8 @@
       </div>
       {% endif %}
 
+  {% endset %}
+  {% set notes_card %}
       {% if place.notes %}
       <div class="card bg-white" id="place-notes">
         <div class="card-body p-5 space-y-2">
@@ -149,9 +154,8 @@
         </div>
       </div>
       {% endif %}
-    </div>
-
-    <div class="card-stack">
+  {% endset %}
+  {% set grade_card %}
       <div class="card bg-white" id="place-grade">
         <div class="card-body p-5 space-y-3">
           <div class="flex items-baseline justify-between gap-3">
@@ -180,6 +184,8 @@
         </div>
       </div>
 
+  {% endset %}
+  {% set visits_card %}
       {% if visits or stays %}
       <div class="card bg-white" id="visit-history">
         <div class="card-body p-5 space-y-3">
@@ -196,6 +202,8 @@
       </div>
       {% endif %}
 
+  {% endset %}
+  {% set tags_card %}
       {% if travel.tags %}
       <div class="card bg-white" id="place-tags">
         <div class="card-body p-5 space-y-2">
@@ -205,11 +213,33 @@
       </div>
       {% endif %}
 
+  {% endset %}
+  {% set links_cards %}
       {% set owner_kind = 'place' %}{% set owner_id = place.id %}{% set links_url = '/places/' ~ place.id ~ '/links' %}
       {% include "_travel_web_links_card.html" %}
       {% include "_travel_link_groups.html" %}
-    </div>
+  {% endset %}
+  {% if place.everyday %}
+  <div class="split">
+    <div class="card-stack">
+{{ hours_card }}{{ everyday_cards }}{{ notes_card }}    </div>
+    <div class="card-stack">
+{{ grade_card }}{{ visits_card }}{{ tags_card }}{{ links_cards }}    </div>
   </div>
+  {% else %}
+  {% set card_count = 2 + [visits or stays, place.opening_hours, travel.tags, place.notes] | select | list | length + link_groups | length %}
+  {% if card_count <= 2 %}
+  <div class="card-stack" id="place-cards">
+{{ grade_card }}{{ links_cards }}  </div>
+  {% else %}
+  <div class="split" id="place-cards">
+    <div class="card-stack">
+{{ grade_card }}{{ visits_card }}    </div>
+    <div class="card-stack">
+{{ hours_card }}{{ tags_card }}{{ notes_card }}{{ links_cards }}    </div>
+  </div>
+  {% endif %}
+  {% endif %}
 
   {% include "_travel_visit_dialog.html" %}
   {% include "_travel_tx_dialog.html" %}

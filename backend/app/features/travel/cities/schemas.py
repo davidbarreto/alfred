@@ -7,6 +7,7 @@ from pydantic import BaseModel, computed_field
 
 from app.features.location.cities.schemas import CityRead, CityRef
 from app.features.location.countries.schemas import CountryRead, CountryRef
+from app.features.travel.constants import CityStatus, CityStatusFilter
 from app.features.travel.transaction_links.schemas import LocationCosts
 from app.shared.utils.links import photo_album_label, photos_search_url
 
@@ -86,6 +87,9 @@ class TravelLocationFilters:
         self,
         q: Annotated[str | None, Query(description="Case-insensitive substring of the name")] = None,
         country_id: Annotated[int | None, Query(description="Cities only: those of this country")] = None,
+        status: Annotated[CityStatusFilter, Query(
+            description="visited (the home city and cities been to), planned, passed (only a leg end) or all"
+        )] = "all",
         sort: Annotated[TravelLocationSort, Query()] = "name",
         desc: Annotated[bool, Query(description="Largest (or latest) first; name sorts A-Z unless set")] = False,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
@@ -93,6 +97,7 @@ class TravelLocationFilters:
     ):
         self.q = q
         self.country_id = country_id
+        self.status = status
         self.sort = sort
         self.desc = desc
         self.limit = limit
@@ -104,6 +109,8 @@ class TravelLocationRow(BaseModel):
 
     id: int
     name: str
+    # home, visited, planned, passed or none (only links); a country takes its best city's.
+    status: CityStatus = "none"
     trips: int = 0
     # Nights spent there so far: distinct local dates of its begun stays, up to today.
     nights: int = 0

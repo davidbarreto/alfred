@@ -31,7 +31,7 @@
 
   <div class="stat-row" id="country-stats">
     {# Every number links to the list it was counted from (docs/portal.md, Numbers link to their source). #}
-    <a href="/places/cities?country_id={{ country.id }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-cities"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ cities_total }}</p></div></a>
+    <a href="/places/cities?country_id={{ country.id }}&status=all" class="card bg-white hover:shadow-md transition-shadow" id="stat-cities"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ cities_total }}</p></div></a>
     {% if travel.trips %}<a href="/places/countries/{{ country.id }}/trips" class="card bg-white hover:shadow-md transition-shadow" id="stat-trips"><div class="card-body p-4"><p class="text-xs text-gray-400">Trips</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.trips | length }}</p></div></a>{% endif %}
     {% if travel.trips or travel.stay_count %}<a href="/places/countries/{{ country.id }}/stays" class="card bg-white hover:shadow-md transition-shadow" id="stat-nights"><div class="card-body p-4"><p class="text-xs text-gray-400">Nights</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ travel.nights }}</p></div></a>{% endif %}
     {% if spend is not none %}<a href="{{ charges_url('country', country.id, part='overall', name=country.name) | trim }}" class="card bg-white hover:shadow-md transition-shadow" id="stat-spend"><div class="card-body p-4"><p class="text-xs text-gray-400">Spend</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ spend | money }} €</p></div></a>{% endif %}
@@ -49,7 +49,7 @@
             {% if c.travel %}<span class="text-xs text-gray-400 whitespace-nowrap">{{ c.travel.place_count }} place{{ '' if c.travel.place_count == 1 else 's' }}{% if c.travel.grade %} · <span class="text-amber-600">{{ c.travel.grade | number }}/5</span>{% endif %}</span>{% endif %}
           </a>
           {% else %}<p class="text-sm text-gray-400">No cities.</p>{% endfor %}
-          {% if cities_total > cities | length %}<a href="/places/cities?country_id={{ country.id }}" class="text-xs text-[#378ADD] hover:underline">See all {{ cities_total }} cities</a>{% endif %}
+          {% if cities_total > cities | length %}<a href="/places/cities?country_id={{ country.id }}&status=all" class="text-xs text-[#378ADD] hover:underline">See all {{ cities_total }} cities</a>{% endif %}
         </div>
       </div>
 

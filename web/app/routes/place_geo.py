@@ -1,7 +1,7 @@
 """Cities and countries in the Places section: cover cards, one page per city and per country.
 
-`location` owns them (name, country, ISO code, coordinates, cover); travel adds what was done there (trips, days,
-spend), from `/travel/cities` and `/travel/countries`. The pages compose both (`docs/modules/places.md`).
+`location` owns them (name, country, ISO code, coordinates, cover); travel adds what was done there (status, trips,
+nights, spend), from `/travel/cities` and `/travel/countries`. The pages compose both (`docs/modules/places.md`).
 Registered before the place routes, so `/places/cities` is never read as a place id.
 """
 import asyncio
@@ -24,6 +24,9 @@ _PAGE_SIZE = 24
 # Rows of a list card on a detail page; the rest are on their own page.
 _CARD_LIMIT = 5
 CITY_SORTS = {"name": "Name", "last_visit": "Last visit", "trips": "Trips", "nights": "Nights", "spend": "Spend"}
+# The Cities and Countries chips: travel's status filter. Visited (the default) is the home city and cities been to.
+STATUS_VIEWS = {"visited": "Visited", "planned": "Planned", "passed": "Passed through", "all": "All"}
+_DEFAULT_STATUS = "visited"
 # Rows per page of a city's or country's stays or legs.
 _ROWS_PAGE = 20
 # Enough for every city or travel row in one call: the lists are sorted by travel figures, so they page here.
@@ -56,16 +59,32 @@ def sort_cards(cards: list[dict], sort: str) -> list[dict]:
     return cards
 
 
+def _status(params) -> str:
+    return params.get("status") if params.get("status") in STATUS_VIEWS else _DEFAULT_STATUS
+
+
 def cities_filters(params) -> dict:
     return {
         "q": (params.get("q") or "").strip(),
         "country_id": _digits(params.get("country_id")),
+        "status": _status(params),
         "sort": params.get("sort") if params.get("sort") in CITY_SORTS else "name",
     }
 
 
 def _query(filters: dict) -> str:
-    return urlencode([(k, v) for k, v in filters.items() if v and not (k == "sort" and v == "name")])
+    defaults = {"sort": "name", "status": _DEFAULT_STATUS}
+    return urlencode([(k, v) for k, v in filters.items() if v and defaults.get(k) != v])
+
+
+def status_chips(filters: dict) -> list[tuple[str, str, str]]:
+    """(status, label, query string) for each chip, keeping the other filters."""
+    return [(key, label, _query({**filters, "status": key})) for key, label in STATUS_VIEWS.items()]
+
+
+def _shown(item_ids: list[int], rows: dict[int, dict], status: str) -> set[int]:
+    """The ids the chip shows: every one on All, else those travel lists for the status."""
+    return set(item_ids) if status == "all" else {i for i in item_ids if i in rows}
 
 
 async def _home_city_id() -> int | None:
@@ -84,11 +103,12 @@ async def _city_cards_context(filters: dict, offset: int) -> dict:
     params = {k: filters[k] for k in ("q", "country_id") if filters[k]}
     cities, travel, home_city_id = await asyncio.gather(
         safe_get("/location/cities", params=params or None),
-        safe_get("/travel/cities", params={"limit": _ALL}, default=[]),
+        safe_get("/travel/cities", params={"limit": _ALL, "status": filters["status"]}, default=[]),
         _home_city_id(),
     )
     rows = by_id(travel)
-    cards = [{"item": c, "travel": rows.get(c["id"]), "home": c["id"] == home_city_id} for c in cities or []]
+    shown = _shown([c["id"] for c in cities or []], rows, filters["status"])
+    cards = [{"item": c, "travel": rows.get(c["id"]), "home": c["id"] == home_city_id} for c in cities or [] if c["id"] in shown]
     home_places = None
     if any(card["home"] for card in cards):
         found = await safe_get("/location/places", params={"city_id": home_city_id, "active": "true", "limit": _ALL}, default=[])
@@ -108,7 +128,7 @@ async def cities_page(request: Request):
         _city_cards_context(filters, 0), safe_get("/location/countries", default=[]),
     )
     return templates.TemplateResponse(request, "places_cities.html", {
-        **context, "countries": countries or [], "sorts": CITY_SORTS,
+        **context, "countries": countries or [], "sorts": CITY_SORTS, "chips": status_chips(filters),
     })
 
 
@@ -263,22 +283,25 @@ def mosaic(cities: list[dict], limit: int = 4) -> list[int]:
 async def countries_page(request: Request):
     q = (request.query_params.get("q") or "").strip()
     sort = request.query_params.get("sort") if request.query_params.get("sort") in CITY_SORTS else "name"
+    status = _status(request.query_params)
     countries, cities, travel = await asyncio.gather(
         safe_get("/location/countries"),
         safe_get("/location/cities", default=[]),
-        safe_get("/travel/countries", params={"limit": _ALL}, default=[]),
+        safe_get("/travel/countries", params={"limit": _ALL, "status": status}, default=[]),
     )
     rows = by_id(travel)
+    shown = _shown([c["id"] for c in countries or []], rows, status)
     cards = []
     for country in countries or []:
-        if q and q.lower() not in country["name"].lower():
+        if country["id"] not in shown or (q and q.lower() not in country["name"].lower()):
             continue
         own = [c for c in cities or [] if c["country"]["id"] == country["id"]]
         cards.append({"item": country, "travel": rows.get(country["id"]), "city_count": len(own), "mosaic": mosaic(own)})
     offset = _offset(request.query_params.get("offset"))
     return templates.TemplateResponse(request, "places_countries.html", {
-        **_page(sort_cards(cards, sort), offset), "available": countries is not None, "q": q, "sort": sort,
-        "sorts": CITY_SORTS, "query": urlencode([(k, v) for k, v in (("q", q), ("sort", sort)) if v and v != "name"]),
+        **_page(sort_cards(cards, sort), offset), "available": countries is not None, "q": q, "sort": sort, "status": status,
+        "sorts": CITY_SORTS, "query": _query({"q": q, "status": status, "sort": sort}),
+        "chips": status_chips({"q": q, "status": status, "sort": sort}),
     })
 
 

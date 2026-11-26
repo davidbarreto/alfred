@@ -68,7 +68,9 @@ def _home(city_id):
 
 class TestHelpers:
     def test_filters_fall_back(self):
-        assert cities_filters({"sort": "grade", "country_id": "x", "q": " a "}) == {"q": "a", "country_id": "", "sort": "name"}
+        assert cities_filters({"sort": "grade", "country_id": "x", "q": " a ", "status": "home"}) == {
+            "q": "a", "country_id": "", "status": "visited", "sort": "name"}
+        assert cities_filters({"status": "passed"})["status"] == "passed"
 
     def test_sort_cards(self):
         cards = [{"item": {"name": "beta"}, "travel": {"trips": 1, "last_visit": "2026-01-01"}},
@@ -100,7 +102,8 @@ class TestCitiesList:
     def test_cards_with_cover_home_badge_and_travel_line(self, client, mock_api):
         _route(mock_api, {
             "/location/cities": [_city(4, "Alpha", has_cover=True), _city(5, "Home Town")],
-            "/travel/cities": [{"id": 4, "name": "Alpha", "trips": 3, "nights": 12, "last_visit": "2026-03-01"}],
+            "/travel/cities": [{"id": 4, "name": "Alpha", "status": "visited", "trips": 3, "nights": 12, "last_visit": "2026-03-01"},
+                               {"id": 5, "name": "Home Town", "status": "home", "trips": 0, "nights": 0, "last_visit": None}],
             "/location/places": _home(5), "/location/countries": [_country()],
         })
         html = client.get("/places/cities").text
@@ -122,14 +125,14 @@ class TestCitiesList:
 
     def test_cards_are_a_grid(self, client, mock_api):
         _route(mock_api, {"/location/cities": [_city()], "/travel/cities": [], "/location/places": [], "/location/countries": []})
-        assert '<div class="card-grid" style="--card-min: 14rem">' in client.get("/places/cities").text
+        assert '<div class="card-grid" style="--card-min: 14rem">' in client.get("/places/cities?status=all").text
 
     def test_partial_pages_and_sorts(self, client, mock_api):
         cities = [_city(i, f"City {i:02d}") for i in range(1, 30)]
         _route(mock_api, {"/location/cities": cities, "/travel/cities": [], "/location/places": []})
-        html = client.get("/places/cities/list?sort=trips&offset=24").text
+        html = client.get("/places/cities/list?sort=trips&status=all&offset=24").text
         assert 'href="/places/cities/25"' in html and 'href="/places/cities/1"' not in html
-        assert "Previous" in html and "Next" not in html and "sort=trips" in html
+        assert "Previous" in html and "Next" not in html and "status=all&amp;sort=trips" in html
 
     def test_country_filter_goes_to_the_api(self, client, mock_api):
         seen = {}
@@ -145,6 +148,43 @@ class TestCitiesList:
         _route(mock_api, {"/location/cities": httpx.ConnectError("down"), "/travel/cities": [], "/location/places": [],
                           "/location/countries": []})
         assert "Cities are unavailable" in client.get("/places/cities").text
+
+
+class TestStatusChips:
+    def _travel(self, seen):
+        def travel(params):
+            seen.append(params.get("status"))
+            return [{"id": 4, "status": "planned", "trips": 1, "nights": 0, "last_visit": None}] if params.get("status") != "visited" else []
+        return travel
+
+    def test_cities_default_to_visited_and_show_only_what_travel_lists(self, client, mock_api):
+        seen = []
+        _route(mock_api, {"/location/cities": [_city(4, "Alpha"), _city(6, "Beta")], "/travel/cities": self._travel(seen),
+                          "/location/places": [], "/location/countries": []})
+        html = client.get("/places/cities").text
+        assert seen == ["visited"] and "No city matches" in html
+        assert 'data-status="visited"' in html and "Passed through" in html
+        assert 'class="px-3 py-1 rounded-full text-xs whitespace-nowrap bg-[#378ADD] text-white" data-status="visited"' in html
+        assert 'href="/places/cities?status=planned"' in html and 'href="/places/cities"' in html
+        assert '<input type="hidden" name="status" value="visited">' in html
+
+    def test_cities_planned_and_all(self, client, mock_api):
+        seen = []
+        _route(mock_api, {"/location/cities": [_city(4, "Alpha"), _city(6, "Beta")], "/travel/cities": self._travel(seen),
+                          "/location/places": [], "/location/countries": []})
+        html = client.get("/places/cities/list?status=planned&q=a").text
+        assert 'id="city-4"' in html and 'id="city-6"' not in html and "status=planned" not in html  # one page, no pager
+        html = client.get("/places/cities?status=all").text
+        assert 'id="city-4"' in html and 'id="city-6"' in html and seen == ["planned", "all"]
+
+    def test_countries_follow_the_chip(self, client, mock_api):
+        seen = []
+        _route(mock_api, {"/location/countries": [_country(4, "Alphaland"), _country(6, "Betaland")], "/location/cities": [],
+                          "/travel/countries": self._travel(seen)})
+        html = client.get("/places/countries?status=planned&sort=trips").text
+        assert 'id="country-4"' in html and 'id="country-6"' not in html and seen == ["planned"]
+        assert 'href="/places/countries?status=passed&amp;sort=trips"' in html and 'href="/places/countries?sort=trips"' in html
+        assert '<input type="hidden" name="status" value="planned">' in html
 
 
 class TestCityPage:
@@ -282,7 +322,7 @@ class TestCountries:
             "/location/cities": [_city(4, "Alpha", has_cover=True), _city(6, "Beta")],
             "/travel/countries": [{"id": 2, "trips": 3, "nights": 20}],
         })
-        html = client.get("/places/countries").text
+        html = client.get("/places/countries?status=all").text
         assert "2 cities · 3 trips · 20 nights" in html and "cover-mosaic-1" in html and 'src="/places/cities/4/cover"' in html
         assert 'src="/places/countries/5/cover?v=' in html and "🇴🇱" in html
         assert 'aria-current="page">Countries' in html
@@ -291,7 +331,7 @@ class TestCountries:
         _route(mock_api, {"/location/countries/2": _country(), "/travel/countries/2/links": [], "/travel/countries/2": _travel_country(),
                           "/location/cities": [_city()]})
         html = client.get("/places/countries/2").text
-        assert '<a href="/places/cities?country_id=2" class="card' in html and '<a href="/places/countries/2/trips" class="card' in html
+        assert '<a href="/places/cities?country_id=2&status=all" class="card' in html and '<a href="/places/countries/2/trips" class="card' in html
         assert '<a href="/places/countries/2/stays" class="card' in html and ">20<" in html
         assert '<a href="/travel/charges?scope=country&id=2&part=overall&name=Examplia" class="card' in html
 
@@ -299,13 +339,13 @@ class TestCountries:
         countries = [_country(i, f"Country {i:02d}", None) for i in range(1, 27)]
         _route(mock_api, {"/location/countries": countries, "/location/cities": [],
                           "/travel/countries": [{"id": 26, "trips": 1, "nights": 2, "spend_eur": "50.00", "last_visit": None}]})
-        html = client.get("/places/countries?sort=spend").text
+        html = client.get("/places/countries?sort=spend&status=all").text
         assert html.index('id="country-26"') < html.index('id="country-1"') and "1 trip · 2 nights · 50 €" in html
-        assert 'href="/places/countries?sort=spend&offset=24"' in html and '<div class="card-grid"' in html
+        assert 'href="/places/countries?status=all&amp;sort=spend&offset=24"' in html and '<div class="card-grid"' in html
 
     def test_search(self, client, mock_api):
         _route(mock_api, {"/location/countries": [_country(), _country(3, "Otherland")], "/location/cities": [], "/travel/countries": []})
-        html = client.get("/places/countries?q=other").text
+        html = client.get("/places/countries?q=other&status=all").text
         assert 'href="/places/countries/3"' in html and 'href="/places/countries/2"' not in html
 
     def test_country_page(self, client, mock_api):
@@ -315,7 +355,7 @@ class TestCountries:
         html = client.get("/places/countries/2").text
         assert 'id="country-hero"' in html and "cover-mosaic-2" in html
         assert 'href="/places/cities/5"' in html and 'href="/places/cities/6"' not in html
-        assert 'href="/places/cities?country_id=2"' in html and "See all 7 cities" in html
+        assert 'href="/places/cities?country_id=2&status=all"' in html and "See all 7 cities" in html
         assert 'data-owner-kind="country" data-owner-id="2"' in html and "3.5/5" in html
         assert "Find photo" not in html and "Upload cover" in html and 'name="code" value="EX"' in html
         assert 'data-map-data="/places/map/data?country_id=2" data-fit="country"' in html

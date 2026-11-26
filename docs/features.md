@@ -68,8 +68,8 @@ Frequent everyday places (home, work, school, the shops near them) with address,
 - Opening hours typed as text (`mon-fri 08:00-20:00; sun closed; holidays closed`); today's hours and "open now" on every location, using the first `HOLIDAY_CALENDARS` calendar for holidays.
 - One home; archive instead of delete; no maps provider (hours and travel are entered by hand or by Claude after the user confirms).
 - Events can sit at a location (picker with *New location…* on the event form); the day plan returns them with every saved route between places, and the client chooses each leg and mode.
-- **Portal:** `/places` (*Everyday*, *Visited*, *All*), `/places/{id}` (hours, sells, travel times, upcoming events, grade with *Log a visit* / *Want to go*, visits and stays, tags, links), `/places/{id}/travel-times`, `/places/{id}/events`, `/places/{id}/visits`, `/places/{id}/links`.
-- **Commands:** `place` add / list / show / update / grade / archive / delete (one command for everyday and visited places; `list --view everyday|visited|all`); "add the pharmacy near school" and "give Cafe Example a 4" work in natural language. **API:** `/organizer/places` (everyday view), `/location/places` (the place itself).
+- **Portal:** `/places` (*Everyday*, *Visited*, *Planned*, *All*; the Cities and Countries tabs: *Visited*, *Planned*, *Passed through*, *All*), `/places/{id}` (hours, sells, travel times, upcoming events, grade with *Log a visit* / *Want to go*, visits and stays, tags, links), `/places/{id}/travel-times`, `/places/{id}/events`, `/places/{id}/visits`, `/places/{id}/links`.
+- **Commands:** `place` add / list / show / update / grade / archive / delete (one command for everyday and visited places; `list --view everyday|visited|planned|all`); "add the pharmacy near school" and "give Cafe Example a 4" work in natural language. **API:** `/organizer/places` (everyday view), `/location/places` (the place itself).
 
 ## Memories, working memory and recall
 

@@ -194,8 +194,8 @@ class TestList:
         }, services)
 
         f = services.travel.get_places.await_args.args[0]
-        assert (f.has_visits, f.kind, f.city, f.tag, f.min_grade, f.ungraded, f.active) == (
-            True, "hotel", "Lisbon", ["A", "B"], 4, False, True
+        assert (f.status, f.kind, f.city, f.tag, f.min_grade, f.ungraded, f.active) == (
+            "visited", "hotel", "Lisbon", ["A", "B"], 4, False, True
         )
         assert result["places"][0]["grade"] == 4.5 and result["places"][0]["tags"] == ["would return"]
 
@@ -203,7 +203,12 @@ class TestList:
         await run("list", {"view": "all", "all": "true"}, services)
 
         f = services.travel.get_places.await_args.args[0]
-        assert f.has_visits is False and f.active is None
+        assert f.status is None and f.active is None
+
+    async def test_planned_view_asks_for_planned_places(self, services):
+        await run("list", {"view": "planned"}, services)
+
+        assert services.travel.get_places.await_args.args[0].status == "planned"
 
     async def test_travel_filters_on_the_everyday_view_are_refused(self, services):
         with pytest.raises(HTTPException) as exc:

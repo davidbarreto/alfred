@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, cast, func, or_, select, union_all
+from sqlalchemy import Date, Select, cast, func, or_, select, union, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.location.cities.tables import City
@@ -17,6 +17,29 @@ def _grades():
     visits = select(Visit.place_id.label("place_id"), Visit.grade.label("grade")).where(Visit.grade.is_not(None))
     stays = select(Stay.place_id.label("place_id"), Stay.grade.label("grade")).where(Stay.grade.is_not(None))
     return union_all(visits, stays).subquery()
+
+
+def visited_place_ids():
+    """Places been to: a visited visit, or a stay that has begun."""
+    return union(
+        select(Visit.place_id).where(Visit.status == "visited"),
+        select(Stay.place_id).where(Stay.check_in_at <= func.now()),
+    )
+
+
+def planned_place_ids():
+    """Places with something ahead (a planned visit or a future stay); a place may be visited too."""
+    return union(
+        select(Visit.place_id).where(Visit.status == "planned"),
+        select(Stay.place_id).where(Stay.check_in_at > func.now()),
+    )
+
+
+def _with_status(stmt: Select, status: str) -> Select:
+    """Visited places, or planned ones that are not visited (a place in both is visited only)."""
+    if status == "visited":
+        return stmt.where(Place.id.in_(visited_place_ids()))
+    return stmt.where(Place.id.in_(planned_place_ids()), ~Place.id.in_(visited_place_ids()))
 
 
 class TravelPlaceRepository:
@@ -57,14 +80,12 @@ class TravelPlaceRepository:
         if filters.ungraded:
             stmt = stmt.where(~Place.id.in_(select(_grades().c.place_id)))
         if filters.status:
-            stmt = stmt.where(Place.id.in_(select(Visit.place_id).where(Visit.status == filters.status)))
+            stmt = _with_status(stmt, filters.status)
         if filters.no_trip:
             stmt = stmt.where(
                 ~Place.id.in_(select(Visit.place_id).where(Visit.trip_id.is_not(None))),
                 ~Place.id.in_(select(Stay.place_id).where(Stay.trip_id.is_not(None))),
             )
-        if filters.has_visits:
-            stmt = stmt.where(or_(Place.id.in_(select(Visit.place_id)), Place.id.in_(select(Stay.place_id))))
         if filters.active is not None:
             stmt = stmt.where(Place.active.is_(filters.active))
         stmt = stmt.order_by(func.lower(Place.name), Place.id).limit(filters.limit).offset(filters.offset)

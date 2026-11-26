@@ -122,12 +122,16 @@ class TestListHelpers:
         f = list_filters(QueryParams("view=visited&city_id=15&min_grade=4&tag=family&ungraded=1&archived=1"))
         path, params = list_request(f, 0)
         assert path == "/travel/places"
-        assert ("has_visits", "true") in params and ("min_grade", "4") in params and ("tag", "family") in params
+        assert ("status", "visited") in params and ("min_grade", "4") in params and ("tag", "family") in params
         assert ("ungraded", "true") in params and ("active", "true") not in params
 
     def test_all_view_lists_every_place_through_travel(self):
         path, params = list_request(list_filters(QueryParams("view=all")), 0)
-        assert path == "/travel/places" and ("has_visits", "true") not in params
+        assert path == "/travel/places" and not any(k == "status" for k, _ in params)
+
+    def test_planned_view_asks_travel_for_planned_places(self):
+        path, params = list_request(list_filters(QueryParams("view=planned&tag=a")), 0)
+        assert path == "/travel/places" and ("status", "planned") in params and ("tag", "a") in params
 
     def test_query_keeps_the_filters_for_pagination(self):
         f = list_filters(QueryParams("view=visited&q=x&tag=a&tag=b&archived=1"))
@@ -158,6 +162,7 @@ class TestListPage:
 
         assert re.search(r'href="/places\?view=visited" class="[^"]*bg-\[#378ADD\][^"]*" data-view="visited"', text)
         assert 'href="/places?view=everyday"' in text and 'href="/places?view=all"' in text
+        assert text.index('data-view="visited"') < text.index('data-view="planned"') < text.index('data-view="all"')
         assert '<a href="/places" class="nav-link active">' in text
         assert 'href="/places/cities"' in text and 'href="/places/countries"' in text  # the section's tabs
 
@@ -195,6 +200,7 @@ class TestListPage:
         mock_api["get"].side_effect = _routes(places=[])
         assert "No everyday places yet" in client.get("/places").text
         assert "No visited places yet" in client.get("/places?view=visited").text
+        assert "Nothing planned" in client.get("/places?view=planned").text
 
         def failing(path, params=None):
             raise httpx.ConnectError("down")

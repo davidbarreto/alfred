@@ -7,6 +7,7 @@ from app.features.location.cities.tables import City
 from app.features.location.places.tables import Place
 from app.features.travel.legs.tables import Leg
 from app.features.travel.links.tables import WebLink
+from app.features.travel.places.repository import planned_place_ids, visited_place_ids
 from app.features.travel.stays.tables import Stay
 from app.features.travel.trips.tables import Trip
 from app.features.travel.visits.tables import Visit
@@ -117,6 +118,17 @@ class TravelCityRepository:
             select(WebLink.city_id).where(WebLink.city_id.is_not(None)),
         )
         return set((await self._session.scalars(stmt)).all())
+
+    async def get_status_city_ids(self) -> tuple[set[int], set[int], set[int]]:
+        """City ids with a visited place, with a planned one (a planned visit or a future stay), and with a leg end."""
+        visited = select(Place.city_id).where(Place.id.in_(visited_place_ids())).distinct()
+        planned = select(Place.city_id).where(Place.id.in_(planned_place_ids())).distinct()
+        legs = union(
+            select(Leg.origin_city_id).where(Leg.origin_city_id.is_not(None)),
+            select(Leg.destination_city_id).where(Leg.destination_city_id.is_not(None)),
+        )
+        found = [set((await self._session.scalars(stmt)).all()) for stmt in (visited, planned, legs)]
+        return found[0], found[1], found[2]
 
     async def get_link_country_ids(self) -> set[int]:
         stmt = select(WebLink.country_id).where(WebLink.country_id.is_not(None)).distinct()

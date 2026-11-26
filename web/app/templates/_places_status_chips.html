@@ -1,0 +1,6 @@
+{# The Cities and Countries status chips. Needs chips [(status, label, query)], current (the chosen status), base (the tab's path). #}
+<nav class="scroll-row" aria-label="Show">
+  {% for key, label, query in chips %}
+  <a href="{{ base }}{{ '?' ~ query if query }}" class="px-3 py-1 rounded-full text-xs whitespace-nowrap {{ 'bg-[#378ADD] text-white' if key == current else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}" data-status="{{ key }}">{{ label }}</a>
+  {% endfor %}
+</nav>

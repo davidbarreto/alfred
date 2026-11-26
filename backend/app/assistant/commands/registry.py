@@ -1610,11 +1610,12 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["name"],
         },
         "list": {
-            "description": "List places: --view everyday (default, with today's hours), visited or all; filter by --kind, --sells, --city, --tag, --min-grade",
+            "description": "List places: --view everyday (default, with today's hours), visited, planned or all; filter by --kind, --sells, --city, --tag, --min-grade",
             "details": _PLACE_DETAILS + (
                 " The argument searches names (and addresses). everyday: the everyday places and Home, filters kind, "
-                "sells, all. visited: places with a visit or a stay, with their grade and tags. all: every place. "
-                "city, country, tag, min_grade and ungraded (true: no grade yet) filter visited and all. --all true includes archived places."
+                "sells, all. visited: places with a visited visit or a stay begun, with their grade and tags. planned: a planned "
+                "visit or a future stay and nothing visited yet. all: every place. "
+                "city, country, tag, min_grade and ungraded (true: no grade yet) filter visited, planned and all. --all true includes archived places."
             ),
             "aliases": ["/places", "/placelist"],
             "flags": PLACE_LIST_FLAGS,

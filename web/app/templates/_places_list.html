@@ -1,4 +1,4 @@
-{# One page of the Places list. Everyday cards show today's hours and what the place sells; the visited and all views show
+{# One page of the Places list. Everyday cards show today's hours and what the place sells; the visited, planned and all views show
    city, grade, last visit and tags. The name link covers the whole card; inner links sit above it (relative z-10). #}
 {% macro today_line(t) -%}
   {%- if not t or t.hours is none -%}Hours unknown
@@ -12,6 +12,7 @@
 <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">
   {%- if filters.view == 'everyday' and not (filters.q or filters.kind or filters.city_id) %}No everyday places yet. Start with home, then add the shops near home, work and school.
   {%- elif filters.view == 'visited' and not (filters.q or filters.kind or filters.city_id or filters.tags or filters.min_grade) %}No visited places yet. Log a visit or a grade on any place's page.
+  {%- elif filters.view == 'planned' and not (filters.q or filters.kind or filters.city_id or filters.tags or filters.min_grade) %}Nothing planned. Plan a visit on a trip or a place's page.
   {%- else %}No places match.{% endif %}</p></div></div>
 {% elif filters.view == 'everyday' %}
 <div class="card-grid" style="--card-min: 16rem">

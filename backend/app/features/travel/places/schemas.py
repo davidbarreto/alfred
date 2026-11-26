@@ -13,7 +13,7 @@ from app.features.location.places.schemas import (
     clean_kind,
     clean_name,
 )
-from app.features.travel.constants import VisitStatus
+from app.features.travel.constants import PlaceStatus
 from app.features.travel.tags.schemas import normalize_tags
 
 
@@ -110,11 +110,10 @@ class TravelPlaceFilters:
         tag: Annotated[list[str] | None, Query(description="Place must carry every given tag")] = None,
         min_grade: Annotated[int | None, Query(ge=1, le=5, description="Minimum derived grade")] = None,
         ungraded: Annotated[bool, Query(description="Only places with no grade yet")] = False,
-        status: Annotated[VisitStatus | None, Query(description="Has a visit with this status")] = None,
+        status: Annotated[PlaceStatus | None, Query(
+            description="visited: a visited visit or a stay begun; planned: a planned visit or a future stay, nothing visited"
+        )] = None,
         no_trip: Annotated[bool, Query(description="Only places in no trip (no visit or stay carries a trip)")] = False,
-        has_visits: Annotated[
-            bool, Query(description="Only places with a visit (any status) or a stay: the Visited view")
-        ] = False,
         active: Annotated[bool | None, Query(description="Only active (true) or archived (false) places")] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
@@ -130,7 +129,6 @@ class TravelPlaceFilters:
         self.ungraded = ungraded
         self.status = status
         self.no_trip = no_trip
-        self.has_visits = has_visits
         self.active = active
         self.limit = limit
         self.offset = offset

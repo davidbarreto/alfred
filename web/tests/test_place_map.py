@@ -71,7 +71,8 @@ class TestMapPage:
         assert "2 places without coordinates" in html
         assert 'data-map-toggle="cities"' in html and 'data-map-toggle="places"' in html
         stats = html[html.index('id="map-stats"'):html.index('id="world-map"')]
-        assert stats.count('<a href="/places/countries" class="card') == 2 and stats.count('<a href="/places/cities" class="card') == 1
+        assert stats.count('<a href="/places/countries?status=all" class="card') == 2
+        assert stats.count('<a href="/places/cities?status=all" class="card') == 1
 
     def test_unavailable(self, client, mock_api):
         mock_api["get"].side_effect = httpx.ConnectError("down")

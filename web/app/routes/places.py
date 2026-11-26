@@ -21,7 +21,7 @@ router = APIRouter(prefix="/places")
 # The pre-Places URLs, kept as permanent redirects (place ids did not change when locations became places).
 legacy_router = APIRouter(prefix="/locations")
 
-VIEWS = ("everyday", "visited", "all")
+VIEWS = ("everyday", "visited", "planned", "all")
 _PAGE_SIZE = 24
 _DAYS = (("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"),
          ("sat", "Saturday"), ("sun", "Sunday"))
@@ -66,7 +66,7 @@ def list_filters(params) -> dict:
         "city_id": _digits(params.get("city_id")),
         "country_id": _digits(params.get("country_id")),
         "archived": params.get("archived") in ("1", "true", "on"),
-        # Travel filters: the visited and all views only.
+        # Travel filters: the visited, planned and all views only.
         "tags": [t for t in params.getlist("tag") if t],
         "min_grade": params.get("min_grade") if params.get("min_grade") in ("1", "2", "3", "4", "5") else "",
         "ungraded": params.get("ungraded") in ("1", "true", "on"),
@@ -98,8 +98,8 @@ def list_request(filters: dict, offset: int) -> tuple[str, list[tuple[str, objec
     params += [("tag", t) for t in filters["tags"]]
     if filters["ungraded"]:
         params.append(("ungraded", "true"))
-    if filters["view"] == "visited":
-        params.append(("has_visits", "true"))
+    if filters["view"] in ("visited", "planned"):
+        params.append(("status", filters["view"]))
     return "/travel/places", params
 
 

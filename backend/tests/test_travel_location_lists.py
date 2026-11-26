@@ -12,7 +12,9 @@ from sqlalchemy.dialects import postgresql
 from app import dependencies as deps
 from app.features.travel.cities.repository import TravelCityRepository
 from app.features.travel.cities.schemas import TravelCityRow, TravelLocationFilters
-from app.features.travel.cities.service import TravelCityService, last_visit, nights_by_city, sort_rows, stay_nights
+from app.features.travel.cities.service import (
+    TravelCityService, best_status, city_status, last_visit, nights_by_city, sort_rows, stay_nights,
+)
 from app.features.travel.trips.schemas import TripCreate, TripRead, TripUpdate
 from app.main import app
 from app.shared.utils.links import photo_album_label, photos_search_url
@@ -31,7 +33,7 @@ def _at(year, month, day, hour, minute=0):
 
 
 def _filters(**kw):
-    return TravelLocationFilters(**{"q": None, "country_id": None, "sort": "name", "desc": False, "limit": 50, "offset": 0, **kw})
+    return TravelLocationFilters(**{"q": None, "country_id": None, "status": "all", "sort": "name", "desc": False, "limit": 50, "offset": 0, **kw})
 
 
 def _row(id, name, **kw):
@@ -113,6 +115,25 @@ class TestHelpers:
         assert [r.id for r in sort_rows(rows, _filters(sort="last_visit", desc=True))] == [3, 2, 1]
         assert [r.id for r in sort_rows(rows, _filters(sort="last_visit"))] == [2, 3, 1]
 
+    def test_a_city_has_one_status_best_first(self):
+        visited, planned, legs = {2, 3}, {3, 4}, {1, 2, 3, 4, 5}
+        assert [city_status(i, 1, visited, planned, legs) for i in (1, 2, 3, 4, 5, 6)] == [
+            "home", "visited", "visited", "planned", "passed", "none"]
+        assert city_status(1, None, visited, planned, legs) == "passed"
+
+    def test_a_country_takes_its_best_citys_status(self):
+        assert best_status(["passed", "planned", "none"]) == "planned"
+        assert best_status(["visited", "home"]) == "home"
+        assert best_status([]) == "none"
+
+    def test_the_status_filter_groups_home_with_visited(self):
+        rows = [_row(1, "A", status="home"), _row(2, "B", status="visited"), _row(3, "C", status="planned"),
+                _row(4, "D", status="passed"), _row(5, "E")]
+        assert [r.id for r in sort_rows(rows, _filters(status="visited"))] == [1, 2]
+        assert [r.id for r in sort_rows(rows, _filters(status="planned"))] == [3]
+        assert [r.id for r in sort_rows(rows, _filters(status="passed"))] == [4]
+        assert len(sort_rows(rows, _filters())) == 5
+
     def test_search_and_pages(self):
         rows = [_row(i, f"City {i}") for i in range(1, 6)] + [_row(9, "Other")]
         assert [r.id for r in sort_rows(rows, _filters(q="city", limit=2, offset=2))] == [3, 4]
@@ -146,6 +167,9 @@ class TestLists:
         service._cities.get_cities.return_value = cities
         service._countries.get_countries.return_value = [examplia, testland, _country(3, "Linked only", "LO")]
         service._repo.get_travel_city_ids.return_value = {1, 2}
+        service._places.get_home.return_value = None
+        # Alpha was been to; Beta has only a planned place and a leg end.
+        service._repo.get_status_city_ids.return_value = ({1}, {1, 2}, {2})
         service._repo.get_link_country_ids.return_value = {3}
         service._repo.get_trip_city_pairs.return_value = [(10, 1), (10, 2), (11, 1)]
         service._repo.get_trips.return_value = [
@@ -165,12 +189,22 @@ class TestLists:
             ("Alpha", 2, 3, date(2026, 3, 1)), ("Beta", 1, 2, date(2026, 9, 9)),
         ]
         assert rows[0].spend_eur == Decimal("12.50") and rows[0].photos_url.endswith("/search/Alpha")
+        assert [r.status for r in rows] == ["visited", "planned"]
+
+    async def test_the_home_city_is_listed_without_travel_data_and_its_country_is_home(self, service):
+        self._data(service)
+        service._places.get_home.return_value = SimpleNamespace(city_id=3)
+        cities = await service.list_cities(_filters(status="visited"))
+        assert [(r.name, r.status, r.trips) for r in cities] == [("Alpha", "visited", 2), ("Gamma", "home", 0)]
+        countries = await service.list_countries(_filters())
+        assert [(r.name, r.status) for r in countries] == [("Examplia", "visited"), ("Linked only", "none"), ("Testland", "home")]
+        assert [r.name for r in await service.list_countries(_filters(status="planned"))] == []
 
     async def test_countries_count_each_trip_once(self, service):
         self._data(service)
         rows = await service.list_countries(_filters())
         assert [(r.name, r.cities, r.trips, r.nights) for r in rows] == [("Examplia", 2, 2, 3), ("Linked only", 0, 0, 0)]
-        assert rows[0].last_visit == date(2026, 9, 9)
+        assert rows[0].last_visit == date(2026, 9, 9) and rows[0].status == "visited"
 
     async def test_detail_has_nights_counts_and_last_visit(self, service):
         service._cities.get_city.return_value = SimpleNamespace(
@@ -253,6 +287,18 @@ class TestRepositorySql:
         stmt = (session.execute.await_args or session.scalars.await_args).args[0]
         return str(stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
 
+    async def test_status_city_ids(self):
+        session = _session()
+        session.scalars.return_value = MagicMock(all=lambda: [1])
+        assert await TravelCityRepository(session).get_status_city_ids() == ({1}, {1}, {1})
+        visited, planned, legs = (
+            str(c.args[0].compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+            for c in session.scalars.await_args_list
+        )
+        assert "travel.visits.status = 'visited'" in visited and "check_in_at <= now()" in visited
+        assert "travel.visits.status = 'planned'" in planned and "check_in_at > now()" in planned
+        assert "travel.legs.destination_city_id IS NOT NULL" in legs
+
     async def test_travel_city_ids(self):
         sql = await self._compiled(lambda r: r.get_travel_city_ids())
         assert "UNION" in sql and "travel.links.city_id" in sql and "travel.legs.origin_city_id" in sql
@@ -304,7 +350,11 @@ class TestRoutes:
         response = c.get("/travel/cities?sort=trips&desc=true&limit=5", headers=AUTH)
         assert response.status_code == 200 and response.json()[0]["trips"] == 2
         filters = service.list_cities.await_args.args[0]
-        assert (filters.sort, filters.desc, filters.limit) == ("trips", True, 5)
+        assert (filters.sort, filters.desc, filters.limit, filters.status) == ("trips", True, 5, "all")
+        assert response.json()[0]["status"] == "none"
+        c.get("/travel/countries?status=passed", headers=AUTH)
+        assert service.list_countries.await_args.args[0].status == "passed"
+        assert c.get("/travel/cities?status=home", headers=AUTH).status_code == 422
         assert c.get("/travel/countries", headers=AUTH).json() == []
 
     def test_bad_sort_is_422(self, client):

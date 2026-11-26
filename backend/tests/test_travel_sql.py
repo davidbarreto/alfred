@@ -152,10 +152,15 @@ class TestPlaceQuery:
         sql = await self._sql(no_trip=True, status="visited", kind="cafe", city="Lisbon", country="Portugal", q="x")
         assert "trip_id IS NOT NULL" in sql and "'visited'" in sql
 
-    async def test_has_visits_takes_a_visit_of_any_status_or_a_stay(self):
-        sql = await self._sql(has_visits=True)
-        assert "FROM travel.visits" in sql and "FROM travel.stays" in sql and " OR " in sql
-        assert "status" not in sql.split("WHERE", 1)[1]
+    async def test_visited_is_a_visited_visit_or_a_stay_begun(self):
+        where = (await self._sql(status="visited")).split("WHERE", 1)[1]
+        assert "travel.visits.status = 'visited'" in where and "travel.stays.check_in_at <= now()" in where
+        assert "'planned'" not in where
+
+    async def test_planned_is_a_planned_visit_or_a_future_stay_and_nothing_visited(self):
+        where = (await self._sql(status="planned")).split("WHERE", 1)[1]
+        assert "travel.visits.status = 'planned'" in where and "travel.stays.check_in_at > now()" in where
+        assert "location.places.id NOT IN" in where and "travel.visits.status = 'visited'" in where
 
     async def test_active_filter(self):
         assert "location.places.active IS true" in await self._sql(active=True)

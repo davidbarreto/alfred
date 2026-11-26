@@ -8,7 +8,7 @@
   <div class="page-head">
     <div>
       <h1 class="text-base font-semibold text-gray-900">Cities</h1>
-      <p class="text-xs text-gray-400">Every city Alfred knows: the home city and the ones your trips and places are in.</p>
+      <p class="text-xs text-gray-400">The home city and the cities you have been to; the chips show planned ones, ones only passed through, or every city.</p>
     </div>
     <div class="page-actions">
       <button type="button" id="new-city"
@@ -20,8 +20,11 @@
 
   {% include "_places_tabs.html" %}
 
+  {% with current=filters.status, base="/places/cities" %}{% include "_places_status_chips.html" %}{% endwith %}
+
   <form id="city-filters" class="filter-bar"
         hx-get="/places/cities/list" hx-target="#city-cards" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#city-q">
+    <input type="hidden" name="status" value="{{ filters.status }}">
     <label class="space-y-1 filter-wide sm:w-48"><span class="block text-xs text-gray-500">Search</span>
       <input id="city-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-full" placeholder="City name"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>

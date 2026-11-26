@@ -34,7 +34,7 @@ from app.shared.utils.timezone import local_today
 logger = logging.getLogger(__name__)
 
 _TEXT_FIELDS = ("name", "kind", "address", "maps_url", "coordinates", "opening_hours", "notes")
-_VIEWS = ("everyday", "visited", "all")
+_VIEWS = ("everyday", "visited", "planned", "all")
 
 
 @dataclass(frozen=True)
@@ -196,7 +196,7 @@ async def _list(arguments: dict[str, Any], services: PlaceServices) -> dict[str,
     if view == "everyday":
         travel_only = [k for k in ("city", "country", "tag", "min_grade", "ungraded") if _text(arguments, k)]
         if travel_only:
-            raise _bad_request(f"{', '.join(travel_only)} filter the visited or all views: add --view visited or all")
+            raise _bad_request(f"{', '.join(travel_only)} filter the visited, planned or all views: add --view visited, planned or all")
         sells = _text(arguments, "sells")
         filters = EverydayPlaceFilters(
             kind=_text(arguments, "kind"), active=active,
@@ -212,7 +212,7 @@ async def _list(arguments: dict[str, Any], services: PlaceServices) -> dict[str,
         country=_text(arguments, "country"), tag=parse_tags(arguments.get("tag")) or None,
         min_grade=parse_int(arguments.get("min_grade"), "min_grade"),
         ungraded=parse_bool(arguments["ungraded"], "ungraded") if _text(arguments, "ungraded") else False,
-        has_visits=view == "visited", active=active,
+        status=view if view in ("visited", "planned") else None, active=active,
         limit=limit, offset=optional_int(arguments, "offset", 0),
     )
     places = await services.travel.get_places(filters)

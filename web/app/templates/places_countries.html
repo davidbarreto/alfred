@@ -11,6 +11,7 @@
       <p class="text-xs text-gray-400">The countries of your cities. A country is added with its first city.</p>
     </div>
     <form class="page-actions" method="get" action="/places/countries">
+      <input type="hidden" name="status" value="{{ status }}">
       <input name="q" value="{{ q }}" class="input input-sm input-bordered w-44" placeholder="Search" aria-label="Search countries">
       <select name="sort" class="select select-sm select-bordered" aria-label="Sort countries" onchange="this.form.submit()">
         {% for key, label in sorts.items() %}<option value="{{ key }}" {{ 'selected' if sort == key }}>{{ label }}</option>{% endfor %}
@@ -19,6 +20,8 @@
   </div>
 
   {% include "_places_tabs.html" %}
+
+  {% with current=status, base="/places/countries" %}{% include "_places_status_chips.html" %}{% endwith %}
 
   {% if not available %}
   <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Countries are unavailable right now.</p></div></div>

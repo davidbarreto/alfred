@@ -22,6 +22,7 @@ from app.features.travel.cities.schemas import (
     TravelLocationFilters,
     TravelLocationRow,
 )
+from app.features.travel.constants import CITY_STATUS_GROUPS, CITY_STATUSES, CityStatus
 from app.features.travel.trips.tables import Trip
 from app.features.travel.zones import to_local
 from app.shared.utils.timezone import local_today
@@ -70,11 +71,28 @@ def last_visit(trips: list, local: date | None, today: date) -> date | None:
     return max(days) if days else None
 
 
+def city_status(city_id: int, home_id: int | None, visited: set[int], planned: set[int], legs: set[int]) -> CityStatus:
+    """The city's one travel status, best first: home, visited, planned, passed (only a leg end), none (only links)."""
+    if city_id == home_id:
+        return "home"
+    for status, ids in (("visited", visited), ("planned", planned), ("passed", legs)):
+        if city_id in ids:
+            return status
+    return "none"
+
+
+def best_status(statuses: list[CityStatus]) -> CityStatus:
+    """A country's status: its best city's."""
+    return min(statuses, key=CITY_STATUSES.index, default="none")
+
+
 def sort_rows(rows: list[TravelLocationRow], filters: TravelLocationFilters) -> list[TravelLocationRow]:
     """Sorted by the chosen column (rows with no last visit go last), then by name; then paginated."""
     if filters.q and filters.q.strip():
         key = filters.q.strip().lower()
         rows = [r for r in rows if key in r.name.lower()]
+    if filters.status != "all":
+        rows = [r for r in rows if r.status in CITY_STATUS_GROUPS[filters.status]]
     rows = sorted(rows, key=lambda r: r.name.lower())
     if filters.sort == "last_visit":
         dated = sorted((r for r in rows if r.last_visit), key=lambda r: r.last_visit, reverse=filters.desc)
@@ -211,9 +229,17 @@ class TravelCityService:
             found[city_id].append(trips[trip_id])
         return found
 
+    async def _statuses(self) -> tuple[set[int], dict[int, CityStatus]]:
+        """The ids of the cities with travel data plus the home city, and each one's status."""
+        home = await self._places.get_home()
+        home_id = home.city_id if home else None
+        ids = await self._repo.get_travel_city_ids() | ({home_id} if home_id else set())
+        visited, planned, legs = await self._repo.get_status_city_ids()
+        return ids, {i: city_status(i, home_id, visited, planned, legs) for i in ids}
+
     async def list_cities(self, filters: TravelLocationFilters) -> list[TravelCityRow]:
-        """Cities with travel data (a stay, a visit, a leg end or a link), with their trips, nights and spend."""
-        ids = await self._repo.get_travel_city_ids()
+        """The home city and cities with travel data (a stay, a visit, a leg end or a link): status, trips, nights, spend."""
+        ids, statuses = await self._statuses()
         cities = [c for c in await self._cities.get_cities(CityFilters(country_id=filters.country_id)) if c.id in ids]
         city_ids = [c.id for c in cities]
         today = local_today()
@@ -224,7 +250,7 @@ class TravelCityService:
         for city in cities:
             costs = await self._costs(place_ids[city.id], [parse_default_tag_names(city.default_tag_names)])
             rows.append(TravelCityRow(
-                id=city.id, name=city.name, country=city.country, trips=len(trips[city.id]),
+                id=city.id, name=city.name, country=city.country, status=statuses[city.id], trips=len(trips[city.id]),
                 nights=_union(nights, [city.id]), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(trips[city.id], locals_.get(city.id), today),
             ))
@@ -232,8 +258,8 @@ class TravelCityService:
         return sort_rows(rows, filters)
 
     async def list_countries(self, filters: TravelLocationFilters) -> list[TravelCountryRow]:
-        """Countries with travel data (one of their cities has some, or a link of their own)."""
-        city_ids = await self._repo.get_travel_city_ids()
+        """Countries with travel data (one of their cities has some or is the home city, or a link of their own)."""
+        city_ids, statuses = await self._statuses()
         all_cities = await self._cities.get_cities(CityFilters())
         travel_cities = [c for c in all_cities if c.id in city_ids]
         country_ids = {c.country_id for c in travel_cities} | await self._repo.get_link_country_ids()
@@ -252,6 +278,7 @@ class TravelCityService:
             local = max((locals_[c.id] for c in cities if c.id in locals_), default=None)
             rows.append(TravelCountryRow(
                 id=country.id, name=country.name, code=country.code, cities=len([c for c in cities if c.id in city_ids]),
+                status=best_status([statuses[c.id] for c in cities if c.id in statuses]),
                 trips=len(country_trips), nights=_union(nights, [c.id for c in cities]), spend_eur=costs.overall.total_eur,
                 last_visit=last_visit(country_trips, local, today),
             ))

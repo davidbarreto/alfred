@@ -1523,7 +1523,7 @@
       }
     },
     {
-      "name": "31b - Places With Visits Or Stays (the Visited view)",
+      "name": "31b - Visited Places (a visited visit or a stay begun)",
       "event": [
         {
           "listen": "test",
@@ -1545,7 +1545,7 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places?has_visits=true&tag=postman-place-{{travel_ts}}",
+          "raw": "{{base_url}}/travel/places?status=visited&tag=postman-place-{{travel_ts}}",
           "host": [
             "{{base_url}}"
           ],
@@ -1555,8 +1555,8 @@
           ],
           "query": [
             {
-              "key": "has_visits",
-              "value": "true"
+              "key": "status",
+              "value": "visited"
             },
             {
               "key": "tag",
@@ -1589,7 +1589,7 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/travel/places?has_visits=true&active=false&tag=postman-place-{{travel_ts}}",
+          "raw": "{{base_url}}/travel/places?status=visited&active=false&tag=postman-place-{{travel_ts}}",
           "host": [
             "{{base_url}}"
           ],
@@ -1599,8 +1599,8 @@
           ],
           "query": [
             {
-              "key": "has_visits",
-              "value": "true"
+              "key": "status",
+              "value": "visited"
             },
             {
               "key": "active",
@@ -1609,6 +1609,79 @@
             {
               "key": "tag",
               "value": "postman-place-{{travel_ts}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "31d - Planned Places Leave Out Visited Ones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A place with a visited visit is not planned, even with a future stay', () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(Number(pm.environment.get('travel_place_id'))));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/places?status=planned&tag=postman-place-{{travel_ts}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "planned"
+            },
+            {
+              "key": "tag",
+              "value": "postman-place-{{travel_ts}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "31e - Old Visit Status Values Are Refused (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/places?status=missed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "missed"
             }
           ]
         }
@@ -6142,7 +6215,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const rows = pm.response.json();",
               "const row = rows.find(r => r.id === Number(pm.environment.get('travel_city_b_id')));",
-              "pm.test('The destination city is listed with its trip', () => { pm.expect(row).to.be.an('object'); pm.expect(row.trips).to.be.at.least(1); pm.expect(row).to.have.property('days'); pm.expect(row).to.have.property('spend_eur'); pm.expect(row).to.have.property('last_visit'); pm.expect(row.photos_url).to.include('photos.google.com'); });",
+              "pm.test('The destination city is listed with its trip', () => { pm.expect(row).to.be.an('object'); pm.expect(row.trips).to.be.at.least(1); pm.expect(row).to.have.property('nights'); pm.expect(['home', 'visited', 'planned', 'passed', 'none']).to.include(row.status); pm.expect(row).to.have.property('spend_eur'); pm.expect(row).to.have.property('last_visit'); pm.expect(row.photos_url).to.include('photos.google.com'); });",
               "pm.test('Sorted by trips, most first', () => { for (let i = 1; i < rows.length; i++) pm.expect(rows[i - 1].trips).to.be.at.least(rows[i].trips); });"
             ]
           }
@@ -6487,6 +6560,157 @@
             {
               "key": "limit",
               "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137k - Travel Cities Visited (home and been to)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only the home city and cities been to', () => pm.response.json().forEach(r => pm.expect(['home', 'visited']).to.include(r.status)));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?status=visited&limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "visited"
+            },
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137l - Travel Cities Passed Through",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only cities that are just a leg end', () => pm.response.json().forEach(r => pm.expect(r.status).to.eql('passed')));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?status=passed&limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "passed"
+            },
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137m - Travel Countries Planned",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Each country is planned by its best city', () => pm.response.json().forEach(r => pm.expect(r.status).to.eql('planned')));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/countries?status=planned&limit=500",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "countries"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "planned"
+            },
+            {
+              "key": "limit",
+              "value": "500"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "137n - Travel Cities With A Bad Status (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/travel/cities?status=home",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "cities"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "home"
             }
           ]
         }

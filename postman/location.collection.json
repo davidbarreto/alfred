@@ -1186,7 +1186,8 @@
       "type": "text/javascript",
       "exec": [
        "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-       "pm.environment.set('map_place_id', pm.response.json().id);"
+       "pm.environment.set('map_place_id', pm.response.json().id);",
+       "pm.test('Has the coordinates', () => { pm.expect(pm.response.json().latitude).to.eql(38.71); pm.expect(pm.response.json().longitude).to.eql(-9.13); });"
       ]
      }
     }
@@ -1211,7 +1212,7 @@
     },
     "body": {
      "mode": "raw",
-     "raw": "{\n  \"name\": \"Map Pin {{place_run}}\",\n  \"kind\": \"cafe\",\n  \"city_id\": \"{{place_other_city_id}}\",\n  \"latitude\": 38.71,\n  \"longitude\": -9.13\n}"
+     "raw": "{\n  \"name\": \"Map Pin {{place_run}}\",\n  \"kind\": \"cafe\",\n  \"city_id\": \"{{place_other_city_id}}\",\n  \"coordinates\": [\n    38.71,\n    -9.13\n  ]\n}"
     }
    }
   },

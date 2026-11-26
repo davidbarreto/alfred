@@ -57,7 +57,7 @@
   </div>
   {% endif %}
 
-  <div id="edit-place" class="card bg-white hidden">
+  <div id="edit-place" class="card bg-white{{ '' if editing else ' hidden' }}">
     <div class="card-body p-5">
       {% with form_id="edit-place-form", form_url="/places/" ~ place.id, form_method="PATCH", p=place, tags_text=travel.tags | join(', ') %}
         {% include "_place_form.html" %}

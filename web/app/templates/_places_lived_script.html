@@ -18,20 +18,21 @@
   });
   let editing = null;
 
-  function open(row) {
+  function open(row, born = false) {
     editing = row;
     error.textContent = '';
-    form.querySelector('[data-title]').textContent = row ? `Edit ${row.city.name}` : 'Add a place lived';
+    form.querySelector('[data-title]').textContent = row ? `Edit ${row.city.name}` : (born ? 'Where you were born' : 'Add a place lived');
     picker.reset(row ? row.city : null);
     form.elements.from_date.value = row?.from_date || '';
     form.elements.to_date.value = row?.to_date || '';
-    form.elements.born.checked = !!row?.born;
+    form.elements.born.checked = row ? !!row.born : born;
     form.elements.notes.value = row?.notes || '';
     deleteButton.classList.toggle('hidden', !row);
     dialog.showModal();
   }
 
   document.querySelectorAll('[data-lived-add]').forEach((b) => b.addEventListener('click', () => open(null)));
+  document.querySelectorAll('[data-lived-born]').forEach((b) => b.addEventListener('click', () => open(null, true)));
   document.querySelectorAll('[data-lived-edit]').forEach((b) => b.addEventListener('click', () => open(JSON.parse(b.dataset.livedEdit))));
   form.querySelector('[data-close]').addEventListener('click', () => dialog.close());
 

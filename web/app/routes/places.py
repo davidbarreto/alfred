@@ -143,13 +143,6 @@ async def places_list(request: Request):
     return templates.TemplateResponse(request, "_places_list.html", context)
 
 
-@router.get("/home")
-async def home_place():
-    """The Home place's page (the /settings Home row links here); the list when there is no Home yet."""
-    homes = await safe_get("/location/places", params={"kind": "home"}, default=[])
-    return RedirectResponse(f"/places/{homes[0]['id']}" if homes else "/places", status_code=302)
-
-
 async def _place(place_id: int) -> dict | None:
     """The place with its everyday role (any place: `everyday` says whether it is one)."""
     return await safe_get(f"/organizer/places/{place_id}")
@@ -187,6 +180,7 @@ async def place_detail(request: Request, place_id: int):
         "categories": categories or [],
         "selected_ids": {c["id"] for c in place["categories"]},
         "home_moved": place["kind"] == "home" and request.query_params.get("moved") == "1",
+        "editing": request.query_params.get("edit") == "1",
         "travel_times": (travel_times or [])[:_CARD_LIMIT], "travel_times_total": len(travel_times or []),
         "others": others,
         "events": events[:_CARD_LIMIT], "events_total": len(events),

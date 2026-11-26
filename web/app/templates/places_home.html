@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% set places_tab = "home" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Home</h1>
+      <p class="text-xs text-gray-400">Where you live now, where you were born and the places you lived: trips start from Home, and dates lived somewhere don't count as nights away.</p>
+    </div>
+  </div>
+
+  {% include "_places_tabs.html" %}
+
+  <div class="split">
+    <div class="space-y-4">
+      <div class="card bg-white" id="home-place">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-900"><i class="ti ti-home"></i> Home</h2>
+            {% if home %}<a href="/places/{{ home.id }}?edit=1#edit-place" class="btn btn-xs btn-outline" id="home-edit"><i class="ti ti-pencil"></i> Change</a>{% endif %}
+          </div>
+          {% if home %}
+          <p class="text-sm"><a class="text-gray-900 hover:underline" href="/places/cities/{{ home.city.id }}">{{ home.city.country | country_flag_of }} {{ home.city.name }}</a><span class="text-gray-400">, {{ home.city.country.name }}</span></p>
+          {% if home.address %}<p class="text-xs text-gray-500">{{ home.address }}</p>{% endif %}
+          <p class="text-xs text-gray-400">The home city and address trips start from. <a class="text-[#378ADD] hover:underline" href="/places/{{ home.id }}">Open the Home place</a></p>
+          {% else %}
+          <p class="text-sm text-gray-400">No Home place yet. Add a place of kind <em>home</em> on the <a class="text-[#378ADD] hover:underline" href="/places">Places</a> tab: its city is the home city.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card bg-white" id="birthplace">
+        <div class="card-body p-5 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-gray-900"><i class="ti ti-baby-carriage"></i> Born in</h2>
+            {% if born %}
+            <button type="button" class="btn btn-xs btn-outline" data-lived-edit="{{ born | tojson | forceescape }}"><i class="ti ti-pencil"></i> Edit</button>
+            {% elif lived_available %}
+            <button type="button" class="btn btn-xs btn-outline" data-lived-born><i class="ti ti-plus"></i> Add</button>
+            {% endif %}
+          </div>
+          {% if born %}
+          <p class="text-sm"><a class="text-gray-900 hover:underline" href="/places/cities/{{ born.city.id }}">{{ born.city.country | country_flag_of }} {{ born.city.name }}</a><span class="text-gray-400">, {{ born.city.country.name }}</span></p>
+          <p class="text-xs text-gray-500">Lived there {{ 'until ' ~ (born.to_date | month_year) if born.to_date else 'since birth' }}</p>
+          {% elif lived_available %}
+          <p class="text-sm text-gray-400">Not set. It is a row of Places lived with <em>Born here</em> ticked.</p>
+          {% else %}
+          <p class="text-sm text-gray-400">Unavailable right now.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if lived_available %}{% include "_places_lived_card.html" %}
+    {% else %}<div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Places lived are unavailable right now.</p></div></div>{% endif %}
+  </div>
+</div>
+{% include "_places_lived_dialog.html" %}
+{% include "_city_dialog.html" %}
+<script src="/static/js/airport-input.js"></script>
+<script src="/static/js/travel-city-picker.js"></script>
+{% include "_places_lived_script.html" %}
+{% endblock %}

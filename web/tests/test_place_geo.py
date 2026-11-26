@@ -512,18 +512,32 @@ class TestPlacesLived:
         assert lived_note([_residence(1, beta)], alpha) == {"home": alpha, "current": beta}
         assert lived_note([_residence(1, beta, to_date="2026-01-01")], alpha) == {"home": alpha, "current": None}
 
-    def test_countries_tab_has_the_card_rows_note_and_see_all(self, client, mock_api):
+    def test_home_tab_has_home_birthplace_and_the_lived_card(self, client, mock_api):
         alpha, beta = _city(4, "Alpha"), _city(6, "Beta", country={"id": 3, "name": "Testland", "code": "TL"})
         rows = [_residence(i, alpha, from_date=f"20{20 - i:02d}-01-01", to_date=f"20{21 - i:02d}-01-01") for i in range(1, 6)]
         rows = [_residence(9, beta, from_date="2021-01-01")] + rows + [_residence(8, beta, None, "2005-03-01", born=True)]
-        _route(mock_api, {"/location/countries": [], "/location/cities": [], "/travel/countries": [],
-                          "/location/residences": rows, "/location/places": [{"id": 1, "kind": "home", "city": alpha}]})
-        html = client.get("/places/countries").text
+        _route(mock_api, {"/location/residences": rows,
+                          "/location/places": [{"id": 1, "kind": "home", "city": alpha, "address": "Example Street 1"}]})
+        html = client.get("/places/home").text
+        assert 'aria-current="page">Home</a>' in html
+        assert 'id="home-place"' in html and 'href="/places/1?edit=1#edit-place"' in html and "Example Street 1" in html
+        assert 'id="birthplace"' in html and "Lived there until Mar 2005" in html and 'data-lived-born>' not in html
         assert 'id="places-lived"' in html and 'id="residence-9"' in html and 'id="residence-4"' in html
-        assert 'id="residence-5"' not in html and 'id="residence-8"' not in html
+        assert 'id="residence-5"' not in html
         assert 'href="/places/lived"' in html and "See all 7" in html
         assert "The Home place is in Alpha, but Places lived still has you in Beta" in html and "Moved to Alpha today" in html
         assert "Jan 2021 – now" in html and 'id="lived-dialog"' in html and "travel-city-picker.js" in html
+
+    def test_home_tab_without_home_or_birthplace(self, client, mock_api):
+        _route(mock_api, {"/location/residences": [], "/location/places": []})
+        html = client.get("/places/home").text
+        assert "No Home place yet" in html and 'id="home-edit"' not in html
+        assert "data-lived-born>" in html and "No places lived yet" in html
+
+    def test_countries_tab_no_longer_has_the_lived_card(self, client, mock_api):
+        _route(mock_api, {"/location/countries": [], "/location/cities": [], "/travel/countries": []})
+        html = client.get("/places/countries").text
+        assert 'id="places-lived"' not in html and 'href="/places/home"' in html
 
     def test_lived_page_lists_every_row(self, client, mock_api):
         alpha = _city(4, "Alpha")

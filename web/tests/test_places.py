@@ -418,15 +418,11 @@ class TestDetailPage:
         assert "https://example.com" in text and 'href="/places/1"' in text
 
 
-class TestHomeLink:
-    def test_opens_the_home_place(self, client, mock_api):
-        mock_api["get"].side_effect = _routes(homes=[_place(29, "Home", "home")])
-        response = client.get("/places/home", follow_redirects=False)
-        assert (response.status_code, response.headers["location"]) == (302, "/places/29")
-
-    def test_without_a_home_opens_the_list(self, client, mock_api):
-        mock_api["get"].side_effect = _routes(homes=[])
-        assert client.get("/places/home", follow_redirects=False).headers["location"] == "/places"
+class TestEditLink:
+    def test_edit_query_opens_the_form(self, client, mock_api):
+        mock_api["get"].side_effect = _routes(place=_place(29, "Home", "home"))
+        assert '<div id="edit-place" class="card bg-white">' in client.get("/places/29?edit=1").text
+        assert '<div id="edit-place" class="card bg-white hidden">' in client.get("/places/29").text
 
 
 class TestRedirects:

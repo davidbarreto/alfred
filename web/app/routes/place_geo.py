@@ -291,12 +291,10 @@ async def countries_page(request: Request):
     q = (request.query_params.get("q") or "").strip()
     sort = request.query_params.get("sort") if request.query_params.get("sort") in CITY_SORTS else "name"
     status = _status(request.query_params)
-    countries, cities, travel, lived, home_city = await asyncio.gather(
+    countries, cities, travel = await asyncio.gather(
         safe_get("/location/countries"),
         safe_get("/location/cities", default=[]),
         safe_get("/travel/countries", params={"limit": _ALL, "status": status}, default=[]),
-        safe_get("/location/residences", params={"limit": _LIVED_ALL}, default=[]),
-        _home_city(),
     )
     rows = by_id(travel)
     shown = _shown([c["id"] for c in countries or []], rows, status)
@@ -311,7 +309,6 @@ async def countries_page(request: Request):
         **_page(sort_cards(cards, sort), offset), "available": countries is not None, "q": q, "sort": sort, "status": status,
         "sorts": CITY_SORTS, "query": _query({"q": q, "status": status, "sort": sort}),
         "chips": status_chips({"q": q, "status": status, "sort": sort}),
-        "lived": (lived or [])[:_CARD_LIMIT], "lived_total": len(lived or []), "lived_note": lived_note(lived or [], home_city),
     })
 
 
@@ -383,6 +380,22 @@ def lived_note(rows: list[dict], home_city: dict | None) -> dict | None:
     if current is not None and current["id"] == home_city["id"]:
         return None
     return {"home": home_city, "current": current}
+
+
+@router.get("/home", response_class=HTMLResponse)
+async def home_page(request: Request):
+    """The Home tab: the Home place (the home city trips start from), the birthplace and Places lived.
+    The /settings Home row links here."""
+    homes, lived = await asyncio.gather(
+        safe_get("/location/places", params={"kind": "home"}, default=[]),
+        safe_get("/location/residences", params={"limit": _LIVED_ALL}),
+    )
+    home = homes[0] if homes else None
+    rows = lived or []
+    return templates.TemplateResponse(request, "places_home.html", {
+        "home": home, "born": next((r for r in rows if r["born"]), None), "lived_available": lived is not None,
+        "lived": rows[:_CARD_LIMIT], "lived_total": len(rows), "lived_note": lived_note(rows, home["city"] if home else None),
+    })
 
 
 @router.get("/lived", response_class=HTMLResponse)

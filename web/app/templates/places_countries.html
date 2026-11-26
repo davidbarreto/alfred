@@ -8,7 +8,7 @@
   <div class="page-head">
     <div>
       <h1 class="text-base font-semibold text-gray-900">Countries</h1>
-      <p class="text-xs text-gray-400">The countries of your cities. A country is added with its first city.</p>
+      <p class="text-xs text-gray-400">The countries of your cities. A country is added with its first city. Where you live and lived is on the <a class="text-[#378ADD] hover:underline" href="/places/home">Home</a> tab.</p>
     </div>
     <form class="page-actions" method="get" action="/places/countries">
       <input type="hidden" name="status" value="{{ status }}">
@@ -20,8 +20,6 @@
   </div>
 
   {% include "_places_tabs.html" %}
-
-  {% include "_places_lived_card.html" %}
 
   {% with current=status, base="/places/countries" %}{% include "_places_status_chips.html" %}{% endwith %}
 
@@ -55,9 +53,4 @@
   {% endif %}
   {% endif %}
 </div>
-{% include "_places_lived_dialog.html" %}
-{% include "_city_dialog.html" %}
-<script src="/static/js/airport-input.js"></script>
-<script src="/static/js/travel-city-picker.js"></script>
-{% include "_places_lived_script.html" %}
 {% endblock %}

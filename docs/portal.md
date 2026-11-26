@@ -37,6 +37,7 @@ Build pages from these classes instead of ad-hoc grids, so every page lines up t
 | `chart-box` | Fixed-height box for a Chart.js canvas (`chart-box-lg` for 14rem); the chart needs `maintainAspectRatio: false` |
 | `table-scroll` | Wrapper for a table that may be wider than its card; give the table a `min-w-[..]` |
 | `cover-box` (+ `cover-hero`, `cover-shade`, `cover-badge`, `cover-credit`, `cover-mosaic`) | A cover photo at a fixed ratio (16:9 cards; `cover-hero` is a full-width banner with a capped height), cropped with `object-fit: cover`, a gradient placeholder without an image, the title over a dark gradient (`cover-shade`), a corner badge and photo credit, or a 2x2 mosaic of covers. Load card images with `loading="lazy"` and a `?v=<updated_at>` cache key (city and country pages) |
+| `places-map` (+ `places-map-card`, `pm-legend`) | The Leaflet map of `places-map.js`: 2:1 on a desktop, taller on a phone (`places-map-card` is the fixed 18rem card on a city or country page). Set `data-map-data` (the `/places/map/data` URL) and `data-fit` (`world`, `country`, `city`), and include `_places_map_assets.html` once. The country shapes in `static/js/world.json` are Natural Earth (public domain), rebuilt with `web/scripts/build_world_map.py` ([modules/places.md](modules/places.md#map)) |
 
 Rules that follow from it:
 
@@ -116,4 +117,4 @@ Feature pages keep a one-line summary and a link to `/settings#<namespace>`: `/p
 
 ## Pages
 
-dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities, places (`/places`, `/places/{id}`, `/places/cities`, `/places/countries` and their pages), settings (`/settings`). Feature-specific portal behaviour is documented in the module docs.
+dashboard, tasks (+ `/tasks/insights`), notes, contacts, calendar (+ `/calendar/day/{date}`), shopping (+ `/shopping/insights`), finance, insights, briefing, chat, auth, language, cs, study, metrics (`/metrics`, `/metrics/{name}`), travel (`/travel`, `/travel/{id}`), plan (`/plan`), routines, activities, places (`/places`, `/places/{id}`, `/places/cities`, `/places/countries` and their pages, `/places/map`), settings (`/settings`). Feature-specific portal behaviour is documented in the module docs.

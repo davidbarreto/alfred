@@ -1,7 +1,7 @@
-{# The Places section's tabs. Needs `places_tab` ('places', 'cities' or 'countries'); the map tab comes with the map page. #}
+{# The Places section's tabs. Needs `places_tab` ('places', 'cities', 'countries' or 'map'). #}
 {% set tab = places_tab | default('places') %}
 <nav class="scroll-row gap-4 border-b border-gray-100 pb-2" aria-label="Places section">
-  {% for key, label, url in [('places', 'Places', '/places'), ('cities', 'Cities', '/places/cities'), ('countries', 'Countries', '/places/countries')] %}
+  {% for key, label, url in [('places', 'Places', '/places'), ('cities', 'Cities', '/places/cities'), ('countries', 'Countries', '/places/countries'), ('map', 'Map', '/places/map')] %}
   <a href="{{ url }}" class="text-sm {{ 'font-semibold text-gray-900' if tab == key else 'text-gray-500 hover:text-gray-800' }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>
   {% endfor %}
 </nav>

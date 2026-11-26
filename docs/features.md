@@ -63,7 +63,7 @@ Shopping list with a product catalog, wishlist, and recurring items. Full rules:
 
 ## Locations
 
-Frequent everyday places (home, work, school, the shops near them) with address, Maps link, opening hours (including public holidays) and the shopping categories each one sells. The Places section also holds the cities and countries: cover-photo cards, a page per city and per country (cover from Wikipedia or an upload, trips, days, spend, places, links, a Google Photos search and the trips' photo albums); new cities get their coordinates and cover on their own. Full rules: [modules/places.md](modules/places.md).
+Frequent everyday places (home, work, school, the shops near them) with address, Maps link, opening hours (including public holidays) and the shopping categories each one sells. The Places section also holds the cities and countries: cover-photo cards, a page per city and per country (cover from Wikipedia or an upload, trips, days, spend, places, links, a Google Photos search and the trips' photo albums); new cities get their coordinates and cover on their own. A zoomable map (world, country, city, place pins) is on `/places/map` and on each city and country page, with a CSV of the pins for Google My Maps. Full rules: [modules/places.md](modules/places.md).
 
 - Opening hours typed as text (`mon-fri 08:00-20:00; sun closed; holidays closed`); today's hours and "open now" on every location, using the first `HOLIDAY_CALENDARS` calendar for holidays.
 - One home; archive instead of delete; no maps provider (hours and travel are entered by hand or by Claude after the user confirms).

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% set active_page = "places" %}
+{% set places_tab = "map" %}
+{% block title %}Map{% endblock %}
+
+{% block content %}
+<div class="page space-y-4">
+  <div class="page-head">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Map</h1>
+      <p class="text-xs text-gray-400">The countries and cities in Alfred, and your places. Click a country to zoom in.</p>
+    </div>
+    <div class="page-actions">
+      <label class="label cursor-pointer gap-1 py-0"><input type="checkbox" class="checkbox checkbox-xs" data-map-toggle="cities" checked><span class="text-xs text-gray-600">Cities</span></label>
+      <label class="label cursor-pointer gap-1 py-0"><input type="checkbox" class="checkbox checkbox-xs" data-map-toggle="places" checked><span class="text-xs text-gray-600">Places</span></label>
+    </div>
+  </div>
+
+  {% include "_places_tabs.html" %}
+
+  {% if not available %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">The map is unavailable right now.</p></div></div>
+  {% else %}
+  <div class="stat-row" id="map-stats">
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.countries }}</p></div></div>
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Cities</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.cities }}</p></div></div>
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Of the world's countries</p><p class="text-2xl font-semibold text-gray-900 mt-1">{{ stats.share }}%</p></div></div>
+  </div>
+
+  <div class="card bg-white">
+    <div class="card-body p-3 sm:p-4 space-y-2">
+      <div class="places-map" data-map-data="/places/map/data" data-fit="world" id="world-map"></div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        {% include "_places_map_legend.html" %}
+        {% if places_without_coordinates %}<a href="/places?view=all" class="text-xs text-gray-500 hover:underline" id="map-missing">{{ places_without_coordinates }} place{{ '' if places_without_coordinates == 1 else 's' }} without coordinates (add a Maps link)</a>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card bg-white" id="map-countries">
+      <div class="card-body p-5 space-y-2">
+        <h2 class="text-sm font-semibold text-gray-900">Countries <span class="text-xs font-normal text-gray-400">{{ countries | length }}</span></h2>
+        {% for c in countries %}
+        <a href="/places/countries/{{ c.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+          <span class="text-gray-900 min-w-0 truncate">{{ c | country_flag_of }} {{ c.name }}</span>
+          <span class="text-xs text-gray-400 whitespace-nowrap">{{ c.city_count }} cit{{ 'y' if c.city_count == 1 else 'ies' }}</span>
+        </a>
+        {% else %}<p class="text-sm text-gray-400">No countries yet. A country is added with its first city.</p>{% endfor %}
+      </div>
+    </div>
+    {% if no_code %}
+    <div class="card bg-white" id="map-no-code">
+      <div class="card-body p-5 space-y-2">
+        <h2 class="text-sm font-semibold text-gray-900">Not on the map</h2>
+        <p class="text-xs text-gray-400">These countries have no ISO code, so their shape can't be drawn. Set it on the country's page.</p>
+        {% for c in no_code %}<a href="/places/countries/{{ c.id }}" class="block text-sm text-[#378ADD] hover:underline">{{ c.name }}</a>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% if available %}{% include "_places_map_assets.html" %}{% endif %}
+{% endblock %}

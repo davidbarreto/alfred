@@ -42,3 +42,17 @@ EVERYDAY_PICK_KINDS = tuple(k for k in KINDS if k != "home" and k not in TRIP_KI
 def location_icon(kind: str | None) -> str:
     """The Tabler icon class for a place kind; the generic pin for an unknown one."""
     return KIND_ICONS.get(kind or "", KIND_ICONS["other"])
+
+# The map pin's colour group per kind (pins are coloured by group, iconed by kind); kinds not listed are "everyday".
+KIND_GROUPS = {
+    "home": "home",
+    "hotel": "stay",
+    "restaurant": "food", "cafe": "food", "bakery": "food",
+    "museum": "sight", "attraction": "sight", "activity": "sight", "venue": "sight", "park": "sight",
+    "playground": "sight", "sports": "sight",
+}
+MAP_GROUP_LABELS = {"stay": "Stays", "food": "Food and drink", "sight": "Sights and activities", "everyday": "Everyday"}
+
+
+def map_group(kind: str | None) -> str:
+    return KIND_GROUPS.get(kind or "", "everyday")

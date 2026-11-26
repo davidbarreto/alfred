@@ -396,6 +396,124 @@ html[data-theme="dark"] {
 }
 .cover-credit a { color: inherit; text-decoration: underline; }
 
+/* ── Places map (places-map.js) ──────────────────────────────────────────
+ * `places-map` is the Leaflet container: 2:1 on a desktop, taller on a phone;
+ * `places-map-card` the smaller one on a city or country page. The basemap
+ * (OpenStreetMap) is greyed so colour belongs to Alfred's data; dark mode
+ * inverts it. Pins are coloured by kind group (pm-group-*).
+ */
+.places-map, .pm-legend {
+  --pm-known: #378ADD;
+  --pm-other: var(--gray-300);
+  --pm-stay: #7C3AED;
+  --pm-food: #E8590C;
+  --pm-sight: #0CA678;
+  --pm-everyday: #378ADD;
+  --pm-home: #1F2937;
+}
+.places-map {
+  position: relative;
+  width: 100%;
+  height: min(130vw, 34rem);
+  border-radius: var(--rounded-box);
+  overflow: hidden;
+  background: var(--surface-sidebar);
+  z-index: 0;
+}
+@media (min-width: 640px) {
+  .places-map { height: auto; aspect-ratio: 2 / 1; max-height: 40rem; }
+}
+.places-map.places-map-card { height: 18rem; aspect-ratio: auto; }
+.places-map .pm-tiles { filter: grayscale(1) brightness(1.04) contrast(0.88); opacity: 0.85; }
+html[data-theme="dark"] .places-map, html[data-theme="dark"] .pm-legend { --pm-other: var(--gray-600); --pm-home: #F9FAFB; }
+html[data-theme="dark"] .places-map { background: #1b1b1b; }
+html[data-theme="dark"] .places-map .pm-tiles { filter: grayscale(1) invert(1) brightness(0.85) contrast(0.85); opacity: 0.8; }
+.places-map .leaflet-control-attribution { font-size: 10px; }
+html[data-theme="dark"] .places-map .leaflet-control-attribution,
+html[data-theme="dark"] .places-map .leaflet-bar a { background: var(--gray-800); color: var(--gray-300); }
+html[data-theme="dark"] .places-map .leaflet-control-attribution a { color: var(--gray-200); }
+.places-map .pm-country { fill: var(--pm-other); stroke: var(--pm-other); }
+.places-map .pm-country-known { fill: var(--pm-known); stroke: var(--pm-known); }
+.pm-pin-wrap, .pm-city-wrap { background: none; border: 0; }
+.pm-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 15px;
+  background: var(--pm-everyday);
+}
+.pm-group-stay { background: var(--pm-stay); }
+.pm-group-food { background: var(--pm-food); }
+.pm-group-sight { background: var(--pm-sight); }
+.pm-group-everyday { background: var(--pm-everyday); }
+.places-map path.leaflet-interactive:focus { outline: none; }
+.places-map .marker-cluster { background: rgba(55, 138, 221, 0.25); }
+.places-map .marker-cluster div { background: #378ADD; color: #fff; font-weight: 600; }
+.pm-pin.pm-pin-home { width: 34px; height: 34px; font-size: 18px; border-radius: 0.5rem; background: var(--pm-home); color: var(--surface-card); }
+.pm-pulse { animation: pm-pulse 0.9s ease-out 2; }
+@keyframes pm-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(55, 138, 221, 0.7); transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { box-shadow: 0 0 0 14px rgba(55, 138, 221, 0); transform: scale(1); }
+}
+.pm-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 28px;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  background: var(--surface-card);
+  color: var(--gray-900);
+  border: 2px solid var(--pm-known);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pm-city .ti { font-size: 15px; color: var(--pm-known); }
+.pm-city-home { border-color: var(--pm-home); }
+.pm-city-home .ti { color: var(--pm-home); }
+.pm-city-name { display: none; }
+.places-map.pm-city-names .pm-city-name { display: inline; }
+.places-map .leaflet-tooltip.pm-label { display: none; font-size: 11px; padding: 1px 5px; }
+.places-map.pm-labels .leaflet-tooltip.pm-label { display: block; }
+.places-map .leaflet-tooltip.pm-label::before { display: none; }
+.pm-popup .pm-popup-title { font-weight: 600; color: var(--gray-900); }
+.pm-popup p { margin: 0.125rem 0 0 !important; color: var(--gray-500); }
+.pm-popup a { color: #378ADD; }
+html[data-theme="dark"] .places-map .leaflet-popup-content-wrapper,
+html[data-theme="dark"] .places-map .leaflet-popup-tip,
+html[data-theme="dark"] .places-map .leaflet-tooltip { background: var(--gray-800); color: var(--gray-100); border-color: var(--gray-700); }
+.pm-bar, .pm-hint, .pm-error {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 1rem);
+  border-radius: 9999px;
+  font-size: 12px;
+  background: var(--surface-card);
+  color: var(--gray-900);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.pm-bar { top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.375rem 0.25rem 0.75rem; white-space: nowrap; }
+.pm-bar[hidden] { display: none; }
+.pm-bar a { color: #378ADD; font-weight: 600; }
+.pm-bar button { padding: 0 0.375rem; font-size: 16px; line-height: 1; color: var(--gray-500); }
+.pm-bar-muted { color: var(--gray-500); }
+.pm-hint { bottom: 1.5rem; padding: 0.125rem 0.625rem; opacity: 0.85; pointer-events: none; }
+.pm-error { top: 45%; padding: 0.375rem 0.875rem; color: var(--tint-red-text); }
+.pm-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 12px; color: var(--gray-500); }
+.pm-legend .pm-dot { display: inline-block; width: 10px; height: 10px; border-radius: 9999px; margin-right: 0.25rem; vertical-align: -1px; }
+
 /* ── Calendar ────────────────────────────────────────────────────────── */
 
 /* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */

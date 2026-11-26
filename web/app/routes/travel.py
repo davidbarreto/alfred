@@ -1,15 +1,14 @@
-import csv
-import io
 from datetime import date, timedelta
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import app.client as api
 from app.config import get_settings
 from app.shared.forward import forward, safe_get
 from app.shared.link_groups import LINK_KINDS, LINKS_PREVIEW, link_groups
+from app.shared.map_csv import map_csv_response
 from app.shared.timezone import local_today
 from app.templates_config import templates
 
@@ -408,13 +407,9 @@ async def trip_map_csv(trip_id: int, scope: str = "all"):
     data = await safe_get(f"/travel/trips/{trip_id}/map", params={"scope": scope})
     if data is None:
         return RedirectResponse(f"/travel/{trip_id}", status_code=302)
-    out = io.StringIO()
-    writer = csv.writer(out)
-    writer.writerow(["Name", "Address", "Category", "Status", "Description"])
-    for point in data["points"]:
-        writer.writerow([point["name"], point["address"], point["category"], point["status"], point["description"] or ""])
+    rows = ([p["name"], p["address"], p["category"], p["status"], p["description"] or ""] for p in data["points"])
     filename = f"trip-{trip_id}-map{'' if scope == 'all' else '-' + scope}.csv"
-    return Response(out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return map_csv_response(["Name", "Address", "Category", "Status", "Description"], rows, filename)
 
 
 def _group_by_day(items: list[dict]) -> dict[str, list]:

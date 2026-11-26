@@ -67,6 +67,8 @@
     </div>
 
     <div class="card-stack">
+      {% with map_scope='country', map_owner_id=country.id %}{% include "_places_map_card.html" %}{% endwith %}
+
       {% set photos_name = country.name %}{% set photos_url = country.photos_url %}{% set albums_url = '/places/countries/' ~ country.id ~ '/albums' %}
       {% include "_place_geo_photos_card.html" %}
 
@@ -104,4 +106,5 @@
 <script src="/static/js/travel-web-links.js"></script>
 <script>initWebLinks();</script>
 {% with cover_base='/places/countries/' ~ country.id, delete_confirm='Delete this country and its links?', after_delete='/places/countries' %}{% include "_place_geo_script.html" %}{% endwith %}
+{% include "_places_map_assets.html" %}
 {% endblock %}

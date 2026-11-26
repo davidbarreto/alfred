@@ -1178,6 +1178,275 @@
    }
   },
   {
+   "name": "18o - Map: Add A Place With Coordinates",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+       "pm.environment.set('map_place_id', pm.response.json().id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{base_url}}/location/places",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"name\": \"Map Pin {{place_run}}\",\n  \"kind\": \"cafe\",\n  \"city_id\": \"{{place_other_city_id}}\",\n  \"latitude\": 38.71,\n  \"longitude\": -9.13\n}"
+    }
+   }
+  },
+  {
+   "name": "18p - Map Of The World",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "pm.test('Countries carry a code and a city count', () => {",
+       "    pm.expect(j.countries.length).to.be.above(0);",
+       "    j.countries.forEach(c => { pm.expect(c).to.have.property('code'); pm.expect(c.city_count).to.be.a('number'); });",
+       "});",
+       "pm.test('Only cities and places with coordinates', () => {",
+       "    j.cities.concat(j.places).forEach(r => { pm.expect(r.latitude).to.be.a('number'); pm.expect(r.longitude).to.be.a('number'); });",
+       "    pm.expect(j.cities_without_coordinates).to.be.a('number');",
+       "    pm.expect(j.places_without_coordinates).to.be.a('number');",
+       "});",
+       "pm.test('The new pin and the other city are on it', () => {",
+       "    pm.expect(j.places.map(p => p.id)).to.include(pm.environment.get('map_place_id'));",
+       "    pm.expect(j.cities.map(c => c.id)).to.include(pm.environment.get('place_other_city_id'));",
+       "});",
+       "pm.test('At most one home city', () => pm.expect(j.cities.filter(c => c.home).length).to.be.at.most(1));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/map",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "map"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18q - Map Of One City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "const cityId = pm.environment.get('place_other_city_id');",
+       "pm.test('The city and its country only', () => {",
+       "    pm.expect(j.cities.map(c => c.id)).to.eql([cityId]);",
+       "    pm.expect(j.countries.map(c => c.id)).to.eql([pm.environment.get('place_other_country_id')]);",
+       "});",
+       "pm.test('Its places, with a Maps link', () => {",
+       "    j.places.forEach(p => pm.expect(p.city_id).to.eql(cityId));",
+       "    const pin = j.places.find(p => p.id === pm.environment.get('map_place_id'));",
+       "    pm.expect(pin.kind).to.eql('cafe');",
+       "    pm.expect(pin.maps_link).to.include('google.com/maps');",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/map?city_id={{place_other_city_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "map"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "{{place_other_city_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18r - Map Of One Country",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "const j = pm.response.json();",
+       "const countryId = pm.environment.get('place_other_country_id');",
+       "pm.test('Only that country and its cities', () => {",
+       "    pm.expect(j.countries).to.have.lengthOf(1);",
+       "    pm.expect(j.countries[0].city_count).to.be.at.least(1);",
+       "    j.cities.forEach(c => pm.expect(c.country_id).to.eql(countryId));",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/map?country_id={{place_other_country_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "map"
+     ],
+     "query": [
+      {
+       "key": "country_id",
+       "value": "{{place_other_country_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18s - Map With Both Filters (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/map?city_id={{place_other_city_id}}&country_id={{place_other_country_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "map"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "{{place_other_city_id}}"
+      },
+      {
+       "key": "country_id",
+       "value": "{{place_other_country_id}}"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18t - Map Of An Unknown City (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/map?city_id=999999",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "map"
+     ],
+     "query": [
+      {
+       "key": "city_id",
+       "value": "999999"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18u - Map: Delete The Pin",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/places/{{map_place_id}}",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "places",
+      "{{map_place_id}}"
+     ]
+    }
+   }
+  },
+  {
    "name": "19 - Delete The Other City",
    "event": [
     {

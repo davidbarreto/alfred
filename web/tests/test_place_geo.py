@@ -144,6 +144,9 @@ class TestCityPage:
         assert "Photo: A. Author, CC BY-SA 4.0" in html and 'href="https://commons.wikimedia.org/wiki/File:A.jpg"' in html
         assert 'href="/places/countries/2"' in html and 'href="https://photos.google.com/search/Alpha"' in html
         assert "Find photo (Wikipedia)" in html and "Remove cover" in html
+        # the Map card: fitted to the city, its CSV, place rows that pulse their pin
+        assert 'data-map-data="/places/map/data?city_id=4" data-fit="city"' in html
+        assert 'href="/places/cities/4/map.csv"' in html and 'data-map-place="1"' in html and "Food and drink" in html
         # stat-row: trips, days, places, grade, spend
         assert ">7<" in html and ">12<" in html and ">8<" in html and "4.5" in html and "100.00 €" in html
         # every list card is capped at 5
@@ -207,6 +210,8 @@ class TestCountries:
         assert 'href="/places/cities?country_id=2"' in html and "See all 7 cities" in html
         assert 'data-owner-kind="country" data-owner-id="2"' in html and "3.5/5" in html
         assert "Find photo" not in html and "Upload cover" in html and 'name="code" value="EX"' in html
+        assert 'data-map-data="/places/map/data?country_id=2" data-fit="country"' in html
+        assert 'href="/places/countries/2/map.csv"' in html
 
     def test_unknown_country_is_404(self, client, mock_api):
         _route(mock_api, {"/location/countries/9": None, "/travel/countries/9": None, "/location/cities": [],

@@ -1,0 +1,4 @@
+{# Pin colours by kind group; needs `groups` (MAP_GROUP_LABELS). #}
+<div class="pm-legend" aria-label="Pin colours">
+  {% for key, label in groups.items() %}<span><span class="pm-dot pm-group-{{ key }}"></span>{{ label }}</span>{% endfor %}
+</div>

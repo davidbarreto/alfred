@@ -49,7 +49,7 @@
             </div>
           </div>
           {% for p in places %}
-          <a href="/places/{{ p.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+          <a href="/places/{{ p.id }}" data-map-place="{{ p.id }}" class="flex items-baseline justify-between gap-3 text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
             <span class="text-gray-900 min-w-0 truncate"><i class="ti {{ p.kind | location_icon }} text-gray-400"></i> {{ p.name }}</span>
             <span class="text-xs text-gray-400 whitespace-nowrap">{{ p.kind | replace('_', ' ') }}</span>
           </a>
@@ -77,6 +77,8 @@
     </div>
 
     <div class="card-stack">
+      {% with map_scope='city', map_owner_id=city.id %}{% include "_places_map_card.html" %}{% endwith %}
+
       {% set photos_name = city.name %}{% set photos_url = city.photos_url %}{% set albums_url = '/places/cities/' ~ city.id ~ '/albums' %}
       {% include "_place_geo_photos_card.html" %}
 
@@ -120,4 +122,5 @@
 <script src="/static/js/travel-web-links.js"></script>
 <script>initWebLinks();</script>
 {% with cover_base='/places/cities/' ~ city.id, delete_confirm='Delete this city and its links?', after_delete='/places/cities' %}{% include "_place_geo_script.html" %}{% endwith %}
+{% include "_places_map_assets.html" %}
 {% endblock %}

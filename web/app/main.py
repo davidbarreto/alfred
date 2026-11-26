@@ -13,7 +13,7 @@ from app.config import get_settings
 from app.routes import (
     auth, briefing, contacts, dashboard, overload, pause, tasks, tasks_insights, shopping, shopping_insights,
     calendar, notes, finance, chat, insights, language, watcher, cs, study, interviews, interview_prep, metrics,
-    activities, routines, plan, travel, place_geo, places, settings,
+    activities, routines, plan, travel, place_geo, place_map, places, settings,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +69,7 @@ app.include_router(travel.router)
 app.include_router(activities.router)
 app.include_router(routines.router)
 app.include_router(place_geo.router)  # before places: /places/cities is not a place id
+app.include_router(place_map.router)  # before places: /places/map is not a place id
 app.include_router(places.router)
 app.include_router(places.legacy_router)
 app.include_router(settings.router)

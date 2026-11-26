@@ -38,7 +38,7 @@ class CityEnricher:
         cities, countries = CityRepository(session), CountryRepository(session)
         country = city.country
         if city.latitude is None or country.code is None:
-            found = await self._geocoder.geocode(city.name, country.name, country.code)
+            found = await self._geocoder.geocode(city.name, country.name, country.code, session=session)
             if found is not None:
                 if city.latitude is None:
                     await cities.update(city, {"latitude": found.latitude, "longitude": found.longitude})
@@ -48,10 +48,12 @@ class CityEnricher:
                     await countries.update(country, {"code": code})
                     filled.append("country code")
         if covers and city.cover_path is None:
-            photo = await self._photos.find(cover_titles(city.name, country.name))
+            photo = await self._photos.find(cover_titles(city.name, country.name), session=session)
             if photo is not None:
                 await CoverService(session, self._storage, self._photos, self._images).apply_city_photo(city, photo)
                 filled.append("cover")
+        # The provider-call log rows are still pending when nothing was filled.
+        await cities.commit()
         if filled:
             logger.info("City enriched: id=%d filled=%s", city.id, filled)
         return filled

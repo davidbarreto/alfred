@@ -1,8 +1,10 @@
-{# The cover menu of a city or country page. Needs `cover_base` (/places/cities/1), `has_cover`, `can_find` (cities). #}
+{# The cover menu of a city or country page and its photo picker. Needs `cover_base` (/places/cities/1), `cover_name`
+   (the picker's first search), `has_cover` and `can_find` (cities: Find photo, and the article's images in the picker). #}
 <div class="dropdown dropdown-end">
   <label tabindex="0" class="btn btn-xs btn-outline" id="cover-menu"><i class="ti ti-dots"></i> More</label>
   <ul tabindex="0" class="dropdown-content menu menu-xs z-10 w-56 p-2 shadow bg-white rounded-box">
     {% if can_find %}<li><button type="button" data-cover-action="find"><i class="ti ti-world-search"></i> Find photo (Wikipedia)</button></li>{% endif %}
+    <li><button type="button" data-cover-action="choose"><i class="ti ti-photo-search"></i> Choose a photo</button></li>
     <li><button type="button" data-cover-action="upload"><i class="ti ti-upload"></i> Upload cover</button></li>
     <li><button type="button" data-cover-action="url"><i class="ti ti-link"></i> Cover from an image address</button></li>
     {% if has_cover %}<li><button type="button" data-cover-action="remove"><i class="ti ti-photo-off"></i> Remove cover</button></li>{% endif %}
@@ -11,3 +13,25 @@
 </div>
 <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" id="cover-file">
 <span class="text-xs text-gray-500" id="cover-msg" role="status"></span>
+<dialog id="cover-picker" class="modal">
+  <div class="modal-box max-w-3xl space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="text-sm font-semibold text-gray-900">Choose a photo</h3>
+      <button type="button" class="btn btn-sm btn-ghost btn-circle" data-picker-close aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    {% if can_find %}
+    <div class="join" id="cover-picker-sources">
+      <button type="button" class="btn btn-xs join-item btn-active" data-picker-source="article">Wikipedia article</button>
+      <button type="button" class="btn btn-xs join-item" data-picker-source="commons">Commons search</button>
+    </div>
+    {% endif %}
+    <form class="flex gap-2" id="cover-picker-search"{% if can_find %} hidden{% endif %}>
+      <input type="search" name="q" class="input input-bordered input-sm flex-1 min-w-0" value="{{ cover_name }}" maxlength="200" aria-label="Search Wikimedia Commons">
+      <button type="submit" class="btn btn-sm btn-outline"><i class="ti ti-search"></i> Search</button>
+    </form>
+    <p class="text-xs text-gray-500" id="cover-picker-msg" role="status"></p>
+    <div class="card-grid picker-grid" id="cover-picker-grid"></div>
+    <p class="text-xs text-gray-400">Photos from Wikimedia Commons, at least 1200 px wide. The one you choose is downloaded once, at 1600 px, with its credit.</p>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>

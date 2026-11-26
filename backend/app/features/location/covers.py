@@ -1,5 +1,6 @@
-"""Cover photos of cities and countries: found on Wikipedia (cities only), uploaded, or fetched once from a pasted
-image URL; stored under MEDIA_STORAGE_DIR (`covers/cities/<id>.<ext>`, `covers/countries/<id>.<ext>`), never hotlinked."""
+"""Cover photos of cities and countries: found on Wikipedia (cities only), chosen in the photo picker (a Commons file),
+uploaded, or fetched once from a pasted image URL; stored under MEDIA_STORAGE_DIR (`covers/cities/<id>.<ext>`,
+`covers/countries/<id>.<ext>`), never hotlinked."""
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,9 @@ from app.features.location.countries.tables import Country
 from app.features.location.errors import LocationValidationError
 from app.integrations.http.images import MAX_IMAGE_BYTES, sniff_image_type
 from app.shared.protocols.audio import FileStorage
-from app.shared.protocols.media import CoverPhoto, CoverPhotoProvider, FetchedImage, ImageFetcher
+from app.shared.protocols.media import (
+    CoverCandidate, CoverPhoto, CoverPhotoProvider, CoverSource, FetchedImage, ImageFetcher,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,9 @@ def _path(folder: str, owner_id: int, content_type: str) -> str:
 
 class CoverService:
     def __init__(self, session: AsyncSession, storage: FileStorage, photos: CoverPhotoProvider, images: ImageFetcher):
+        # Given to the photo provider, which logs its calls through it; committed by the repositories' writes or, when
+        # nothing is written, by `_keep_logs`.
+        self._session = session
         self._cities = CityRepository(session)
         self._countries = CountryRepository(session)
         self._storage = storage
@@ -48,8 +54,9 @@ class CoverService:
         city = await self._cities.get_city(city_id)
         if city is None:
             return None
-        photo = await self._photos.find(cover_titles(city.name, city.country.name))
+        photo = await self._photos.find(cover_titles(city.name, city.country.name), session=self._session)
         if photo is None:
+            await self._keep_logs()
             raise CoverNotFoundError(f"No photo found on Wikipedia for {city.name}")
         await self.apply_city_photo(city, photo)
         return CityRead.model_validate(city)
@@ -58,12 +65,21 @@ class CoverService:
         await self._store(self._cities, city, "cities", photo.image, photo.credit, photo.source_url)
         logger.info("City cover set: id=%d source=wikipedia", city.id)
 
-    async def set_city_cover(self, city_id: int, data: bytes | None = None, url: str | None = None) -> CityRead | None:
+    async def city_cover_candidates(self, city_id: int, source: CoverSource, q: str | None) -> list[CoverCandidate] | None:
+        """The photo picker's choices: the article's images or a Commons search (default: the city's name). None when
+        the city is unknown."""
         city = await self._cities.get_city(city_id)
         if city is None:
             return None
-        await self._store(self._cities, city, "cities", await self._image(data, url), None, url)
-        logger.info("City cover set: id=%d source=%s", city_id, "url" if url else "upload")
+        return await self._candidates(source, cover_titles(city.name, city.country.name), (q or "").strip() or city.name)
+
+    async def set_city_cover(
+        self, city_id: int, data: bytes | None = None, url: str | None = None, commons_file: str | None = None,
+    ) -> CityRead | None:
+        city = await self._cities.get_city(city_id)
+        if city is None:
+            return None
+        await self._set(self._cities, city, "cities", data, url, commons_file)
         return CityRead.model_validate(city)
 
     async def remove_city_cover(self, city_id: int) -> CityRead | None:
@@ -79,12 +95,20 @@ class CoverService:
 
     # ---- countries ----------------------------------------------------------
 
-    async def set_country_cover(self, country_id: int, data: bytes | None = None, url: str | None = None) -> CountryRead | None:
+    async def country_cover_candidates(self, country_id: int, q: str | None) -> list[CoverCandidate] | None:
+        """A Commons search (default: the country's name); a country's article lead image is usually its flag."""
         country = await self._countries.get_country(country_id)
         if country is None:
             return None
-        await self._store(self._countries, country, "countries", await self._image(data, url), None, url)
-        logger.info("Country cover set: id=%d source=%s", country_id, "url" if url else "upload")
+        return await self._candidates("commons", [], (q or "").strip() or country.name)
+
+    async def set_country_cover(
+        self, country_id: int, data: bytes | None = None, url: str | None = None, commons_file: str | None = None,
+    ) -> CountryRead | None:
+        country = await self._countries.get_country(country_id)
+        if country is None:
+            return None
+        await self._set(self._countries, country, "countries", data, url, commons_file)
         return CountryRead.model_validate(country)
 
     async def remove_country_cover(self, country_id: int) -> CountryRead | None:
@@ -100,10 +124,35 @@ class CoverService:
 
     # ---- shared -------------------------------------------------------------
 
+    async def _candidates(self, source: CoverSource, titles: list[str], query: str) -> list[CoverCandidate]:
+        try:
+            return await self._photos.candidates(source, titles, query, session=self._session)
+        finally:
+            await self._keep_logs()
+
+    async def _set(self, repo, owner: City | Country, folder: str, data: bytes | None, url: str | None,
+                   commons_file: str | None) -> None:
+        """Exactly one of an upload, an image address or a Commons file (which keeps its credit)."""
+        if sum(value is not None for value in (data, url, commons_file)) != 1:
+            raise LocationValidationError("Send exactly one of an image file, an image URL or a Commons file")
+        if commons_file is not None:
+            photo = await self._photos.from_file(commons_file, session=self._session)
+            if photo is None:
+                await self._keep_logs()
+                raise LocationValidationError("Could not fetch that photo from Wikimedia Commons")
+            await self._store(repo, owner, folder, photo.image, photo.credit, photo.source_url)
+            source = "commons"
+        else:
+            await self._store(repo, owner, folder, await self._image(data, url), None, url)
+            source = "url" if url else "upload"
+        logger.info("%s cover set: id=%d source=%s", "City" if folder == "cities" else "Country", owner.id, source)
+
+    async def _keep_logs(self) -> None:
+        """Commit the provider-call log rows of a lookup that wrote nothing else."""
+        await self._cities.commit()
+
     async def _image(self, data: bytes | None, url: str | None) -> FetchedImage:
         """The uploaded bytes or the image at the URL, checked to be a JPEG, PNG, WebP or GIF under the size cap."""
-        if (data is None) == (url is None):
-            raise LocationValidationError("Send exactly one of an image file or an image URL")
         if url is not None:
             image = await self._images.fetch(url.strip())
             if image is None:

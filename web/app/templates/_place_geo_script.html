@@ -31,6 +31,7 @@
       if (!address || !address.trim()) return;
       const form = new FormData(); form.append('url', address.trim()); upload(form);
     },
+    choose() { picker.open(); },
     async remove() {
       if (!confirm('Remove the cover photo?')) return;
       const res = await fetch(`${BASE}/cover`, { method: 'DELETE' });
@@ -44,6 +45,60 @@
       location.href = {{ after_delete | tojson }};
     },
   };
+  // The photo picker: the article's images (cities) or a Commons search; choosing one sets it as the cover.
+  const picker = (() => {
+    const dialog = document.getElementById('cover-picker');
+    const grid = document.getElementById('cover-picker-grid');
+    const note = document.getElementById('cover-picker-msg');
+    const search = document.getElementById('cover-picker-search');
+    const sources = dialog.querySelectorAll('[data-picker-source]');
+    let source = sources.length ? 'article' : 'commons';
+    let loaded = null;
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
+    function tile(photo) {
+      const button = el('button', 'picker-tile');
+      button.type = 'button';
+      button.title = photo.title.replace(/^File:/, '');
+      const img = el('img');
+      img.src = photo.thumb_url; img.alt = button.title; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+      button.append(img, el('span', 'picker-meta', `${photo.width}×${photo.height} · ${photo.credit.replace(/^Photo:\s*/, '').replace(/, via Wikimedia Commons$/, '')}`));
+      button.addEventListener('click', () => choose(photo));
+      return button;
+    }
+    async function load() {
+      const q = search.q.value.trim();
+      const key = `${source}|${source === 'commons' ? q : ''}`;
+      if (key === loaded) return;
+      loaded = key;
+      grid.replaceChildren();
+      note.textContent = 'Looking on Wikimedia…';
+      const params = new URLSearchParams({ source });
+      if (source === 'commons' && q) params.set('q', q);
+      const res = await fetch(`${BASE}/cover/candidates?${params}`);
+      const data = await json(res);
+      if (!res.ok) { loaded = null; note.textContent = data.error || 'Could not load photos.'; return; }
+      note.textContent = data.length ? `${data.length} photo${data.length === 1 ? '' : 's'}. Choose one to make it the cover.`
+        : (source === 'article' ? 'No large photos in the article. Try the Commons search.' : 'No large photos found. Try other words.');
+      grid.replaceChildren(...data.map(tile));
+    }
+    async function choose(photo) {
+      note.textContent = 'Saving the cover…';
+      const form = new FormData(); form.append('commons_file', photo.title);
+      const res = await fetch(`${BASE}/cover`, { method: 'PUT', body: form });
+      if (!res.ok) { note.textContent = (await json(res)).error || 'Could not save the cover.'; return; }
+      location.reload();
+    }
+    sources.forEach((button) => button.addEventListener('click', () => {
+      source = button.dataset.pickerSource;
+      sources.forEach((b) => b.classList.toggle('btn-active', b === button));
+      search.hidden = source !== 'commons';
+      load();
+    }));
+    search.addEventListener('submit', (event) => { event.preventDefault(); load(); });
+    dialog.querySelector('[data-picker-close]').addEventListener('click', () => dialog.close());
+    return { open() { dialog.showModal(); load(); } };
+  })();
+
   document.querySelectorAll('[data-cover-action]').forEach((button) => {
     button.addEventListener('click', () => { document.activeElement.blur(); actions[button.dataset.coverAction](); });
   });

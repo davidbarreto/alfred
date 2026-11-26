@@ -21,7 +21,9 @@ from app.integrations.http.images import MAX_IMAGE_BYTES, HttpImageFetcher, snif
 from app.integrations.open_meteo.geocoder import OpenMeteoCityGeocoder, pick
 from app.integrations.wikipedia.client import WikipediaClient, credit_text, file_name
 from app.main import app
-from app.shared.protocols.media import CoverPhoto, FetchedImage, GeocodedCity
+from app.shared.protocols.media import (
+    CoverCandidate, CoverPhoto, CoverSourceBusyError, CoverSourceUnavailableError, FetchedImage, GeocodedCity,
+)
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 NOW = datetime(2026, 11, 1, tzinfo=timezone.utc)
@@ -162,7 +164,7 @@ class TestCoverService:
         city = _city(name="Valencia", country=_country(name="Spain"))
         service._cities.get_city.return_value = city
         read = await service.find_city_cover(1)
-        photos.find.assert_awaited_once_with(["Valencia, Spain", "Valencia"])
+        photos.find.assert_awaited_once_with(["Valencia, Spain", "Valencia"], session=service._session)
         storage.save.assert_awaited_once_with(JPEG, "covers/cities/1.jpg")
         assert read.has_cover and read.cover_credit.startswith("Photo: A. Author")
         assert read.cover_source_url == "https://commons.wikimedia.org/wiki/File:Alpha.jpg"
@@ -173,6 +175,8 @@ class TestCoverService:
         with pytest.raises(CoverNotFoundError, match="No photo found on Wikipedia for Alpha"):
             await service.find_city_cover(1)
         storage.save.assert_not_awaited()
+        # The lookup's provider-call log is kept although nothing else is written.
+        service._cities.commit.assert_awaited_once()
 
     async def test_find_unknown_city(self):
         service, _, _, _ = _cover_service()
@@ -228,6 +232,63 @@ class TestCoverService:
         with pytest.raises(LocationValidationError, match="Could not fetch"):
             await service.set_country_cover(1, url="https://example.com/x")
 
+    async def test_a_commons_file_is_stored_with_its_credit(self):
+        service, storage, photos, _ = _cover_service()
+        photos.from_file.return_value = _photo()
+        service._cities.get_city.return_value = _city(cover_path="covers/cities/1.png")
+        read = await service.set_city_cover(1, commons_file="File:Alpha.jpg")
+        photos.from_file.assert_awaited_once_with("File:Alpha.jpg", session=service._session)
+        storage.save.assert_awaited_once_with(JPEG, "covers/cities/1.jpg")
+        storage.delete.assert_awaited_once_with("covers/cities/1.png")
+        assert read.cover_credit.startswith("Photo: A. Author")
+        assert read.cover_source_url == "https://commons.wikimedia.org/wiki/File:Alpha.jpg"
+
+    async def test_a_commons_file_that_does_not_fetch_is_422_and_keeps_the_log(self):
+        service, storage, photos, _ = _cover_service()
+        photos.from_file.return_value = None
+        service._countries.get_country.return_value = _country()
+        with pytest.raises(LocationValidationError, match="Wikimedia Commons"):
+            await service.set_country_cover(1, commons_file="File:Gone.jpg")
+        storage.save.assert_not_awaited()
+        service._cities.commit.assert_awaited_once()
+
+    async def test_a_commons_file_and_an_upload_together_are_refused(self):
+        service, _, _, _ = _cover_service()
+        service._cities.get_city.return_value = _city()
+        with pytest.raises(LocationValidationError, match="exactly one"):
+            await service.set_city_cover(1, data=JPEG, commons_file="File:Alpha.jpg")
+
+    async def test_city_candidates_default_to_the_article_titles_and_the_name(self):
+        service, _, photos, _ = _cover_service()
+        found = [CoverCandidate("File:A.jpg", "https://t/a.jpg", 2000, 1000, "Photo via Wikimedia Commons", "https://p")]
+        photos.candidates.return_value = found
+        service._cities.get_city.return_value = _city(name="Valencia", country=_country(name="Spain"))
+        assert await service.city_cover_candidates(1, "commons", None) == found
+        photos.candidates.assert_awaited_once_with(
+            "commons", ["Valencia, Spain", "Valencia"], "Valencia", session=service._session)
+        await service.city_cover_candidates(1, "article", "  old town ")
+        assert photos.candidates.await_args.args == ("article", ["Valencia, Spain", "Valencia"], "old town")
+        await service.city_cover_candidates(1, "commons", "   ")
+        assert photos.candidates.await_args.args[2] == "Valencia"
+        assert service._cities.commit.await_count == 3
+
+    async def test_country_candidates_search_commons_and_keep_the_log_on_errors(self):
+        service, _, photos, _ = _cover_service()
+        photos.candidates.side_effect = CoverSourceBusyError("busy")
+        service._countries.get_country.return_value = _country(name="Examplia")
+        with pytest.raises(CoverSourceBusyError):
+            await service.country_cover_candidates(1, None)
+        assert photos.candidates.await_args.args == ("commons", [], "Examplia")
+        service._cities.commit.assert_awaited_once()
+
+    async def test_candidates_of_an_unknown_owner(self):
+        service, _, photos, _ = _cover_service()
+        service._cities.get_city.return_value = None
+        service._countries.get_country.return_value = None
+        assert await service.city_cover_candidates(9, "article", None) is None
+        assert await service.country_cover_candidates(9, None) is None
+        photos.candidates.assert_not_awaited()
+
     async def test_remove_clears_the_columns_and_the_file(self):
         service, storage, _, _ = _cover_service()
         country = _country(cover_path="covers/countries/1.webp")
@@ -272,8 +333,9 @@ class TestEnricher:
         _, countries = self._patch_repos(monkeypatch)
         enricher, geocoder, _ = self._enricher(GeocodedCity(38.7, -9.1, "EX"), _photo())
         city = _city()
-        assert await enricher.enrich(AsyncMock(), city) == ["coordinates", "country code", "cover"]
-        geocoder.geocode.assert_awaited_once_with("Alpha", "Examplia", None)
+        session = AsyncMock()
+        assert await enricher.enrich(session, city) == ["coordinates", "country code", "cover"]
+        geocoder.geocode.assert_awaited_once_with("Alpha", "Examplia", None, session=session)
         assert (city.latitude, city.longitude, city.country.code) == (38.7, -9.1, "EX")
         assert city.cover_path == "covers/cities/1.jpg"
 
@@ -284,6 +346,14 @@ class TestEnricher:
         city = _city()
         assert await enricher.enrich(AsyncMock(), city) == ["coordinates"]
         assert city.country.code is None
+
+    async def test_logs_are_committed_when_nothing_is_found(self, monkeypatch):
+        cities, _ = self._patch_repos(monkeypatch)
+        enricher, _, photos = self._enricher(None, None)
+        session = AsyncMock()
+        assert await enricher.enrich(session, _city()) == []
+        photos.find.assert_awaited_once_with(["Alpha, Examplia", "Alpha"], session=session)
+        cities.commit.assert_awaited_once()
 
     async def test_nothing_missing_means_no_calls(self, monkeypatch):
         self._patch_repos(monkeypatch)
@@ -345,6 +415,25 @@ class TestGeocoder:
         client = AsyncMock()
         client.search.side_effect = httpx.ConnectError("down")
         assert await OpenMeteoCityGeocoder(client).geocode("Alpha", "Examplia", None) is None
+
+    async def test_each_lookup_is_logged(self, monkeypatch):
+        logs = []
+
+        async def fake_log(session, **kw):
+            logs.append(kw)
+        monkeypatch.setattr("app.integrations.open_meteo.geocoder.create_sync_log", fake_log)
+        client = AsyncMock()
+        client.search.return_value = [{"latitude": 1.5, "longitude": 2.5, "country": "Examplia", "country_code": "ex"}]
+        await OpenMeteoCityGeocoder(client).geocode("Alpha", "Examplia", None, session=AsyncMock())
+        client.search.side_effect = httpx.ConnectError("down")
+        await OpenMeteoCityGeocoder(client).geocode("Beta", "Examplia", "EX", session=AsyncMock())
+        await OpenMeteoCityGeocoder(client).geocode("Gamma", "Examplia", None)  # no session: nothing logged
+        assert [(l["provider"], l["operation"], l["provider_entity_id"], l["status"]) for l in logs] == [
+            ("open_meteo", "geocode_city", "Alpha", "ok"), ("open_meteo", "geocode_city", "Beta", "error")]
+        assert logs[0]["request_payload"] == {"city": "Alpha", "country": "Examplia", "country_code": None}
+        assert logs[0]["response_payload"] == {"results": 1, "found": True, "latitude": 1.5, "longitude": 2.5,
+                                               "country_code": "EX"}
+        assert logs[1]["response_payload"] is None and "down" in logs[1]["error"]
 
 
 def _resolve_to(monkeypatch, *ips):
@@ -455,6 +544,107 @@ class TestWikipedia:
         client, _ = self._client(monkeypatch, lambda r: httpx.Response(500))
         assert await client.find(["Alpha"]) is None
 
+    @staticmethod
+    def _page(title, mime="image/jpeg", width=2400, index=None):
+        page = {"title": title, "imageinfo": [{
+            "mime": mime, "width": width, "height": 1200, "thumburl": f"https://upload.wikimedia.org/thumb/{title}",
+            "descriptionurl": f"https://commons.wikimedia.org/wiki/{title}",
+            "extmetadata": {"Artist": {"value": "A. Author"}, "LicenseShortName": {"value": "CC BY 2.0"}},
+        }]}
+        if index is not None:
+            page["index"] = index
+        return page
+
+    def _logs(self, monkeypatch):
+        logs = []
+
+        async def fake_log(session, **kw):
+            logs.append(kw)
+        monkeypatch.setattr("app.integrations.wikipedia.client.create_sync_log", fake_log)
+        return logs
+
+    async def test_article_candidates_try_each_title_and_drop_what_is_not_a_photo(self, monkeypatch):
+        logs = self._logs(monkeypatch)
+        seen = []
+
+        def handler(request: httpx.Request):
+            seen.append(request.url)
+            if request.url.params["titles"] == "Alpha, Examplia":
+                return httpx.Response(200, json={"batchcomplete": True})
+            return httpx.Response(200, json={"query": {"pages": [
+                self._page("File:Alpha old town.jpg"), self._page("File:Flag of Alpha.svg", mime="image/svg+xml"),
+                self._page("File:Alpha locator map.png", mime="image/png"), self._page("File:Coat of arms of Alpha.jpg"),
+                self._page("File:Alpha small.jpg", width=800), self._page("File:Alpha anim.gif", mime="image/gif"),
+                self._page("File:Alpha beach.webp", mime="image/webp"), {"title": "File:No info.jpg"},
+            ]}})
+
+        client, _ = self._client(monkeypatch, handler)
+        found = await client.candidates("article", ["Alpha, Examplia", "Alpha"], "Alpha", session=AsyncMock())
+        assert [c.title for c in found] == ["File:Alpha old town.jpg", "File:Alpha beach.webp"]
+        assert found[0].credit == "Photo: A. Author, CC BY 2.0, via Wikimedia Commons" and found[0].width == 2400
+        assert seen[-1].host == "en.wikipedia.org" and seen[-1].params["generator"] == "images"
+        assert seen[-1].params["iiurlwidth"] == "400"
+        assert [(l["provider"], l["operation"], l["status"]) for l in logs] == [("wikipedia", "cover_candidates", "ok")]
+        assert logs[0]["response_payload"]["photos"] == 2
+
+    async def test_commons_candidates_keep_the_search_order(self, monkeypatch):
+        def handler(request: httpx.Request):
+            assert request.url.host == "commons.wikimedia.org"
+            assert request.url.params["gsrsearch"] == "Alpha beach" and request.url.params["gsrnamespace"] == "6"
+            return httpx.Response(200, json={"query": {"pages": [
+                self._page("File:B.jpg", index=2), self._page("File:A.jpg", index=1)]}})
+
+        client, _ = self._client(monkeypatch, handler)
+        found = await client.candidates("commons", [], "Alpha beach")
+        assert [c.title for c in found] == ["File:A.jpg", "File:B.jpg"]
+
+    async def test_a_429_is_busy_and_other_failures_unavailable(self, monkeypatch):
+        logs = self._logs(monkeypatch)
+        client, _ = self._client(monkeypatch, lambda r: httpx.Response(429))
+        with pytest.raises(CoverSourceBusyError):
+            await client.candidates("commons", [], "Alpha", session=AsyncMock())
+        client, _ = self._client(monkeypatch, lambda r: httpx.Response(500))
+        with pytest.raises(CoverSourceUnavailableError) as raised:
+            await client.candidates("article", ["Alpha"], "Alpha", session=AsyncMock())
+        assert not isinstance(raised.value, CoverSourceBusyError)
+        assert [l["status"] for l in logs] == ["error", "error"]
+
+    async def test_from_file_fetches_1600px_with_the_credit_and_logs_a_summary(self, monkeypatch):
+        logs = self._logs(monkeypatch)
+        seen = []
+
+        def handler(request: httpx.Request):
+            seen.append(request.url)
+            return httpx.Response(200, json={"query": {"pages": [{"imageinfo": [{
+                "url": _ORIGINAL, "thumburl": "https://upload.wikimedia.org/thumb/1600px.jpg", "width": 4000,
+                "height": 2000, "descriptionurl": "https://commons.wikimedia.org/wiki/File:Alpha.jpg",
+                "extmetadata": {"Artist": {"value": "A. Author"}},
+            }]}]}})
+
+        client, images = self._client(monkeypatch, handler)
+        photo = await client.from_file(" File:Alpha.jpg ", session=AsyncMock())
+        assert photo.credit == "Photo: A. Author, via Wikimedia Commons"
+        assert photo.source_url == "https://commons.wikimedia.org/wiki/File:Alpha.jpg"
+        assert seen[0].params["titles"] == "File:Alpha.jpg" and seen[0].params["iiurlwidth"] == "1600"
+        images.fetch.assert_awaited_once_with("https://upload.wikimedia.org/thumb/1600px.jpg")
+        assert logs[0]["operation"] == "fetch_cover" and logs[0]["provider_entity_id"] == "Alpha.jpg"
+        assert logs[0]["response_payload"] == {"file": "Alpha.jpg", "width": 4000, "height": 2000, "bytes": len(JPEG),
+                                               "credit": "Photo: A. Author, via Wikimedia Commons"}
+
+    async def test_from_file_failures_are_none(self, monkeypatch):
+        client, _ = self._client(monkeypatch, lambda r: httpx.Response(200, json={"query": {"pages": [{"missing": True}]}}))
+        assert await client.from_file("File:Gone.jpg") is None
+        client, _ = self._client(monkeypatch, lambda r: httpx.Response(500))
+        assert await client.from_file("File:Alpha.jpg") is None
+        assert await client.from_file("File:") is None
+
+    async def test_find_logs_what_it_found_or_not(self, monkeypatch):
+        logs = self._logs(monkeypatch)
+        client, _ = self._client(monkeypatch, lambda r: httpx.Response(404))
+        assert await client.find(["Alpha, Examplia", "Alpha"], session=AsyncMock()) is None
+        assert logs[0]["operation"] == "find_cover" and logs[0]["provider_entity_id"] == "Alpha, Examplia"
+        assert logs[0]["response_payload"] == {"found": False} and logs[0]["status"] == "ok"
+
 
 class TestRoutes:
     @pytest.fixture
@@ -486,13 +676,48 @@ class TestRoutes:
         covers.set_city_cover.return_value = self._city_read()
         response = c.put("/location/cities/1/cover", headers=AUTH, files={"file": ("a.png", PNG, "image/png")})
         assert response.status_code == 200 and response.json()["has_cover"] is True
-        assert covers.set_city_cover.await_args.kwargs == {"data": PNG, "url": None}
+        assert covers.set_city_cover.await_args.kwargs == {"data": PNG, "url": None, "commons_file": None}
 
     def test_url(self, client):
         c, covers = client
         covers.set_country_cover.return_value = CountryRead.model_validate(_country())
         assert c.put("/location/countries/1/cover", headers=AUTH, data={"url": "https://example.com/a.jpg"}).status_code == 200
-        assert covers.set_country_cover.await_args.kwargs == {"data": None, "url": "https://example.com/a.jpg"}
+        assert covers.set_country_cover.await_args.kwargs == {"data": None, "url": "https://example.com/a.jpg", "commons_file": None}
+
+    def test_commons_file(self, client):
+        c, covers = client
+        covers.set_city_cover.return_value = self._city_read()
+        assert c.put("/location/cities/1/cover", headers=AUTH, data={"commons_file": "File:Alpha.jpg"}).status_code == 200
+        assert covers.set_city_cover.await_args.kwargs == {"data": None, "url": None, "commons_file": "File:Alpha.jpg"}
+
+    def test_candidates(self, client):
+        c, covers = client
+        covers.city_cover_candidates.return_value = [
+            CoverCandidate("File:A.jpg", "https://t/a.jpg", 2000, 1000, "Photo via Wikimedia Commons", "https://p")]
+        response = c.get("/location/cities/1/cover/candidates", headers=AUTH)
+        assert response.status_code == 200 and response.json() == [{
+            "title": "File:A.jpg", "thumb_url": "https://t/a.jpg", "width": 2000, "height": 1000,
+            "credit": "Photo via Wikimedia Commons", "page_url": "https://p"}]
+        assert covers.city_cover_candidates.await_args.args == (1, "article", None)
+        c.get("/location/cities/1/cover/candidates?source=commons&q=old%20town", headers=AUTH)
+        assert covers.city_cover_candidates.await_args.args == (1, "commons", "old town")
+        assert c.get("/location/cities/1/cover/candidates?source=flickr", headers=AUTH).status_code == 422
+        covers.country_cover_candidates.return_value = []
+        assert c.get("/location/countries/2/cover/candidates?q=coast", headers=AUTH).json() == []
+        assert covers.country_cover_candidates.await_args.args == (2, "coast")
+
+    def test_candidates_errors(self, client):
+        c, covers = client
+        covers.city_cover_candidates.side_effect = CoverSourceBusyError("Wikimedia is busy, try again in a minute")
+        response = c.get("/location/cities/1/cover/candidates", headers=AUTH)
+        assert response.status_code == 503 and "busy" in response.json()["detail"]
+        covers.city_cover_candidates.side_effect = CoverSourceUnavailableError("Wikimedia could not be reached")
+        assert c.get("/location/cities/1/cover/candidates", headers=AUTH).status_code == 502
+        covers.city_cover_candidates.side_effect = None
+        covers.city_cover_candidates.return_value = None
+        covers.country_cover_candidates.return_value = None
+        assert c.get("/location/cities/9/cover/candidates", headers=AUTH).status_code == 404
+        assert c.get("/location/countries/9/cover/candidates", headers=AUTH).status_code == 404
 
     def test_invalid_image_is_422(self, client):
         c, covers = client

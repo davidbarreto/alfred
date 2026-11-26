@@ -215,6 +215,8 @@ class TestCityPage:
         assert "Photo: A. Author, CC BY-SA 4.0" in html and 'href="https://commons.wikimedia.org/wiki/File:A.jpg"' in html
         assert 'href="/places/countries/2"' in html and 'href="https://photos.google.com/search/Alpha"' in html
         assert "Find photo (Wikipedia)" in html and "Remove cover" in html
+        assert 'data-cover-action="choose"' in html and 'id="cover-picker"' in html
+        assert 'data-picker-source="article"' in html and 'id="cover-picker-search" hidden' in html
         # the Map card: fitted to the city, its CSV, place rows that pulse their pin
         assert 'data-map-data="/places/map/data?city_id=4" data-fit="city"' in html
         assert 'href="/places/cities/4/map.csv"' in html and 'data-map-place="1"' in html and "Food and drink" in html
@@ -372,7 +374,8 @@ class TestCountries:
         assert 'href="/places/cities/5"' in html and 'href="/places/cities/6"' not in html
         assert 'href="/places/cities?country_id=2&status=all"' in html and "See all 7 cities" in html
         assert 'data-owner-kind="country" data-owner-id="2"' in html and "3.5/5" in html
-        assert "Find photo" not in html and "Upload cover" in html and 'name="code" value="EX"' in html
+        assert "Find photo" not in html and "Upload cover" in html and 'data-cover-action="choose"' in html
+        assert 'data-picker-source="article"' not in html and 'id="cover-picker-search">' in html and 'name="code" value="EX"' in html
         assert 'data-map-data="/places/map/data?country_id=2" data-fit="country"' in html
         assert 'href="/places/countries/2/map.csv"' in html
         assert 'id="country-map-toggles" hidden' in html
@@ -423,6 +426,32 @@ class TestWritesAndCovers:
         response = client.put("/places/cities/4/cover", data={"url": " "})
         assert response.status_code == 422 and "Choose an image" in response.json()["error"]
         mock_api["put_multipart"].assert_not_awaited()
+
+    def test_a_commons_file_is_sent_on(self, client, mock_api):
+        mock_api["put_multipart"].return_value = {"id": 4, "has_cover": True}
+        assert client.put("/places/cities/4/cover", data={"commons_file": " File:Alpha.jpg "}).status_code == 200
+        assert mock_api["put_multipart"].await_args.kwargs == {"data": {"commons_file": "File:Alpha.jpg"}}
+
+    def test_picker_candidates_are_proxied(self, client, mock_api):
+        photos = [{"title": "File:A.jpg", "thumb_url": "https://t/a.jpg", "width": 2000, "height": 1000,
+                   "credit": "Photo via Wikimedia Commons", "page_url": "https://p"}]
+        mock_api["get"].return_value = photos
+        response = client.get("/places/cities/4/cover/candidates")
+        assert response.status_code == 200 and response.json() == photos
+        mock_api["get"].assert_awaited_with("/location/cities/4/cover/candidates", params={"source": "article"}, timeout=30.0)
+        client.get("/places/cities/4/cover/candidates?source=commons&q=%20old%20town%20")
+        assert mock_api["get"].await_args.kwargs["params"] == {"source": "commons", "q": "old town"}
+        # Countries search Commons only: no source is sent.
+        client.get("/places/countries/2/cover/candidates?source=article&q=coast")
+        assert mock_api["get"].await_args.args == ("/location/countries/2/cover/candidates",)
+        assert mock_api["get"].await_args.kwargs["params"] == {"q": "coast"}
+
+    def test_a_busy_wikimedia_is_relayed(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/x")
+        mock_api["get"].side_effect = httpx.HTTPStatusError("x", request=request, response=httpx.Response(
+            503, request=request, json={"detail": "Wikimedia is busy, try again in a minute"}))
+        response = client.get("/places/cities/4/cover/candidates")
+        assert response.status_code == 503 and response.json()["error"] == "Wikimedia is busy, try again in a minute"
 
     def test_find_and_remove(self, client, mock_api):
         mock_api["post"].return_value = {"id": 4}

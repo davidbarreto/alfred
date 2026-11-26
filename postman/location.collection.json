@@ -897,6 +897,297 @@
    }
   },
   {
+   "name": "18f1 - Photo Picker: Article Images",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('A list of photos (empty with integrations off)', () => {",
+       "    const photos = pm.response.json();",
+       "    pm.expect(photos).to.be.an('array');",
+       "    photos.forEach((p) => {",
+       "        pm.expect(p).to.have.all.keys('title', 'thumb_url', 'width', 'height', 'credit', 'page_url');",
+       "        pm.expect(p.title).to.match(/^File:/);",
+       "        pm.expect(p.width).to.be.at.least(1200);",
+       "    });",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover/candidates",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover",
+      "candidates"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f2 - Photo Picker: Commons Search",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('A list of photos (empty with integrations off)', () => {",
+       "    const photos = pm.response.json();",
+       "    pm.expect(photos).to.be.an('array');",
+       "    photos.forEach((p) => {",
+       "        pm.expect(p).to.have.all.keys('title', 'thumb_url', 'width', 'height', 'credit', 'page_url');",
+       "        pm.expect(p.title).to.match(/^File:/);",
+       "        pm.expect(p.width).to.be.at.least(1200);",
+       "    });",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover/candidates?source=commons&q=postman harbour",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover",
+      "candidates"
+     ],
+     "query": [
+      {
+       "key": "source",
+       "value": "commons"
+      },
+      {
+       "key": "q",
+       "value": "postman harbour"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f3 - Photo Picker: Unknown Source (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover/candidates?source=flickr",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover",
+      "candidates"
+     ],
+     "query": [
+      {
+       "key": "source",
+       "value": "flickr"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f4 - Photo Picker: Unknown City (404)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/999999999/cover/candidates",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "999999999",
+      "cover",
+      "candidates"
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f5 - Photo Picker: Country Commons Search",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+       "pm.test('A list of photos (empty with integrations off)', () => {",
+       "    const photos = pm.response.json();",
+       "    pm.expect(photos).to.be.an('array');",
+       "    photos.forEach((p) => {",
+       "        pm.expect(p).to.have.all.keys('title', 'thumb_url', 'width', 'height', 'credit', 'page_url');",
+       "        pm.expect(p.title).to.match(/^File:/);",
+       "        pm.expect(p.width).to.be.at.least(1200);",
+       "    });",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/countries/{{place_other_country_id}}/cover/candidates?q=postman coast",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "countries",
+      "{{place_other_country_id}}",
+      "cover",
+      "candidates"
+     ],
+     "query": [
+      {
+       "key": "q",
+       "value": "postman coast"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f6 - A Commons File That Can't Be Fetched (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Says Commons', () => pm.expect(pm.response.json().detail).to.include('Wikimedia Commons'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "commons_file",
+       "value": "File:Postman no such photo 0000.jpg",
+       "type": "text"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "18f7 - A Commons File And A URL Together (422)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+       "pm.test('Exactly one', () => pm.expect(pm.response.json().detail).to.include('exactly one'));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "PUT",
+    "header": [],
+    "url": {
+     "raw": "{{base_url}}/location/cities/{{place_other_city_id}}/cover",
+     "host": [
+      "{{base_url}}"
+     ],
+     "path": [
+      "location",
+      "cities",
+      "{{place_other_city_id}}",
+      "cover"
+     ]
+    },
+    "body": {
+     "mode": "formdata",
+     "formdata": [
+      {
+       "key": "commons_file",
+       "value": "File:Postman.jpg",
+       "type": "text"
+      },
+      {
+       "key": "url",
+       "value": "https://example.com/a.jpg",
+       "type": "text"
+      }
+     ]
+    }
+   }
+  },
+  {
    "name": "18g - Latitude Alone (422)",
    "event": [
     {

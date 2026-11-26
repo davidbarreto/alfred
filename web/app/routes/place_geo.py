@@ -428,14 +428,18 @@ async def _cover_image(kind: str, owner_id: int) -> Response:
 
 
 async def _set_cover(kind: str, owner_id: int, request: Request) -> JSONResponse:
-    """A file from the page's upload input, or an image URL typed into it, sent on as multipart."""
+    """A file from the page's upload input, an image URL typed into it, or a photo chosen in the picker (its Commons
+    file title), sent on as multipart."""
     form = await request.form()
     upload, url = form.get("file"), (form.get("url") or "").strip()
+    commons_file = (form.get("commons_file") or "").strip()
     if upload is not None and hasattr(upload, "read"):
         files = {"file": (upload.filename or "cover", await upload.read(), upload.content_type or "application/octet-stream")}
         call = api.put_multipart(_owner_path(kind, owner_id), files=files)
     elif url:
         call = api.put_multipart(_owner_path(kind, owner_id), data={"url": url})
+    elif commons_file:
+        call = api.put_multipart(_owner_path(kind, owner_id), data={"commons_file": commons_file})
     else:
         return JSONResponse({"error": "Choose an image or paste an image address."}, status_code=422)
     return await forward(call, "Could not save the cover.")
@@ -449,6 +453,29 @@ async def city_cover(city_id: int):
 @router.put("/cities/{city_id}/cover")
 async def set_city_cover(city_id: int, request: Request):
     return await _set_cover("cities", city_id, request)
+
+
+async def _cover_candidates(kind: str, owner_id: int, params: dict) -> JSONResponse:
+    """The photo picker's thumbnails; a busy Wikimedia comes back as a 503 whose message the dialog shows."""
+    return await forward(
+        api.get(f"{_owner_path(kind, owner_id)}/candidates", params=params, timeout=30.0), "Could not load photos.",
+    )
+
+
+def _candidate_params(request: Request, sources: tuple[str, ...]) -> dict:
+    source = request.query_params.get("source") or sources[0]
+    q = (request.query_params.get("q") or "").strip()
+    return {**({"source": source} if len(sources) > 1 and source in sources else {}), **({"q": q[:200]} if q else {})}
+
+
+@router.get("/cities/{city_id}/cover/candidates")
+async def city_cover_candidates(city_id: int, request: Request):
+    return await _cover_candidates("cities", city_id, _candidate_params(request, ("article", "commons")))
+
+
+@router.get("/countries/{country_id}/cover/candidates")
+async def country_cover_candidates(country_id: int, request: Request):
+    return await _cover_candidates("countries", country_id, _candidate_params(request, ("commons",)))
 
 
 @router.post("/cities/{city_id}/cover/find")

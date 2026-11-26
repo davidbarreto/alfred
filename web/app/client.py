@@ -37,8 +37,8 @@ async def close() -> None:
         _client = None
 
 
-async def get(path: str, params: dict[str, Any] | None = None) -> Any:
-    resp = await _http().get(_url(path), headers=_headers(), params=params, timeout=10.0)
+async def get(path: str, params: dict[str, Any] | None = None, timeout: float = 10.0) -> Any:
+    resp = await _http().get(_url(path), headers=_headers(), params=params, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 

@@ -26,7 +26,7 @@
       <a class="btn btn-xs btn-outline" href="https://www.google.com/maps/search/?api=1&query={{ (city.latitude ~ ',' ~ city.longitude) if city.latitude is not none else (city.name ~ ', ' ~ city.country.name) | urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-map-2"></i> Maps</a>
       <a class="btn btn-xs btn-outline" href="{{ city.photos_url }}" target="_blank" rel="noopener noreferrer" id="city-photos"><i class="ti ti-photo"></i> Photos</a>
       <button type="button" class="btn btn-xs btn-outline" id="edit-open">Edit</button>
-      {% with cover_base='/places/cities/' ~ city.id, has_cover=city.has_cover, can_find=true %}{% include "_place_geo_cover_menu.html" %}{% endwith %}
+      {% with cover_base='/places/cities/' ~ city.id, has_cover=city.has_cover, cover_name=city.name, can_find=true %}{% include "_place_geo_cover_menu.html" %}{% endwith %}
     </div>
   </div>
 

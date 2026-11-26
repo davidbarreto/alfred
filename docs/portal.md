@@ -58,6 +58,10 @@ A card that is a link must not contain other links (the browser splits nested `<
 
 HTMX actions target the smallest possible DOM element. Full-page navigation uses standard `<a href>`. Form submissions use `fetch()` + manual DOM update (not `hx-post`) when the response replaces a larger container.
 
+## Numbers link to their source
+
+A count or total on a page (a stat tile, "3 nights", "5 legs", a spend figure, a counter) links to the list it was counted from: the trips, the stays, the legs, the transactions behind a spend. When that list has no page yet, add one (paginated, see *Capped cards*) rather than leave the number plain. The exception is a number inside an element that is already a link (a cover card that opens its page): no nested links, so it stays plain and the page it opens has the linked version.
+
 ## Capped cards
 
 The trip page's warnings card shows only its title and count, linking to `/travel/{id}/warnings`. Other cards that list things that can grow (calendar events, unlinked charges) show the first 5 and a "See all N" link to a separate page with everything (`/travel/{id}/warnings`, `/travel/{id}/unlinked`), grouped and foldable with `<details>` when there are several groups. Never an in-place expand, even when rows carry their own controls: the full page repeats them (shared row partial and script). Never render an unbounded list on a detail page.

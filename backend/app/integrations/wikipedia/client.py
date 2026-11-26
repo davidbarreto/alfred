@@ -31,12 +31,19 @@ def _plain(value: str | None) -> str | None:
 
 
 def file_name(image_url: str) -> str | None:
-    """`File:` title of an upload.wikimedia.org URL (the last path segment of the original)."""
+    """`File:` title of an upload.wikimedia.org URL: the original's last path segment.
+
+    Some summaries give a thumbnail instead (`.../thumb/a/ab/<File>/3840px-<File>`): its file is the segment before.
+    """
     parts = urlsplit(image_url)
     if not parts.hostname or not parts.hostname.endswith("wikimedia.org"):
         return None
-    segment = unquote(parts.path.rsplit("/", 1)[-1])
-    return segment or None
+    segments = [s for s in parts.path.split("/") if s]
+    if "thumb" in segments and len(segments) >= 2:
+        segment = segments[-2]
+    else:
+        segment = segments[-1] if segments else ""
+    return unquote(segment) or None
 
 
 def credit_text(metadata: dict) -> str:

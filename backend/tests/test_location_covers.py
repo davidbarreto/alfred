@@ -403,6 +403,11 @@ class TestWikipedia:
         assert file_name(_ORIGINAL) == "Alpha_skyline,_2020.jpg"
         assert file_name("https://example.com/a.jpg") is None
 
+    def test_file_name_of_a_thumbnail_is_the_original(self):
+        # Some summaries give a thumbnail as the "original": /thumb/<hash>/<File>/<width>px-<File>.
+        thumb = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Beta_view%2C_2012.jpg/3840px-Beta_view%2C_2012.jpg"
+        assert file_name(thumb) == "Beta_view,_2012.jpg"
+
     def test_credit_strips_html(self):
         meta = {"Artist": {"value": '<a href="//commons">A.&nbsp;Author</a>'}, "LicenseShortName": {"value": "CC BY-SA 4.0"}}
         assert credit_text(meta) == "Photo: A. Author, CC BY-SA 4.0, via Wikimedia Commons"

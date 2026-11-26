@@ -120,6 +120,40 @@ class TestCalendarPage:
         assert "Christmas Day" in christmas_cell
         mock_api["get"].assert_any_await("/organizer/holidays", params={"from": "2026-12-01", "to": "2026-12-31"})
 
+    def test_cells_use_the_themed_calendar_classes(self, client, mock_api):
+        mock_api["get"].side_effect = _get_by_path(holidays=[{"date": "2026-12-25", "name": "Christmas Day", "country": "PT"}])
+
+        resp = client.get("/calendar?year=2026&month=12")
+
+        grid_html = resp.text.split('<!-- Upcoming events list -->')[0]
+        # December 2026 starts on a Tuesday: Monday is a padding cell.
+        assert "cal-empty" in grid_html
+        assert "cal-day" in _cell_tag(resp.text, "2026-12-24") and "cal-empty" not in _cell_tag(resp.text, "2026-12-24")
+        christmas_cell = resp.text.split('hx-get="/calendar/day/2026-12-25"')[1].split('hx-get="/calendar/day/')[0]
+        assert "cal-holiday-text" in christmas_cell
+        # No Tailwind opacity variants: their dark overrides are easy to miss.
+        assert not re.search(r"bg-(gray-50|\[#E6F1FB\])/\d+", grid_html)
+        assert "text-[#BA7517]" not in grid_html
+
+    def test_today_cell_is_marked(self, client, mock_api, monkeypatch):
+        from datetime import date
+        import app.routes.calendar as calendar_route
+        monkeypatch.setattr(calendar_route, "local_today", lambda: date(2026, 7, 14))
+        mock_api["get"].side_effect = _get_by_path()
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert "cal-today" in _cell_tag(resp.text, "2026-07-14")
+        assert "cal-today" not in _cell_tag(resp.text, "2026-07-15")
+
+    def test_holiday_banner_in_day_view_uses_the_holiday_text_colour(self, client, mock_api):
+        mock_api["get"].side_effect = _get_by_path(holidays=[{"date": "2026-12-25", "name": "Christmas Day", "country": "PT"}])
+
+        resp = client.get("/calendar/day/2026-12-25")
+
+        assert resp.status_code == 200
+        assert "cal-holiday cal-holiday-text" in resp.text and "text-[#BA7517]" not in resp.text
+
     def test_page_renders_without_holidays_when_the_lookup_fails(self, client, mock_api):
         request = httpx.Request("GET", "http://api/organizer/holidays")
         mock_api["get"].side_effect = _get_by_path(

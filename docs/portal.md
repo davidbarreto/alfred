@@ -20,6 +20,8 @@ The client sends `X-Alfred-Client: web` on every backend call.
 
 Tailwind and DaisyUI come from a CDN; everything the portal defines itself is in `web/app/static/css/portal.css` (theme variables for light and dark, and the layout classes below). `base.html` links it with `?v={{ static_version }}` (the file's mtime), so a deploy never serves a stale stylesheet. It loads before Tailwind, so a Tailwind utility on the same element wins.
 
+Dark mode remaps Tailwind's light gray and tint classes in `portal.css` (`html[data-theme="dark"] .bg-gray-50 { ... }`). An opacity variant such as `bg-gray-50/60` is a separate class that those overrides miss, so it paints the light colour over a dark card: give each variant a template uses its own dark override (a test in `web/tests/test_dashboard.py` checks the gray ones), or prefer a token-based class. The calendar does the latter: `cal-empty`, `cal-today`, `cal-day` (hover), `cal-holiday` and `cal-holiday-text` read `--cal-*` tokens defined for both themes; holidays are a soft red, pinker than the error red.
+
 Build pages from these classes instead of ad-hoc grids, so every page lines up the same way on a desktop and on a phone:
 
 | Class | Use |

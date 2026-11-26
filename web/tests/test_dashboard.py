@@ -1,4 +1,6 @@
+import re
 from datetime import date, datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -482,4 +484,18 @@ class TestBaseLayout:
 
         assert resp.status_code == 200
         assert ".card-row" in resp.text
+
+    def test_every_opacity_variant_of_a_gray_background_has_a_dark_override(self):
+        """`bg-gray-50/60` is its own Tailwind class: the `.bg-gray-50` dark override misses it
+        and paints the light gray over a dark card."""
+        web_app = Path(__file__).resolve().parents[1] / "app"
+        css = (web_app / "static" / "css" / "portal.css").read_text()
+        used = set()
+        for template in (web_app / "templates").rglob("*.html"):
+            used |= set(re.findall(r"(?<![\w-])((?:hover:)?bg-gray-\d+/\d+)", template.read_text()))
+        assert used
+        for cls in used:
+            escaped = cls.replace(":", "\\:").replace("/", "\\/")
+            selector = f".{escaped}:hover" if cls.startswith("hover:") else f".{escaped} "
+            assert f'html[data-theme="dark"] {selector}' in css, cls
 

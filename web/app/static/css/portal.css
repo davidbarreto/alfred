@@ -63,6 +63,14 @@
   --tint-orange-bg-3: #FDF3E7;
   --tint-green-bg-2:  #E9F5E9;
 
+  /* Calendar month grid (light). The holiday red is pinker and softer than the error red. */
+  --cal-empty-bg:         #FAFBFC;
+  --cal-today-bg:         #F5F9FD;
+  --cal-hover-bg:         #F3F4F6;
+  --cal-holiday-bg:       #FDEFF1;
+  --cal-holiday-hover-bg: #FBE3E7;
+  --cal-holiday-text:     #C2415B;
+
   /* Layout */
   --page-max: 80rem;        /* widest a page's content gets on a large screen */
   --page-pad: 1rem;         /* page gutter; grows at the sm breakpoint below */
@@ -116,6 +124,13 @@ html[data-theme="dark"] {
   --tint-orange-bg-2: #362711;
   --tint-orange-bg-3: #362711;
   --tint-green-bg-2:  #17251A;
+
+  --cal-empty-bg:         #191A1D;   /* a step darker than the card, so the month's shape stays visible */
+  --cal-today-bg:         #1B2633;
+  --cal-hover-bg:         #26272B;
+  --cal-holiday-bg:       #2F1C22;
+  --cal-holiday-hover-bg: #3A2229;
+  --cal-holiday-text:     #F0909E;
 }
 
 @media (min-width: 640px) {
@@ -557,8 +572,15 @@ html[data-theme="dark"] .places-map .leaflet-tooltip { background: var(--gray-80
 
 /* ── Calendar ────────────────────────────────────────────────────────── */
 
-/* A public holiday of the primary holiday calendar: amber day cell and banner (the tint follows the theme). */
-.cal-holiday { background-color: var(--tint-amber-bg); }
+/* Month-grid cells and the day view's holiday banner. Own tokens instead of Tailwind opacity
+   variants (bg-gray-50/60, ...), which the dark overrides below don't cover. `.cal-holiday` is a
+   public holiday of the primary holiday calendar: a soft red, distinct from the error red. */
+.cal-empty  { background-color: var(--cal-empty-bg); }
+.cal-today  { background-color: var(--cal-today-bg); }
+.cal-day:hover { background-color: var(--cal-hover-bg); }
+.cal-holiday { background-color: var(--cal-holiday-bg); }
+.cal-holiday.cal-day:hover { background-color: var(--cal-holiday-hover-bg); }
+.cal-holiday-text { color: var(--cal-holiday-text); }
 
 /* ── Charts and tables ───────────────────────────────────────────────── */
 
@@ -660,7 +682,10 @@ html[data-theme="dark"] .bg-gray-900 { background-color: var(--gray-900) !import
 html[data-theme="dark"] .hover\:bg-gray-50:hover  { background-color: var(--gray-50) !important; }
 html[data-theme="dark"] .hover\:bg-gray-100:hover { background-color: var(--gray-100) !important; }
 html[data-theme="dark"] .hover\:bg-gray-200:hover { background-color: var(--gray-200) !important; }
+html[data-theme="dark"] .bg-gray-50\/60 { background-color: var(--gray-50) !important; }
+html[data-theme="dark"] .bg-gray-50\/80 { background-color: var(--gray-50) !important; }
 html[data-theme="dark"] .hover\:bg-gray-50\/50:hover { background-color: var(--surface-hover) !important; }
+html[data-theme="dark"] .hover\:bg-gray-50\/60:hover { background-color: var(--surface-hover) !important; }
 
 html[data-theme="dark"] .border-gray-50  { border-color: var(--gray-50) !important; }
 html[data-theme="dark"] .border-gray-100 { border-color: var(--gray-100) !important; }
